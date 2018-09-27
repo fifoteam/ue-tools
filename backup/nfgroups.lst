@@ -1,0 +1,11 @@
+[Verilog Files]
+Source Files = *.v;*.vh;*.vo;
+Constraint Files = *.ucf;*.sdc;
+
+[C/C++ Files]
+Source Files = *.c;*.cpp;*.cxx;
+Header Files = *.h;*.hpp;*.hxx;
+
+[Assembler Files]
+Source Files = *.asm;*.nsm;*.s;
+Header Files = *.inc;

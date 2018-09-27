@@ -1,0 +1,115 @@
+P "文件(&F)"
+  M "新建(&N)\tCtrl+N",                          ID_FILE_NEW
+  M "打开(&O)...\tCtrl+O",                       ID_FILE_OPEN
+  M "关闭(&C)",                                  ID_FILE_CLOSE
+  M "关闭所有文件(&F)\tCtrl+Shift+F4",           ID_FILE_CLOSEALL
+  S
+  M "保存(&S)\tCtrl+S",                          ID_FILE_SAVE
+  M "另存为(&A)...\tF12",                        ID_FILE_SAVE_AS
+  M "全部保存(&L)\tAlt+F12",                     ID_FILE_SAVE_ALL
+  S
+  M "打印(&P)...\tCtrl+P",                       ID_FILE_PRINT
+  M "收藏的文件(&V)...\tCtrl+Shift+F",           ID_FAVORITE_FILES
+  P "打印设置/配置(&G)"
+    M "页面设置(&T)...",                         ID_PAGE_SETUP
+    M "打印设置(&U)...",                         ID_FILE_PRINT_SETUP
+    M "设置打印机字体(&P)...",                   ID_CHOOSE_PRINT_FONT
+    LM "镜像显示字体(&M)",                       ID_MIRROR_DISPLAY_FONT
+  S
+  P "最近打开文件(&I)"
+    LM "最近打开文件",                           ID_FILE_MRU_FILE1
+  S
+  M "最近打开文件",                              ID_FILE_MRU_FILE1
+  S
+  LM "退出(&X)",                                 ID_APP_EXIT2
+P "编辑(&E)"
+  M "撤销(&U)\tCtrl+Z",                          ID_EDIT_UNDO
+  S
+  M "剪切(&T)\tCtrl+X",                          ID_EDIT_CUT
+  M "复制(&C)\tCtrl+C",                          ID_EDIT_COPY
+  M "粘贴(&P)\tCtrl+V",                          ID_EDIT_PASTE
+  S
+  M "全选(&A)\tCtrl+A",                          ID_EDIT_SELECTALL
+  S
+  M "查找(&F)\tAlt+F3",                          ID_EDIT_FIND
+  M "查找下一个(&N)\tF3",                        ID_EDIT_FINDNEXT
+  M "替换(&R)\tCtrl+R",                          ID_EDIT_REPLACE
+  M "转到行/页(&G)\tCtrl+G",                     ID_EDIT_GOTO
+  S
+  LM "拼写检查(&K)\tCtrl+K",                     ID_SPELLCHECK
+P "插入(&N)"
+  M "日期/时间（&D)",                            ID_EDIT_TIMEDATE
+  S
+  M "行(&L)",                                    ID_INSERTLINE
+  M "分页符(&P)",                                ID_EDIT_PAGE_BREAK
+  S
+  LM "文件(&F)",                                 ID_FILE_INSERT
+P "视图(&V)"
+  M "环境",                                      ID_PROFILE_SWITCH
+  S
+  P "视图/列表(&V)"
+    P "工具栏(&T)"
+      LM "工具栏 1(&1)",                         ID_VIEW_TOOLBAR1
+    M "状态栏(&S)",                              ID_VIEW_STATUS_BAR1
+    M "文件树视图(&V)\tCtrl +U",                 ID_PRJFRAME
+    M "找到字符串列表(&N)",                      CG_ID_VIEW_LISTOCC
+    M  "输出窗口(&U)",                           CG_ID_VIEW_OUTPUTWINDOW
+    S
+    LM "恢复移动窗口",                           ID_MOVE_FLOATWIN_INSIDE_APP
+  S
+  M "列变更指标 (LCI)",                          ID_LINE_CHANGE_INDICATOR
+  M "停用所有档案的列变更指标",                  ID_LINE_CHANGE_INDICATOR_OFF
+  S
+  M "高亮显示所有激活项",                        ID_HIGHLIGHT_ALL
+  S
+  M "显示标尺(&D)",                              ID_DISPLAY_RULER
+  LM "显示行号(&L)",                             ID_DISPLAY_LINENUM
+P "格式(&T)"
+  M "转换回车符为换行(&W)",                      ID_FILE_REMOVECR
+  M "换行转为回车符(&V)",                        ID_FILE_SAVESOFTCR
+  S
+  M "转换制表符为空格(&S)",                      ID_TABTOSPACES
+  M "转换空格为制表符 (全部)(&P)",               ID_SPACESTOSTABSALL
+  S
+  M "转为大写字母(&O)\tAlt+F5",                  ID_TOUPPER
+  LM "转为小写字母(&L)\tCtrl+F5",                ID_TOLOWER
+P "高级(&A)"
+  M "配置(&C)...",                               ID_UEOPTIONS
+  S
+  LP "脚本(&i)"
+    M "脚本...",                                 ID_SCRIPTS
+    S
+    LM "脚本列表",                               CG_ID_VIEW_SCRIPTLIST
+P "窗口(&W)"
+  M "复制窗口(&D)",                              ID_WINDOW_NEW
+  M "层叠(&C)",                                  ID_WINDOW_CASCADE
+  M "水平平铺(&T)",                              ID_WINDOW_TILE_HORZ
+  M "垂直平铺(&V)",                              ID_WINDOW_TILE_VERT
+  M "下一个窗口(&N)",                            ID_NEXTWINDOW
+  M "上一个窗口(&P)",                            ID_PREVWINDOW
+  M "排列图标(&A)",                              ID_WINDOW_ARRANGE
+  S
+  M "下一个文件标签(&E)\tAlt+Down",              ID_NEXTTAB
+  M "上一个文件标签(&B)\tAlt+Up",                ID_PREVTAB
+  S
+  M "分割窗口(&O)",                              ID_SPLIT_WINDOW
+  S
+  M "最小化所有窗口(&M)",                        ID_FILE_MINIMIZE_ALL
+  M "关闭所有文件(&L)",                          ID_FILE_CLOSEALL
+  S
+  M "输出窗口(&U)",                              CG_ID_VIEW_OUTPUTWINDOW
+  S
+  M "同步滚动(&Y)",                              ID_SYNC_WINDOWS
+  S
+  LM "",                                        AFX_IDM_FIRST_MDICHILD
+LP "帮助(&H)"
+  M "索引(&I)\tF1",                              ID_HELP_INDEX
+  M "使用帮助(&U)",                              ID_HELP_USING
+  M "快速入门指南",                              ID_SHOW_DAILYTIP
+  S
+  M "在线论坛(&F)",                              ID_HELP_FORUMS
+  M "检查更新(&C)",                              ID_CHECKFORUPDATES
+  M "IDM 产品(&P)",                              ID_HELP_SHOWAD
+  S
+  M "注册...",                                   ID_REGISTER_ULTRAEDIT
+  LM "关于(&A)...",                              ID_APP_ABOUT

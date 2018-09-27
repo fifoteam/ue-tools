@@ -1,0 +1,1 @@
+cloc -force-lang=Verilog-SystemVerilog --ignore-whitespace --windows --diff-alignment=c:\ue\cloc_res.txt --diff F:\DAHENG\hw_mer\trunk\fpga_prj\mer-502-79u3x\src\ F:\DAHENG\hw_mer\trunk\fpga_prj\mer-503-36u3x\src\
