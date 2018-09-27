@@ -1,0 +1,31 @@
+/L14"ini" Line Comment = ; Nocase String Chars = ' File Extensions = ini
+
+/Colors = 0,8421376,8421376,8421504,255,
+/Colors Back = 13625548,13625548,13625548,13625548,13625548,
+/Colors Auto Back = 1,1,1,1,1,
+/Font Style = 0,0,0,0,0,
+
+
+/TGBegin "Function"
+/TGFindStr = "["
+/TGEnd
+
+
+#/Delimiters = #@$+-()[]:;"'<> ,	.?
+
+
+/C1"DIRECTIVES" Colors = 16711680 Colors Back = 13625548 Colors Auto Back = 1 Font Style = 0
+
+/C2"INSTRUCTIONS" Colors = 255 Colors Back = 13625548 Colors Auto Back = 1 Font Style = 0
+
+/C3"FLAGS" Colors = 32768 Colors Back = 13625548 Colors Auto Back = 1 Font Style = 0
+
+/C4"JUMPS" Colors = 128 Colors Back = 13625548 Colors Auto Back = 1 Font Style = 0
+
+/C5"FUNCTION" Colors = 16711680 Colors Back = 13625548 Colors Auto Back = 1 Font Style = 0
+
+/C6"PREDEFINE" Colors = 32896 Colors Back = 13625548 Colors Auto Back = 1 Font Style = 0
+
+#/C8"String"
+
+#/C9"REGISTER"

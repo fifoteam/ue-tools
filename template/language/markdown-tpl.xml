@@ -1,0 +1,6 @@
+<?xml version="1.0"?>
+<Templates encode="utf8escenc"><Template Name="table" Description="" Comments="0" Strings="0">| Tables           | Are                  | Cool         |&#xD;
+| :--------------- | :------------------- | :----------- |&#xD;
+| col 3 is         | right-aligned        | 1600         |&#xD;
+| col 2 is         | centered             | 12           |&#xD;
+| zebra stripes    | are neat             | 1            |</Template></Templates>

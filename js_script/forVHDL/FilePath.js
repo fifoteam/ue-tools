@@ -1,0 +1,1 @@
+UltraEdit.activeDocument.copyFilePath();

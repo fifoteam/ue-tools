@@ -1,0 +1,54 @@
+/L27"svf" SVF_LANG Line Comment = // Line Comment Alt = ! String Chars = " File Extensions = SVF
+
+/Delimiters = ~!@%^&*()-+=|\/{}[]:;"<> ,	.?
+
+
+/C1 "keyword"
+FREQUENCY
+
+ENDDR
+ENDIR
+FREQUENCY
+HDR
+HIR
+PIO
+PIOMAP
+RUNTEST
+SDR
+SIR
+STATE
+TDR
+TIR
+TRST
+
+
+
+TCK
+TDI
+TDO
+SMASK
+MASK
+
+/C2 "state"
+RESET
+IDLE
+DRSELECT
+DRCAPTURE
+DRSHIFT
+DREXIT1
+DRPAUSE
+DREXIT2
+DRUPDATE
+
+IRSELECT
+IRCAPTURE
+IRSHIFT
+IREXIT1
+IRPAUSE
+IREXIT2
+IRUPDATE
+
+On
+Off
+Z
+ABSENT

@@ -1,0 +1,81 @@
+/L22"pBlaze_Assembly" PSM_LANG Line Comment = ; String Chars = " File Extensions = psm fmt log
+
+#/TGBegin
+#/TGFindStr = "FUNC_**:"
+#/TGFindStr = "ref "
+#/TGEnd
+
+/Delimiters = ~!@%^&*()-+=|\/{}[]:;"<> ,	#
+/Function String = "%[ ^t]++^(config[ ^t^p]+[a-zA-Z0-9_]+^)"
+/Function String 1 = "%^([ ^t]++[/]+[ ^t]++[~^p]++[ ^t]++ref[ ^t]++[~^p]++^)"
+
+/C1"DIRECTIVES"
+ORG
+ADDRESS
+CONSTANT
+NAMEREG
+EQU
+DSIN
+DSOUT
+
+/C2"INSTRUCTIONS"
+** 'b 'B 'o 'O 'd 'D 'h 'H 'sb 'sB 'so 'sO 'sd 'sD 'sh 'sH 'Sb 'SB 'So 'SO 'Sd 'SD 'Sh 'SH
+ADD
+ADDC
+ADDCY
+AND
+COMP
+COMPARE
+DINT
+EINT
+FETCH
+LOAD
+OR
+RET
+RETI
+RL
+RR
+SLA
+SLX
+SR0
+SR1
+SRA
+SRX
+OUT
+IN
+STORE
+SUB
+SUBC
+TEST
+XOR
+INPUT
+OUTPUT
+RETURN
+$
+
+
+/C3"FLAGS"
+z
+nz
+
+/C4"JUMPS"
+JUMP
+** lbl_
+CALL
+** FUNC_
+
+
+/C6"PREDEFINE"
+** INPORT_
+** OUTPORT_
+** BIT_
+** SPAD_
+** ADDR_
+** CMD_
+** CHAR_
+
+#/C8"String"
+#** $
+
+#/C9"REGISTER"
+#S_

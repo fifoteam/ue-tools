@@ -1,0 +1,34 @@
+/L1"C/C++" C_LANG Line Comment = // Block Comment On = /* Block Comment Off = */ Escape Char = \ String Chars = "' File Extensions = C CPP CC CXX H HPP AWK
+/L2"Visual Basic" VB_LANG Line Comment = ' File Extensions = BAS FRM CLS VB VBA CTL DSR
+/L3"HTML" HTML_LANG Nocase Noquote Block Comment On = <!-- Block Comment Off = --> File Extensions = HTM HTML SHTML HTT HTA HTX CFM JSP PHP PHTML ASP TMPL ASAX ASHX ASMX ASPX ASCX
+/L4"Java" JAVA_LANG Line Comment = // Block Comment On = /* Block Comment Off = */ Escape Char = \ File Extensions = JAV JAVA
+/L5"Perl" PERL_LANG EnableMLS Line Comment = # Line Comment Preceding Chars = [~[^]^^$/\(] Block Comment On = =pod Block Comment Off = =cut Block Comment On Alt = =item Block Comment Off Alt = =cut Escape Char = \ File Extensions = CGI PL PM PLX
+/L6"XML" XML_LANG Noquote Block Comment On = <!-- Block Comment Off = --> File Extensions = XML XUL XSD XSL XSLT WSDL CONFIG SSS
+/L7"C#" CSHARP_LANG Line Comment = // Block Comment On = /* Block Comment Off = */ Escape Char = \ String Chars = "' String Literal Prefix = @ File Extensions = CS
+/L8"PHP" PHP_LANG Nocase EnableMLS Line Comment = // Line Comment Alt = # Block Comment On = /* Block Comment Off = */ Escape Char = \ String Chars = "' File Extensions = PHP3 PHP4 PHP5
+/L9"JavaScript" JSCRIPT_LANG Line Comment = // Block Comment On = /* Block Comment Off = */ Escape Char = \ String Chars = '" File Extensions = JS
+/L10"VBScript ASP" ASP_LANG Nocase Line Comment = ' Line Comment Alt = REM Block Comment On = /* Block Comment Off = */ Block Comment On Alt = <!-- Block Comment Off Alt = --> String Chars = " File Extensions = VBS
+/L11"CSS" CSS_LANG Nocase Block Comment On = /* Block Comment Off = */ String Chars = "' Escape Char = \ DisableMLS File Extensions = CSS
+/L12"LISP" Line Comment = ; Block Comment On = #| Block Comment Off = |# String Chars = " File Extensions = lsp LSP
+/L13"MySQL 5.1" SQL_LANG Nocase Line Comment = # Line Comment Alt = -- Block Comment On = /* Block Comment Off = */ Escape Char = \ File Extensions = SQL
+/L14"ini" Line Comment = ; Nocase String Chars = ' File Extensions = ini
+/L15"Verilog 1364-2001" Line Comment = // Block Comment On = /* Block Comment Off = */ String Chars = " File Extensions = SV SVL
+/L16"Ruby" RUBY_LANG Line Comment = # Block Comment On = =begin Block Comment Off = =end String Chars='" Escape Char = \ File Extensions = rb rbw
+/L17"tcl" TCL_LANG Line Comment = # String Chars = "' Escape Char = \ DisableMLS File Extensions = TCL TK DO LPF SDC QSF LIC
+/L18"verilog" VERILOG_LANG Line Comment = // Block Comment On = /* Block Comment Off = */ String Chars = " File Extensions = V VL VMD VH
+/L19"VHDL93" Line Comment = -- Nocase String Chars = " File Extensions = VHD VHO BSD
+/L20"Python" PYTHON_LANG Line Comment = # Escape Char = \ String Literal Prefix = r File Extensions = PY PYW
+/L21"Ruby" RUBY_LANG Line Comment = # Block Comment On = =begin Block Comment Off = =end String Chars='" Escape Char = \ File Extensions = rb rbw
+/L22"pBlaze_Assembly" PSM_LANG Line Comment = ; String Chars = " File Extensions = psm fmt log
+/L23"UCF" UCF_LANG Line Comment = # String Chars = " File Extensions = UCF NCF PCF LPC
+/L24"Batch" Nocase Line Comment Num = 4rem  Line Comment Alt = :: Line Comment Valid Columns Alt = [1] String Chars = " DisableMLS File Extensions = BAT CMD SYS
+/L25"AutoHotkey" Line Comment = ; Line Comment Preceding Chars = [~`] Escape Char = ` String Chars = " Block Comment On = /* Block Comment Off = */ File Extensions = ahk coe
+/L26"IDM Wordfiles" Line Comment = # Noquote File Extensions = UEW
+/L27"svf" SVF_LANG Line Comment = // Line Comment Alt = ! String Chars = " File Extensions = SVF
+/L28"Markdown" Nocase EnableSpellasYouType Line Comment Num = 4     Line Comment Valid Columns = [1] Line Comment Alt = > Line Comment Valid Columns Alt = [1] Block Comment On Alt = ``` String Chars = " EnableMLS File Extensions = MD MARKDOWN
+/L29"UE/UES Macros" Noquote Line Comment = // Line Comment Valid Columns = [1] Block Comment On = /*! Block Comment Off = !*/ File Extensions = UEM
+/L30"Matlab" Nocase MATLAB_LANG Line Comment = % Block Comment On = %{ Block Comment Off = %} String Chars = ' DisableMLS File Extensions = m asv
+/L31"X-JTAG" Line Comment = // Block Comment On = /* Block Comment Off = */ File Extensions = xje pdd
+/L32"test" TEST_LANG Line Comment = // Block Comment On = /* Block Comment Off = */ String Chars = " File Extensions = test
+/L33"Makefiles" Line Comment = # String Chars = "' File Extensions = MAK MK
+/L34"xdc" TCL_LANG Line Comment = # String Chars = "' Escape Char = \ DisableMLS File Extensions = XDC SDC
