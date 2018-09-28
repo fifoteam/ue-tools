@@ -1,17 +1,7 @@
-/L9"JavaScript" JSCRIPT_LANG Line Comment = // Block Comment On = /* Block Comment Off = */ Escape Char = \ String Chars = '" File Extensions = JS TS
-/TGBegin "Functions"
-/TGFindStr = "^[ \t]*function[ \t]*(\w+[ \t]*)\(.*\)"
-/TGFindStr = "^[ \t]*function[ \t]*(\w+[ \t]*)\([^\)]*?\)"
-/TGBegin "Parameters"
-/TGFindStr = "[ \t\n]*([^,\s]+)"
-/TGFindBStart = "\("
-/TGFindBEnd = "\)"
-/TGEnd
-/TGEnd
-/TGBegin "Anonymous Functions"
-/TGFindStr = "(?:var[ \t]+)?((?:[\w\.]+))[ \t]*?[:=][ \t]*?function[ \t]*?\([^\)]*?\)"
-/TGEnd
-/Regexp Type = Perl
+/L9"JavaScript" JSCRIPT_LANG Line Comment = // Block Comment On = /* Block Comment Off = */ Escape Char = \ String Chars = '" File Extensions = JS
+/Function String = "%[ ^t]++function[ ^t]++^([a-zA-Z_][a-zA-Z_0-9]++[^t ]++(*)^)"
+/Function String 1 = "%[ ^t]++^(*^)=[ ^t]++function[ ^t]++(*)"
+/Function String 2 = "%[ ^t]++^(*^):[ ^t]++function[ ^t]++(*)"
 /Delimiters = ! "	%&'()*+,-./:;<=>?@[\]^{|}~
 /Indent Strings = "{" "else"
 /Unindent Strings = "}"
@@ -82,7 +72,7 @@ call callee caller cancelBubble captureEvents ceil charAt charCodeAt charset che
 classes clear clearInterval clearTimeout click clientInformation clientX clientY close closed colorDepth
 compile complete concat confirm constructor contains contextual cookie cos crypto ctrlKey current
 data defaultCharset defaultChecked defaultSelected defaultStatus defaultValue description
-disableExternalCapture disablePrivilege display domain delAllEmptyLines delAllEmptyAndWhitespaceOnlyLines
+disableExternalCapture disablePrivilege display domain
 element elements embeds enableExternalCapture enablePrivilege enabledPlugin encoding escape eval event
 exec exp expando
 fgColor fileName find fixed floor focus fontColor fontSize form forms forward frames fromCharCode
@@ -170,7 +160,6 @@ gotoEndOfPrevWordSelect gotoLine gotoLineSelect gotoPage gotoPageSelect gotoPos 
 hexDelete hexInsert hexOff hexOn hideOrShowLines
 insertLine insertMode insertPageBreak insertTemplate invertCase isChar isCharGt isColNum isColNumGt
 isEof isExt isFTP isFound isHexModeOn isName isNotFound isReadOnly isSel isWordWrap
-jsonCompressDocument jsonFormatDocument
 key
 matchBrace messageBox moveLineDown moveLineUp
 newFile

@@ -1,4 +1,7 @@
 /L9"JavaScript" JSCRIPT_LANG Line Comment = // Block Comment On = /* Block Comment Off = */ Escape Char = \ String Chars = '" File Extensions = JS TS
+/TGBegin "Anonymous Functions"
+/TGFindStr = "^[ \t]*(?:([\w \t\.\[\]]+)[ \t]*[=:][ \t]*){1,5}function[ \t]*\([^\)]*\)"
+/TGEnd
 /TGBegin "Functions"
 /TGFindStr = "^[ \t]*function[ \t]*(\w+[ \t]*)\(.*\)"
 /TGFindStr = "^[ \t]*function[ \t]*(\w+[ \t]*)\([^\)]*?\)"
@@ -7,9 +10,6 @@
 /TGFindBStart = "\("
 /TGFindBEnd = "\)"
 /TGEnd
-/TGEnd
-/TGBegin "Anonymous Functions"
-/TGFindStr = "(?:var[ \t]+)?((?:[\w\.]+))[ \t]*?[:=][ \t]*?function[ \t]*?\([^\)]*?\)"
 /TGEnd
 /Regexp Type = Perl
 /Delimiters = ! "	%&'()*+,-./:;<=>?@[\]^{|}~
@@ -82,7 +82,7 @@ call callee caller cancelBubble captureEvents ceil charAt charCodeAt charset che
 classes clear clearInterval clearTimeout click clientInformation clientX clientY close closed colorDepth
 compile complete concat confirm constructor contains contextual cookie cos crypto ctrlKey current
 data defaultCharset defaultChecked defaultSelected defaultStatus defaultValue description
-disableExternalCapture disablePrivilege display domain delAllEmptyLines delAllEmptyAndWhitespaceOnlyLines
+disableExternalCapture disablePrivilege display domain
 element elements embeds enableExternalCapture enablePrivilege enabledPlugin encoding escape eval event
 exec exp expando
 fgColor fileName find fixed floor focus fontColor fontSize form forms forward frames fromCharCode

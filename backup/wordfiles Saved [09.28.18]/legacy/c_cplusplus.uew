@@ -1,34 +1,31 @@
 /L1"C/C++" C_LANG Line Comment = // Block Comment On = /* Block Comment Off = */ Escape Char = \ String Chars = "' File Extensions = C CPP CC CXX H HPP AWK
-/TGBegin "Typedefs"
-/TGFindStr = "^[ \t]*typedef[ \t]+(?:struct|union|enum)[ \t]+(?:\w+[ \t]+)?\{(?s:.+?)\}[ \t]*(\w+);"
-/TGFindStr = "^[ \t]*typedef[ \t]+(?:[\w*[\]]+[ \t]+)+(\w+);"
-/TGEnd
-/TGBegin "Macros"
-/TGFindStr = "^[ \t]*#define[ \t]+(\w+)\("
-/TGEnd
-/TGBegin "Prototypes"
-/TGFindStr = "^(?:\w+[ \t]+)+[ *]*(\w+)[ \t]*\([^)]*\);"
-/TGEnd
 /TGBegin "Functions"
-/TGFindStr = "^(?!if\b|else\b|while\b|[\s*])(?:[\w*~_&]+?\s+){1,6}([\w:*~_&]+\s*)\([^();]*\)[^{;]*?(?:^[^\r\n{]*;?[\s]+){0,10}\{"
+/TGFindStr = "%^([a-z_][a-z_0-9^[^]*]++^)[ ^t^p^r^n]++([~)]++)[~;{()]+[^p^r^n ^t]++[~/]++{[~}]"
+/TGFindStr = "%[ ^t]++^([a-z_][a-z_0-9]++::[a-z_^~][:a-z_0-9]++^)[ ^t^p]++([^p*&:, ^t^[^]/*^-'=:&a-z_0-9./(!]++)[~;{]++{"
+/TGFindStr = "%[ ^t]++[a-z_][:a-z_0-9^[^]*&]++[ ^t]+^([a-z_][a-z_0-9]++::[a-z_^~][:a-z_0-9]++^)[ ^t^p]++([^p*&:, ^t^[^]/*^-'=:&a-z_0-9./(!]++)[~;]"
+/TGFindStr = "%[a-z_][a-z_0-9^[^]:&]++[ ^t*]+[*&]++^([a-z_][a-z_0-9]++^)[ ^t]++([^p*&:, ^t^[^]a-z_0-9\+-./(!]++)[~;]++$"
+/TGFindStr = "%[a-z_][:a-z_0-9*&$^[^]*]++[ ^t]+[a-z_][:a-z_0-9*&$^[^]]++[ ^t*]+[*&]++^([a-z_][a-z_0-9]++^)[ ^t]++([^p*&:, ^t^[^]a-z_0-9./(!]++)+[~;]"
+/TGFindStr = "%[a-z_][:a-z_0-9^[^]*&]++[ ^t]+[a-z_][:a-z_0-9*&^[^]]++[ ^t]+[a-z_][:a-z_0-9*&^[^]]++[ ^t]+[*&]++^([a-z_][a-z_0-9]++^)[ ^t]++([^p*&:, ^t^[^]a-z_0-9./(!]++)[~;]"
+/TGFindStr = "%[a-z_][:a-z_0-9^[^]*&]++[ ^t]+[a-z_][:a-z_0-9*&^[^]]++[ ^t]+[a-z_][:a-z_0-9*&^[^]]++[ ^t]+[a-z_][:a-z_0-9*&^[^]]++[ ^t]+[*&]++^([a-z_][a-z_0-9]++^)[ ^t]++([^p*&:, ^t^[^]a-z_0-9./(!]++)[~;]"
 /TGBegin "Parameters"
-/TGFindStr = "\s*([^,]+)"
-/TGFindBStart = "\("
-/TGFindBEnd = "\)"
+/TGFindStr = "[ ^t^p]++^([~,]+^)"
+/TGFindBStart = "("
+/TGFindBEnd = ")"
 /TGEnd
 /TGBegin "Variables"
-/TGFindStr = "^[ \t]*((?:static[ \t*]+)?(?:const[ \t*]+)?(?:(?:un)?signed[ \t*]+)?(?:long[ \t*]+)?[a-z0-9_]+[ \t*&]+[a-z0-9[\]_]+);"
-/TGFindBStart = "\{"
-/TGFindBEnd = "\}"
-/TGFindStr = "^[ \t]*((?:static[ \t*]+)?(?:const[ \t*]+)?(?:(?:un)?signed[ \t*]+)?(?:long[ \t*]+)?[a-z0-9_]+[ \t*&]+[a-z0-9[\]_]+)[ \t]*=.+;"
-/TGFindBStart = "\{"
-/TGFindBEnd = "\}"
+//type name;
+/TGFindStr = "%[ ^t]++^([a-z0-9_]+[ ^t^*]+[a-z0-9^[^]_]+^);"
+/TGFindBStart = "{"
+/TGFindBEnd = "}"
+//type name = init;
+/TGFindStr = "%[ ^t]++^([a-z0-9_]+[ ^t^*]+[a-z0-9^[^]_]+^)[ ^t]++=*;"
+/TGFindBStart = "{"
+/TGFindBEnd = "}"
 /TGEnd
 /TGEnd
-/Regexp Type = Perl
 /Delimiters = ! "	%&'()*+,-./:;<=>?@[\]^{|}~
-/Member String = "([a-z0-9_:.]+)[ \t*&]+\$S[ \t[\]a-z0-9_]*[();,]"
-/Variable String = "^[ \t]*([!-ÿ~ \t<>]+[^a-z\r\n])$S[ \t;,()\-]"
+/Member String = "^([a-z0-9_:.]+^)[ ^t^*&]+$S[ ^t^[^]a-z0-9_]++[();,]"
+/Variable String = "^([!-ÿ~ ^t<>]+[~a-z^p]^)$S[ ^t;,()^-]"
 /Indent Strings = "{" "if" "else" ":"
 /Unindent Strings = "}"
 /Open Brace Strings =  "{" "(" "["

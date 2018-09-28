@@ -14,7 +14,7 @@ FORTRAN_LANG
 HTML_LANG
 JAVA_LANG JSCRIPT_LANG JSON_LANG
 LATEX_LANG
-MARKDOWN_LANG MASM_LANG MATLAB_LANG
+MASM_LANG MATLAB_LANG
 NASM_LANG
 PASCAL_LANG PERL_LANG PHP_LANG PLB_LANG PUREBASIC_LANG PYTHON_LANG
 RUBY_LANG
@@ -42,14 +42,12 @@ Valid
 =
 /C6"Keywords 2"
 // /Close /Colors /Delimiters /Font /Function /Ignore /Indent /LanguageMarker /Marker /Member /Open
-// /Regexp /Strip /TGBegin /TGEnd /TGFindBEnd /TGFindBStart /TGFindStr /TGFindBEnd /Unindent /Variable
-// /Word
+// /Regexp /TGBegin /TGEnd /TGFindBEnd /TGFindBStart /TGFindStr /TGFindBEnd /Unindent /Variable
 Auto
 Back Brace
-Characters Colors Comments
+Characters Colors
 Fold Font
-Include
-Select SOL String Strings Style
+SOL String Strings Style
 Type
 /C7"Styles"
 STYLE_ATTRIBUTE STYLE_COMMAND STYLE_ELEMENT STYLE_EVENT STYLE_EXTENSION STYLE_FUNCTION STYLE_IDENTIFIER

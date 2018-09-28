@@ -1,5 +1,4 @@
 /L18"verilog" VERILOG_LANG Line Comment = // Block Comment On = /* Block Comment Off = */ String Chars = " File Extensions = V VL VMD VH
-
 /TGBegin "Function"
 /TGFindStr = "%[ ^t]++^(config[ ^t^p]+[a-zA-Z0-9_]+^)"
 /TGFindStr = "%[ ^t]++^(module[ ^t^p]+[a-zA-Z0-9_]+^)[ ^t^p]++[(;#]"
@@ -7,18 +6,14 @@
 /TGFindStr = "%[ ^t]++^(function[ ^t^p]+[~(;]+^)[ ^t^p]++[(;#]"
 /TGFindStr = "%[ ^t]++^(primitive[ ^t^p]+[~(;]+^)[ ^t^p]++[(;#]"
 /TGFindStr = "begin[ ^t^p]++^(:[ ^t^p]++[a-zA-Z0-9_]+^)"
-/TGFindStr = "%[ ^t]++//+^([ ^t]++[-*]++[ ^t]++ref[ ^t]+[~^p]+^)"
-/TGFindStr = "%[ ^t]++//+^([ ^t]++[-*]++[ ^t]++ref[ ^t]+[- )(a-zA-Z0-9_^t?*]+^)"
+/TGFindStr = "%[ ^t]++[//]+^([ ^t]++ref[ ^t^p]+[~(;]+^)[ ^t^p]++[(;#]"
 /TGFindStr = "%[ ^t]++^([ )a-zA-Z0-9_^t]+_inst[(]++[ ^t^p]+^)"
 /TGEnd
 /Delimiters = ~!@%^&*()-+=|\/{}[]:;"<> ,	#
-
-
 /Indent Strings = "module" "generate" "begin" "case" "fork" "specify" "table" "config" "function" "`ifdef" "`ifndef" "`elsif" "`else" "task"
 /Unindent Strings = "endmodule" "endgenerate" "end" "endcase" "join" "endspecify" "endtable" "endconfig" "endfunction" "`elsif" "`endif" "`else" "endtask"
 /Open Fold Strings = "module" "task" "function" "generate" "primitive" "begin" "case" "fork" "specify" "table" "config" "`ifdef" "(" "{" "`ifdef" "`ifndef"
 /Close Fold Strings = "endmodule" "endtask" "endfunction" "endgenerate" "endprimitive" "end" "endcase" "join" "endspecify" "endtable" "endconfig" "`endif" ")" "}" "`endif"
-
 /C1"Keywords"
 always and assign automatic
 begin buf bufif0 bufif1
