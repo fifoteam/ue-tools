@@ -1,4 +1,7 @@
 /L18"verilog" VERILOG_LANG Line Comment = // Block Comment On = /* Block Comment Off = */ String Chars = " File Extensions = V VL VMD VH
+
+/Strip Comments = No
+
 /TGBegin "Function"
 /TGFindStr = "%[ ^t]++^(config[ ^t^p]+[a-zA-Z0-9_]+^)"
 /TGFindStr = "%[ ^t]++^(module[ ^t^p]+[a-zA-Z0-9_]+^)[ ^t^p]++[(;#]"
@@ -6,7 +9,7 @@
 /TGFindStr = "%[ ^t]++^(function[ ^t^p]+[~(;]+^)[ ^t^p]++[(;#]"
 /TGFindStr = "%[ ^t]++^(primitive[ ^t^p]+[~(;]+^)[ ^t^p]++[(;#]"
 /TGFindStr = "begin[ ^t^p]++^(:[ ^t^p]++[a-zA-Z0-9_]+^)"
-/TGFindStr = "%[ ^t]++[//]+^([ ^t]++ref[ ^t^p]+[~(;]+^)[ ^t^p]++[(;#]"
+/TGFindStr = "%[ ^t]++//^([ ^t]++[~^p]++[ ^t]++ref[ ^t]++[~^p]++^)"
 /TGFindStr = "%[ ^t]++^([ )a-zA-Z0-9_^t]+_inst[(]++[ ^t^p]+^)"
 /TGEnd
 /Delimiters = ~!@%^&*()-+=|\/{}[]:;"<> ,	#
