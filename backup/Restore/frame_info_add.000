@@ -1,0 +1,786 @@
+//-------------------------------------------------------------------------------------------------
+//  -- 版权所有者   : 中国大恒（集团）有限公司北京图像视觉技术分公司, 2010 -2015.
+//  -- 保密级别     ：绝密.
+//  -- 部门         : 硬件部，FPGA工作组
+//  -- 模块名       : frame_info_add
+//  -- 设计者       : 邢海涛
+//-------------------------------------------------------------------------------------------------
+//
+//  -- 版本记录 :
+//
+//  -- 作者         :| 版本号	:| 修改日期				:|  修改说明
+//-------------------------------------------------------------------------------------------------
+//  -- 邢海涛       :| V1.0		:| 2018/7/30 10:35:05	:|  划分模块端口
+//-------------------------------------------------------------------------------------------------
+//
+//  -- 模块描述     :
+//              1)  : daheng imaging 协议规范，定义了图像信息格式、图像统计格式
+//
+//              2)  : 1v表示 version 1.x ，1表示大版本号，该版本号升级表示不再向下兼容，x表示小版本号，升级该版本号表示继续向下兼容
+//
+//              3)  : 升级该模块时应该尽量保持向下兼容。修改parameter，修改端口，视为兼容。向后添加协议，视为兼容。修改之前的协议，视为不兼容。
+//
+//-------------------------------------------------------------------------------------------------
+//`include			"frame_info_add_def.v"
+//仿真单位/精度
+`timescale 1ns/1ps
+//-------------------------------------------------------------------------------------------------
+module frame_info_add # (
+	parameter	STATIS_VALID								= "FALSE"	,	//TRUE-statis段中的数据需要计算，FALSE-statis段中的数据填充为0
+	parameter	INFO_WAIT_TIME								= 16		,	//从i_fval上升沿到info_flag之间的距离，以clk为单位
+	parameter	IMAGE_WAIT_TIME								= 16		,	//从info_flag到image_flag之间的距离，以clk为单位
+	parameter	STATIS_WAIT_TIME							= 16		,	//从i_fval下降沿到statis_flag之间的距离，以clk为单位
+	parameter	FVAL_FALL_WAIT_TIME							= 16		,	//从statis_flag到i_fval下降沿之间的距离，以clk为单位
+	parameter	BID_INIT_VALUE								= 1			,	//开流之后，BID第一个是多少，U3是0，gige是1
+	parameter	INFO_SIZE									= 256		,	//INFO段数据量，以byte为单位
+	parameter	STATIS_SIZE									= 256		,	//STATIS段数据量，以byte为单位
+	parameter	MROI_MAX_NUM 								= 4			,	//Multi-ROI的最大个数,最大支持32
+	parameter	DATA_WD										= 256		,	//数据位宽，支持64、128、256、512
+	parameter	MROI_OFFSET_WD								= 96		,	//Multi-ROI模式下所有roi偏移位宽之和
+	parameter	MROI_IMAGE_SIZE_WD							= 96		,	//Multi-ROI模式下所有roi image size位宽之和
+	parameter	SHORT_REG_WD   								= 16		,	//短寄存器位宽
+	parameter	REG_WD  						 			= 32		,	//寄存器位宽
+	parameter	LONG_REG_WD  						 		= 64			//长寄存器位宽
+	)
+	(
+	//  -------------------------------------------------------------------------------------
+	//  时钟和复位信号
+	//  -------------------------------------------------------------------------------------
+	input							clk									,	//工作时钟
+	input							reset								,	//工作时钟域的复位信号，高有效
+	//  -------------------------------------------------------------------------------------
+	//  输入数据
+	//  -------------------------------------------------------------------------------------
+	input							i_fval								,	//clk时钟域，场有效信号，高有效
+	input							i_dval								,	//clk时钟域，数据有效信号，高有效，数据有效不像行信号一样连续，可以是断续的信号
+	input	[DATA_WD-1:0]			iv_pix_data							,	//clk时钟域，图像数据，位宽可变，支持64 128 256 512
+	//  -------------------------------------------------------------------------------------
+	//  控制数据
+	//  -------------------------------------------------------------------------------------
+	input							i_stream_enable						,	//clk时钟域，流停止信号，高有效
+	input							i_mroi_global_en					,	//clk时钟域，multi-roi全局打开使能，高有效
+	input	[REG_WD-1:0]			iv_mroi_single_en					,	//clk时钟域，multi-roi单独roi的使能位，高有效
+	//  -------------------------------------------------------------------------------------
+	//  输出数据
+	//  -------------------------------------------------------------------------------------
+	output							o_fval								,	//clk时钟域，场有效信号，高有效
+	output							o_dval								,	//clk时钟域，数据有效信号，高有效，数据有效不像行信号一样连续，可以是断续的信号
+	output							o_info_flag							,	//clk时钟域，信息段标志，高有效
+	output							o_image_flag						,	//clk时钟域，图像段标志，高有效
+	output							o_statis_flag						,	//clk时钟域，统计段标志，高有效
+	output	[DATA_WD-1:0]			ov_data								,	//clk时钟域，图像数据，位宽可变，支持64 128 256
+	//  -------------------------------------------------------------------------------------
+	//  打包信息输入
+	//  -------------------------------------------------------------------------------------
+	//	input	[LONG_REG_WD-1:0]		iv_block_id							,	//clk时钟域，block id，本模块自己生成
+	input	[LONG_REG_WD-1:0]		iv_timestamp						,	//未知时钟域，time stamp，保证在添加的时候已经准备好，通过时钟约束的方法保证数据采集正确
+	input	[LONG_REG_WD-1:0]		iv_frame_interval					,	//未知时钟域，frame interval，保证在添加的时候已经准备好，通过时钟约束的方法保证数据采集正确
+	input	[REG_WD-1:0]			iv_pixel_format						,	//clk时钟域，pixel format
+	input	[MROI_OFFSET_WD-1:0]	iv_single_roi_offset_x				,	//clk时钟域，roi相对于原始图像的横向坐标位置偏移，单位是像素
+	input	[MROI_OFFSET_WD-1:0]	iv_single_roi_offset_y				,	//clk时钟域，roi相对于原始图像的纵向坐标位置偏移，单位是像素
+	input	[MROI_OFFSET_WD-1:0]	iv_single_roi_width					,	//clk时钟域，roi宽度，单位是像素
+	input	[MROI_OFFSET_WD-1:0]	iv_single_roi_height				,	//clk时钟域，roi高度，单位是像素
+	input	[MROI_IMAGE_SIZE_WD-1:0]iv_single_roi_image_size			,	//clk时钟域，roi图像大小，以byte为单位
+	input	[MROI_IMAGE_SIZE_WD-1:0]iv_single_roi_payload_size			,	//clk时钟域，roi图+chunk像大小，以byte为单位
+	input							i_chunk_mode_active					,	//clk时钟域，chunk开关寄存器
+	input							i_chunkid_en_img					,	//clk时钟域，image开关寄存器
+	input							i_chunkid_en_fid					,	//clk时钟域，frame id开关寄存器
+	input							i_chunkid_en_ts						,	//clk时钟域，时间戳开关寄存器
+	input							i_chunkid_en_fint					,	//clk时钟域，frame interval开关寄存器
+	input	[REG_WD-1:0]			iv_except_payload_size					//clk时钟域，要写入到帧存的image size
+	);
+
+
+	//	ref paramters
+
+
+	//	-------------------------------------------------------------------------------------
+	//	计算出数据位宽对应的字节个数
+	//	-------------------------------------------------------------------------------------
+	localparam	BYTE_NUM			= DATA_WD/8;
+	//	-------------------------------------------------------------------------------------
+	//	计算出MROI_CNT的位宽
+	//	-------------------------------------------------------------------------------------
+	localparam	MROI_CNT_WD			= log2(MROI_MAX_NUM+1);
+	//	-------------------------------------------------------------------------------------
+	//	计算出BYTE_CNT的位宽
+	//	-------------------------------------------------------------------------------------
+	localparam	BYTE_CNT_WD			= log2(max(INFO_SIZE,STATIS_SIZE)+1);
+	//	-------------------------------------------------------------------------------------
+	//	计算出WAIT_CNT的位宽
+	//	-------------------------------------------------------------------------------------
+	localparam	WAIT_CNT_WD			= log2(max(max(INFO_WAIT_TIME,IMAGE_WAIT_TIME),max(STATIS_WAIT_TIME,FVAL_FALL_WAIT_TIME))+1);
+
+
+	//FSM Parameter Define
+	parameter	S_IDLE		= 2'd0;
+	parameter	S_WAIT		= 2'd1;
+	parameter	S_FLAG		= 2'd2;
+
+	reg		[1:0]	current_state	= S_IDLE;
+	reg		[1:0]	next_state		= S_IDLE;
+
+	//FSM for sim
+	// synthesis translate_off
+	reg		[127:0]			state_ascii;
+	always @ ( * ) begin
+		case(current_state)
+			2'd0 	:	state_ascii	= "S_IDLE";
+			2'd1 	:	state_ascii	= "S_WAIT";
+			2'd2 	:	state_ascii	= "S_FLAG";
+			default	:	state_ascii	= "ERROR";
+		endcase
+	end
+	// synthesis translate_on
+
+	//	ref functions
+	//	-------------------------------------------------------------------------------------
+	//	取对数，上取整
+	//	log2取对数的时候，有两种情况。分别是计算计数器的位宽和计算通道偏移的bit数
+	//	1.计算计数器的位宽，使用 y = log2(x+1)，当x=2^n时，y=n+1，可以表示0-2^(n+1)-1的数值
+	//	2.计算通道偏移的bit数，使用 y = log2(x)，当x=2^n时，y=n，可以表示0-2^n-1的数值
+	//	-------------------------------------------------------------------------------------
+	function integer log2 (input integer xx);
+		integer x;
+		begin
+			x	= xx-1 ;
+			for (log2=0;x>0;log2=log2+1) begin
+				x	= x >> 1;
+			end
+		end
+	endfunction
+
+	//	-------------------------------------------------------------------------------------
+	//	max取最大值
+	//	-------------------------------------------------------------------------------------
+	function integer max(input integer n1, input integer n2);
+		max = (n1 > n2) ? n1 : n2;
+	endfunction
+
+	//	-------------------------------------------------------------------------------------
+	//	cycle_acc_minus 循环累加函数，累加之后再减1
+	//	-------------------------------------------------------------------------------------
+	function integer cycle_acc_minus;
+		input integer	in_cnt;
+		integer	i;
+
+		begin
+			cycle_acc_minus	= 0 ;
+			for(i=0;i<32;i=i+1) begin
+				cycle_acc_minus	= cycle_acc_minus + in_cnt[i];
+			end
+			cycle_acc_minus	= cycle_acc_minus - 1;
+		end
+	endfunction
+
+
+	//	ref signals
+	reg										fval_dly			= 1'b0;		//fval延时
+	wire									fval_rise			;			//fval上升沿
+	wire									fval_fall			;			//fval下降沿
+	reg										se_reg				= 1'b0;		//se信号
+	reg										se_reg_dly			= 1'b0;		//se延迟信号
+	wire									se_reg_fall			;			//se下降沿
+	wire	[63:0]							blockid				;			//blockid，实际上就是adder_a，8byte位宽
+	wire	[46:0]							adder_a				;			//adder输入，作为blockid
+	wire	[0:0]							adder_b				;			//adder输入，1bit
+	reg										adder_ce			= 'b0;		//adder使能
+	wire	[46:0]							adder_sum			;			//adder输出
+	reg		[REG_WD-1:0]					valid_payload_cnt	= 'b0;		//有效负载寄存器
+	wire	[SHORT_REG_WD-1:0]				status				;			//状态
+	reg		[1:0]							flag_cnt			= 'b0;		//flag_cnt表示当前在哪个flag状态下，比如 info image statis。0对应info，1对应image，2对应statis，3表示所有flag处理完
+	reg		[BYTE_CNT_WD-1:0]				byte_cnt			= 'b0;		//字节计数器，以byte为单位
+	reg		[MROI_CNT_WD-1:0]				roi_cnt				= 'b0;		//roi_cnt表示当前在info状态下，循环的次数。0对应第一个roi，1对应第二个roi
+	reg		[MROI_CNT_WD-1:0]				roi_num				= 'b0;		//roi_num表示共有多少个multi-roi，0表示有1个roi，1表示有2个roi
+	reg		[REG_WD-1:0]					mroi_single_en_reg	= 'b1;		//multi-roi 单个 roi开关信号
+	reg		[WAIT_CNT_WD-1:0]				wait_cnt			= 'b0;		//等待时间计数器
+	wire	[SHORT_REG_WD-1:0]				wv_width_lane			[MROI_MAX_NUM-1:0];		//width分通道
+	wire	[SHORT_REG_WD-1:0]				wv_height_lane			[MROI_MAX_NUM-1:0];		//height分通道
+	wire	[SHORT_REG_WD-1:0]				wv_offset_x_lane		[MROI_MAX_NUM-1:0];		//offset_x分通道
+	wire	[SHORT_REG_WD-1:0]				wv_offset_y_lane		[MROI_MAX_NUM-1:0];		//offset_y分通道
+	wire	[SHORT_REG_WD-1:0]				wv_image_size_lane		[MROI_MAX_NUM-1:0];		//image_size分通道
+	wire	[SHORT_REG_WD-1:0]				wv_payload_size_lane	[MROI_MAX_NUM-1:0];		//payload_size分通道
+	wire	[SHORT_REG_WD-1:0]				wv_chunk_en			;			//chunk_en
+	reg		[DATA_WD-1:0]					add_data			;			//info statis中添加的数据
+	reg										fval_reg			= 1'b0;		//输出的o_fval
+	reg										dval_reg			= 1'b0;		//输出的o_dval
+	reg										info_flag			= 1'b0;		//输出的o_info_flag
+	reg										image_flag			= 1'b0;		//输出的o_image_flag
+	reg										statis_flag			= 1'b0;		//输出的o_statis_flag
+	reg		[DATA_WD-1:0]					data_reg			= 'b0;		//输出的ov_data
+
+
+
+	//	ref ARCHITECTURE
+
+	//	===============================================================================================
+	//	ref key reg
+	//	===============================================================================================
+	//	-------------------------------------------------------------------------------------
+	//	ref edge
+	//	提取fval上升沿和下降沿
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		fval_dly	<= i_fval;
+	end
+	assign	fval_rise	= (fval_dly==1'b0 && i_fval==1'b1) ? 1'b1 : 1'b0;
+	assign	fval_fall	= (fval_dly==1'b1 && i_fval==1'b0) ? 1'b1 : 1'b0;
+
+	//	-------------------------------------------------------------------------------------
+	//	ref se_reg
+	//	se_reg记录曾经发生过的停流操作，当发生停流操作时要复位BID直到se打开且fval上升沿来了
+	//	1.当se=0时，se_reg=0
+	//	2.当se=1且fval_rise=1，se_reg=1
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		if(i_stream_enable==1'b0) begin
+			se_reg	<= 1'b0;
+		end
+		else begin
+			if(fval_rise==1'b1) begin
+				se_reg	<= 1'b1;
+			end
+		end
+	end
+
+	//	-------------------------------------------------------------------------------------
+	//	提取se_reg的下降沿
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		se_reg_dly	<= se_reg;
+	end
+	assign	se_reg_fall	= (se_reg_dly==1'b1 && se_reg==1'b0) ? 1'b1 : 1'b0;
+
+	//	-------------------------------------------------------------------------------------
+	//	ref bid
+	//	BID计数器按照47位设计，BID最大值为140737488355327，假设帧率为1000fps，在4462年之后才会溢出。
+	//	按照gige vision 1.2和usb3 vision 1.0.1的规定，当停流时需要复位BID，开流后的第一帧为0（gige）或者1(usb3)。
+	//	1.	当se_reg=0时，BID复位为初始值，初始值由参数定义
+	//	2.	当se_reg=1时，在flag状态下，且flag_cnt=0。当一个roi的数据量满足info时，BID自增
+	//	3.	有可能在一帧之内出现se=1 se=0 se=1的情况，因此BID的复位动作要一直保持到开流之后的第一帧
+	//	-------------------------------------------------------------------------------------
+
+	//	-------------------------------------------------------------------------------------
+	//	adder_a是累加器的输入，位宽47bit
+	//	当停流时，adder_a复位
+	//	当开流时，adder_a=累加后的结果
+	//	-------------------------------------------------------------------------------------
+	assign	adder_a		= (se_reg==1'b0) ? BID_INIT_VALUE : adder_sum;
+	assign	blockid		= {17'b0,adder_a};
+	//	-------------------------------------------------------------------------------------
+	//	adder_b是累加器的输入，位宽1bit
+	//	由于在停流时，需要将adder_a传递到adder_sum，此时adder_b必须是0
+	//	当停流时，adder_b=0，累加无效
+	//	当开流时，adder_b=1，累加有效
+	//	-------------------------------------------------------------------------------------
+	assign	adder_b		= (se_reg==1'b0) ? 1'b0 : 1'b1;
+
+	//	-------------------------------------------------------------------------------------
+	//	adder_ce是累加器的使能位
+	//	1.当se_reg下降沿时，adder_a复位，此时adder_b=0，ce=1，adder_sum=adder_a，通过这种方法，复位adder_sum
+	//	2.当info状态时，一个info数据量填满之后，bid自增，adder_ce=1
+	//	3.其他状态下，ce不使能
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		if(se_reg_fall==1'b1) begin
+			adder_ce	<= 1'b1;
+		end
+		else if(current_state==S_FLAG && flag_cnt==0 && byte_cnt==INFO_SIZE-BYTE_NUM) begin
+			adder_ce	<= 1'b1;
+		end
+		else begin
+			adder_ce	<= 1'b0;
+		end
+	end
+
+	//	-------------------------------------------------------------------------------------
+	//	例化加法器
+	//	BID计数器按照47位设计，BID最大值为140737488355327，假设帧率为1000fps，在4462年之后才会溢出
+	//	1.adder_a 47bit
+	//	2.adder_b 1bit，每次加1，或者不加
+	//	3.adder_ce 1bit，使能，高有效
+	//	4.SCLR，复位，高有效，由于u3和gige的bid复位值不一样，因此不使用SCLR
+	//	5.adder_sum，47bit，累加和
+	//	-------------------------------------------------------------------------------------
+	frame_info_adder47 frame_info_adder47_inst (
+	.CLK		(clk			),
+	.A			(adder_a		),
+	.B			(adder_b		),
+	.CE			(adder_ce		),
+	.SCLR		(reset			),
+	.S			(adder_sum		)
+	);
+
+	//	-------------------------------------------------------------------------------------
+	//	ref valid payload cnt
+	//	该计数器属于statis专有，STATIS_VALID=="FALSE"时，该寄存器不会被例化
+	//	Valid payload size计数图像+chunk的大小，以byte为单位，位宽为32bit，当像素格式为mono10时，可以表示2000M的图像。
+	//	因为chunk中表示图像大小的位宽是4byte，因此没必要用位宽太大的计数器
+	//	1.当fval上升沿时，计数器清零
+	//	2.当fval=1且dval=1时，计数器累加
+	//	3.当fval下降沿时，根据chunk的状态，加上如下数值
+	//		a)i_chunk_mode_active=1，i_chunkid_en_ts=0，i_chunkid_en_fid=0，加8
+	//		b)i_chunk_mode_active=1，i_chunkid_en_ts=1，i_chunkid_en_fid=0，加24
+	//		c)i_chunk_mode_active=1，i_chunkid_en_ts=0，i_chunkid_en_fid=1，加24
+	//		d)i_chunk_mode_active=1，i_chunkid_en_ts=1，i_chunkid_en_fid=1，加40
+	//		e)其他，加0
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		if(fval_rise) begin
+			valid_payload_cnt	<= 'b0;
+		end
+		else if(i_fval==1'b1 && i_dval==1'b1) begin
+			valid_payload_cnt	<= valid_payload_cnt + BYTE_NUM;
+		end
+		else if(fval_fall) begin
+			if(i_chunk_mode_active==1'b1 && i_chunkid_en_ts==1'b0 && i_chunkid_en_fid==1'b0) begin
+				valid_payload_cnt	<= valid_payload_cnt + 8;
+			end
+			else if(i_chunk_mode_active==1'b1 && i_chunkid_en_ts==1'b1 && i_chunkid_en_fid==1'b0) begin
+				valid_payload_cnt	<= valid_payload_cnt + 24;
+			end
+			else if(i_chunk_mode_active==1'b1 && i_chunkid_en_ts==1'b0 && i_chunkid_en_fid==1'b1) begin
+				valid_payload_cnt	<= valid_payload_cnt + 24;
+			end
+			else if(i_chunk_mode_active==1'b1 && i_chunkid_en_ts==1'b1 && i_chunkid_en_fid==1'b1) begin
+				valid_payload_cnt	<= valid_payload_cnt + 40;
+			end
+		end
+	end
+
+	//	-------------------------------------------------------------------------------------
+	//	ref status
+	//	该计数器属于statis专有，STATIS_VALID=="FALSE"时，该寄存器不会被例化
+	//	-------------------------------------------------------------------------------------
+	assign	status	= (valid_payload_cnt>iv_except_payload_size) ? 16'ha101 : 16'h0;
+
+	//	-------------------------------------------------------------------------------------
+	//	ref	flag_cnt
+	//	flag_cnt表示当前在哪个flag状态下，比如 info image statis。0对应info，1对应image，2对应statis，3表示所有flag处理完。
+	//	1.在idle状态下，计数器清零
+	//	2.在flag状态下，当满足flag->wait条件时，则flag_cnt自增
+	//	3.其他状态下，保持
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		if(current_state==S_IDLE) begin
+			flag_cnt	<= 'b0;
+		end
+		else if(current_state==S_FLAG) begin
+			if(flag_cnt==0 && byte_cnt==INFO_SIZE-BYTE_NUM && roi_cnt==roi_num) begin
+				flag_cnt	<= flag_cnt + 1'b1;
+			end
+			else if(flag_cnt==1 && i_fval==1'b0) begin
+				flag_cnt	<= flag_cnt + 1'b1;
+			end
+			else if(flag_cnt==2 && byte_cnt==STATIS_SIZE-BYTE_NUM) begin
+				flag_cnt	<= flag_cnt + 1'b1;
+			end
+		end
+	end
+
+	//	-------------------------------------------------------------------------------------
+	//	ref byte_cnt
+	//	byte_cnt表示info段和statis段添加的数据量，以byte为单位
+	//	1.在idle状态下或者wait状态下，计数器清零
+	//	2.在flag状态下，当一个info段添加完了，计数器清零
+	//	3.在flag状态下，当flag_cnt=0时，此时为info段，则byte_cnt自增，自增单位是n个byte
+	//	4.在flag状态下，当flag_cnt=2时，此时为statis段，则byte_cnt自增，自增单位是n个byte
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		if(current_state==S_IDLE || current_state==S_WAIT) begin
+			byte_cnt	<= 'b0;
+		end
+		else if(current_state==S_FLAG && flag_cnt==0 && byte_cnt==INFO_SIZE-BYTE_NUM) begin
+			byte_cnt	<= 'b0;
+		end
+		else if(current_state==S_FLAG && flag_cnt==0) begin
+			byte_cnt	<= byte_cnt + BYTE_NUM;
+		end
+		else if(current_state==S_FLAG && flag_cnt==2) begin
+			byte_cnt	<= byte_cnt + BYTE_NUM;
+		end
+	end
+
+	//	-------------------------------------------------------------------------------------
+	//	ref	roi_cnt
+	//	roi_cnt表示当前在info状态下，循环的次数。0对应第一个roi，1对应第二个roi。
+	//	1.	在idle状态下，计数器清零
+	//	2.	在flag状态下，且flag_cnt==0。当一个roi的数据量满足info时，roi_cnt自增
+	//	3.	其他状态下，保持
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		if(current_state==S_IDLE) begin
+			roi_cnt	<= 'b0;
+		end
+		else begin
+			if(current_state==S_FLAG) begin
+				if(flag_cnt==0 && byte_cnt==INFO_SIZE-BYTE_NUM) begin
+					roi_cnt	<= roi_cnt + 1'b1;
+				end
+			end
+		end
+	end
+
+	//	-------------------------------------------------------------------------------------
+	//	ref	wait_cnt
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		if(current_state==S_WAIT) begin
+			wait_cnt	<= wait_cnt + 1'b1;
+		end
+		else begin
+			wait_cnt	<= 'b0;
+		end
+	end
+
+	//	===============================================================================================
+	//	ref multi roi
+	//	在fval上升沿时锁存i_mroi_global_en和iv_mroi_single_en，i_mroi_global_en=1表示multi-roi模式打开
+	//	roi0必须使能，即info0是必须添加的。roi1-roiN是可选的，根据iv_mroi_single_en的标识选择性添加info1-infoN
+	//	roi_num表示共有多少个multi-roi，0表示有1个roi，1表示有2个roi
+	//	===============================================================================================
+	always @ (posedge clk) begin
+		if(fval_rise) begin
+			if(i_mroi_global_en==1'b1) begin
+				mroi_single_en_reg	<= {iv_mroi_single_en[REG_WD-1:1],1'b1};
+				roi_num				<= cycle_acc_minus({iv_mroi_single_en[REG_WD-1:1],1'b1});
+			end
+			else begin
+				mroi_single_en_reg	<= {{(REG_WD-1){1'b0}},1'b1};
+				roi_num				<= 'b0;
+			end
+		end
+	end
+
+	//	===============================================================================================
+	//	ref add info
+	//	===============================================================================================
+	//	-------------------------------------------------------------------------------------
+	//	划分通道
+	//	-------------------------------------------------------------------------------------
+	genvar	i;
+	generate
+		for(i=0;i<MROI_MAX_NUM;i=i+1) begin
+			assign	wv_width_lane[i]		= iv_single_roi_width[SHORT_REG_WD*(i+1)-1:SHORT_REG_WD*i];
+			assign	wv_height_lane[i]		= iv_single_roi_height[SHORT_REG_WD*(i+1)-1:SHORT_REG_WD*i];
+			assign	wv_offset_x_lane[i]		= iv_single_roi_offset_x[SHORT_REG_WD*(i+1)-1:SHORT_REG_WD*i];
+			assign	wv_offset_y_lane[i]		= iv_single_roi_offset_y[SHORT_REG_WD*(i+1)-1:SHORT_REG_WD*i];
+			assign	wv_image_size_lane[i]	= iv_single_roi_image_size[SHORT_REG_WD*(i+1)-1:SHORT_REG_WD*i];
+			assign	wv_payload_size_lane[i]	= iv_single_roi_payload_size[SHORT_REG_WD*(i+1)-1:SHORT_REG_WD*i];
+		end
+	endgenerate
+
+	//	-------------------------------------------------------------------------------------
+	//	chunk信息拼接
+	//	-------------------------------------------------------------------------------------
+	assign	wv_chunk_en	= {8'b0,8'b0,8'b0,{3'b0,i_chunkid_en_fint,i_chunkid_en_ts,i_chunkid_en_fid,i_chunkid_en_img,i_chunk_mode_active}};
+
+	//	-------------------------------------------------------------------------------------
+	//	添加info信息和statis信息
+	//	1.如果 STATIS_VALID=="TRUE" ，则添加 info 信息 和 statis 信息
+	//	2.如果 STATIS_VALID=="FALSE" ，则只添加 info 信息
+	//	-------------------------------------------------------------------------------------
+	generate
+		if(STATIS_VALID=="TRUE") begin
+			always @ ( * ) begin
+				if(current_state==S_FLAG && flag_cnt==0) begin
+					case(byte_cnt)
+						0		: add_data		= {{{{16'b0},wv_offset_x_lane[roi_cnt]},{{16'b0},wv_height_lane[roi_cnt]}},{{{16'b0},wv_width_lane[roi_cnt]},iv_pixel_format},iv_timestamp,blockid};
+						32		: add_data		= {{{32'b0},{{16'b0},status}},iv_frame_interval,{wv_payload_size_lane[roi_cnt],wv_image_size_lane[roi_cnt]},{{{16'b0},wv_chunk_en},{{16'b0},wv_offset_y_lane[roi_cnt]}}};
+						default	: add_data		= 'b0;
+					endcase
+				end
+				else if(current_state==S_FLAG && flag_cnt==2) begin
+					case(byte_cnt)
+						0		: add_data		= {{64'b0},{64'b0},{{32'b0},{{16'b0},status}},{valid_payload_cnt,iv_except_payload_size}};
+						default	: add_data		= 'b0;
+					endcase
+				end
+				else begin
+					add_data		= 'b0;
+				end
+			end
+		end
+		else begin
+			always @ ( * ) begin
+				if(current_state==S_FLAG && flag_cnt==0) begin
+					case(byte_cnt)
+						0		: add_data		= {{{{16'b0},wv_offset_x_lane[roi_cnt]},{{16'b0},wv_height_lane[roi_cnt]}},{{{16'b0},wv_width_lane[roi_cnt]},iv_pixel_format},iv_timestamp,blockid};
+						32		: add_data		= {{{32'b0},{{16'b0},status}},iv_frame_interval,{wv_payload_size_lane[roi_cnt],wv_image_size_lane[roi_cnt]},{{{16'b0},wv_chunk_en},{{16'b0},wv_offset_y_lane[roi_cnt]}}};
+						default	: add_data		= 'b0;
+					endcase
+				end
+				else begin
+					add_data		= 'b0;
+				end
+			end
+		end
+	endgenerate
+
+	//	===============================================================================================
+	//	ref output
+	//	===============================================================================================
+	//	-------------------------------------------------------------------------------------
+	//	o_fval
+	//	1.在idle状态下，o_fval=0
+	//	2.在其他状态下，o_fval=1
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		if(current_state==S_IDLE) begin
+			fval_reg	<= 1'b0;
+		end
+		else begin
+			fval_reg	<= 1'b1;
+		end
+	end
+	assign	o_fval	= fval_reg;
+
+	//	-------------------------------------------------------------------------------------
+	//	o_dval
+	//	1.在idle和wait状态下，o_dval=0
+	//	2.在flag状态下，
+	//		a)当flag_cnt=0时，此时为info状态，如果当前roi_cnt有效，那么o_dval=1
+	//		b)当flag_cnt=1时，此时为image状态，o_dval=i_dval（打一拍）
+	//		c)当flag_cnt=2时，此时为status状态，o_dval=1
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		if(current_state==S_IDLE || current_state==S_WAIT) begin
+			dval_reg	<= 1'b0;
+		end
+		else if(current_state==S_FLAG) begin
+			if(flag_cnt==0 && mroi_single_en_reg[roi_cnt]==1'b1) begin
+				dval_reg	<= 1'b1;
+			end
+			else if(flag_cnt==1 && i_dval==1'b1) begin
+				dval_reg	<= 1'b1;
+			end
+			else if(flag_cnt==2) begin
+				dval_reg	<= 1'b1;
+			end
+		end
+	end
+	assign	o_dval	= dval_reg;
+
+	//	-------------------------------------------------------------------------------------
+	//	o_info_flag
+	//	1.在idle和wait状态下，o_info_flag=0
+	//	2.在flag状态下，
+	//		a)当flag_cnt=0时，此时为info状态，那么o_info_flag=1
+	//		b)其他情况o_info_flag=0
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		if(current_state==S_IDLE || current_state==S_WAIT) begin
+			info_flag	<= 1'b0;
+		end
+		else if(current_state==S_FLAG) begin
+			if(flag_cnt==0) begin
+				info_flag	<= 1'b1;
+			end
+			else begin
+				info_flag	<= 1'b0;
+			end
+		end
+	end
+	assign	o_info_flag	= info_flag;
+
+	//	-------------------------------------------------------------------------------------
+	//	o_image_flag
+	//	1.在idle和wait状态下，o_image_flag=0
+	//	2.在flag状态下，
+	//		a)当flag_cnt=1时，此时为image状态，那么o_image_flag=1
+	//		b)其他情况o_image_flag=0
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		if(current_state==S_IDLE || current_state==S_WAIT) begin
+			image_flag	<= 1'b0;
+		end
+		else if(current_state==S_FLAG) begin
+			if(flag_cnt==1) begin
+				image_flag	<= 1'b1;
+			end
+			else begin
+				image_flag	<= 1'b0;
+			end
+		end
+	end
+	assign	o_image_flag	= image_flag;
+
+	//	-------------------------------------------------------------------------------------
+	//	o_statis_flag
+	//	1.在idle和wait状态下，o_statis_flag=0
+	//	2.在flag状态下，
+	//		a)当flag_cnt=2时，此时为statis状态，那么o_statis_flag=1
+	//		b)其他情况o_statis_flag=0
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		if(current_state==S_IDLE || current_state==S_WAIT) begin
+			statis_flag	<= 1'b0;
+		end
+		else if(current_state==S_FLAG) begin
+			if(flag_cnt==2) begin
+				statis_flag	<= 1'b1;
+			end
+			else begin
+				statis_flag	<= 1'b0;
+			end
+		end
+	end
+	assign	o_statis_flag	= statis_flag;
+
+	//	-------------------------------------------------------------------------------------
+	//	ov_data
+	//	1.在idle和wait状态下，ov_data=0
+	//	2.在flag状态下，
+	//		a)当flag_cnt=0时，此时为info状态，那么ov_data按照frame_info协议添加信息
+	//		b)当flag_cnt=1时，此时为image状态，那么ov_data=iv_data（打一拍）
+	//		c)当flag_cnt=2时，此时为statis状态，那么ov_data按照frame_info协议添加信息
+	//		d)其他情况ov_data=0
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		if(current_state==S_IDLE || current_state==S_WAIT) begin
+			data_reg	<= 'b0;
+		end
+		else if(current_state==S_FLAG) begin
+			if(flag_cnt==0) begin
+				data_reg	<= add_data;
+			end
+			else if(flag_cnt==1) begin
+				data_reg	<= iv_pix_data;
+			end
+			else if(flag_cnt==2) begin
+				data_reg	<= add_data;
+			end
+			else begin
+				data_reg	<= 'b0;
+			end
+		end
+	end
+	assign	ov_data	= data_reg;
+
+	//	===============================================================================================
+	//	ref ***FSM***
+	//	===============================================================================================
+	//	-------------------------------------------------------------------------------------
+	//	FSM Sequential Logic
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		if(reset) begin
+			current_state	<= S_IDLE;
+		end
+		else begin
+			current_state	<= next_state;
+		end
+	end
+
+	//	-------------------------------------------------------------------------------------
+	//	FSM Conbinatial Logic
+	//	-------------------------------------------------------------------------------------
+	always @ ( * ) begin
+		case(current_state)
+			//	-------------------------------------------------------------------------------------
+			//	IDLE 空闲状态
+			//	IDLE-> WAIT
+			//	1.Fval_rise=1
+			//	-------------------------------------------------------------------------------------
+			S_IDLE	:
+			if(fval_rise==1'b1) begin
+				next_state	= S_WAIT;
+			end
+			else begin
+				next_state	= S_IDLE;
+			end
+			//	-------------------------------------------------------------------------------------
+			//	WAIT 进入一个新的FLAG状态时，需要等待的时间
+			//	WAIT-> FLAG
+			//	1.当flag_cnt=0时，此时处于INFO状态
+			//		a)Wait_cnt达到INFO的等待时间
+			//	2.当flag_cnt=1时，此时处于IMAGE状态
+			//		a)Wait_cnt达到IMAGE的等待时间
+			//	3.当flag_cnt=2时，此时处于SATIS状态
+			//		a)Wait_cnt达到STATIS的等待时间
+			//	WAIT-> IDLE
+			//	当flag=3时，表示STATIS
+			//	1.当flag_cnt=3时，表示STATIS已经处理完
+			//		a)Wait_cnt达到FVAL的等待时间
+			//	-------------------------------------------------------------------------------------
+			S_WAIT	:
+			if(flag_cnt==0) begin
+				if(wait_cnt==INFO_WAIT_TIME-1) begin
+					next_state	= S_FLAG;
+				end
+				else begin
+					next_state	= S_WAIT;
+				end
+			end
+			else if(flag_cnt==1) begin
+				if(wait_cnt==IMAGE_WAIT_TIME-1) begin
+					next_state	= S_FLAG;
+				end
+				else begin
+					next_state	= S_WAIT;
+				end
+			end
+			else if(flag_cnt==2) begin
+				if(wait_cnt==STATIS_WAIT_TIME-1) begin
+					next_state	= S_FLAG;
+				end
+				else begin
+					next_state	= S_WAIT;
+				end
+			end
+			else begin
+				if(wait_cnt==FVAL_FALL_WAIT_TIME-1) begin
+					next_state	= S_IDLE;
+				end
+				else begin
+					next_state	= S_WAIT;
+				end
+			end
+			//	-------------------------------------------------------------------------------------
+			//	FLAG 处理一个新的flag的数据
+			//	FLAG-> WAIT
+			//	1.当flag_cnt=0时，此时处于INFO状态
+			//		a)当INFO数据量添加完，且
+			//		b)当roi_cnt==roi_num
+			//	2.当flag_cnt=1时，此时处于IMAGE状态
+			//		a)当fval==0（此处不能用fval下降沿，因为如果是残帧，有可能看不到下降沿）
+			//	3.当flag_cnt=2时，此时处于STATIS状态
+			//		a)当STATIS数据量添加完
+			//	-------------------------------------------------------------------------------------
+			S_FLAG	:
+			if(flag_cnt==0) begin
+				if(byte_cnt==INFO_SIZE-BYTE_NUM && roi_cnt==roi_num) begin
+					next_state	= S_WAIT;
+				end
+				else begin
+					next_state	= S_FLAG;
+				end
+			end
+			else if(flag_cnt==1) begin
+				if(i_fval==1'b0) begin
+					next_state	= S_WAIT;
+				end
+				else begin
+					next_state	= S_FLAG;
+				end
+			end
+			else if(flag_cnt==2) begin
+				if(byte_cnt==STATIS_SIZE-BYTE_NUM) begin
+					next_state	= S_WAIT;
+				end
+				else begin
+					next_state	= S_FLAG;
+				end
+			end
+			else begin
+				next_state	= S_IDLE;
+			end
+			default	:
+			next_state	= S_IDLE;
+		endcase
+	end
+
+
+
+
+endmodule
