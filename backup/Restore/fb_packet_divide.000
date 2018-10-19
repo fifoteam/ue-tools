@@ -1,0 +1,589 @@
+//-------------------------------------------------------------------------------------------------
+//  -- 版权所有者   : 中国大恒（集团）有限公司北京图像视觉技术分公司, 2010 -2018.
+//  -- 保密级别     ：绝密.
+//  -- 部门         : 硬件部，FPGA工作组
+//  -- 模块名       : fb_packet_divide
+//  -- 设计者       : 张希伦
+//-------------------------------------------------------------------------------------------------
+//
+//  -- 版本记录 :
+//
+//  -- 作者         :| 版本号	:| 修改日期				:| 修改说明
+//-------------------------------------------------------------------------------------------------
+//  -- 张希伦       :| V1.0		:| 2018/9/5 13:40:12	:| 初始版本
+//-------------------------------------------------------------------------------------------------
+//
+//  -- 模块描述     :
+//              1)  : ... ...
+//
+//              2)  : ... ...
+//
+//              3)  : ... ...
+//
+//-------------------------------------------------------------------------------------------------
+//`include			"fb_packet_divide_def.v"
+//仿真单位/精度
+`timescale 1ns/1ps
+//-------------------------------------------------------------------------------------------------
+module fb_packet_divide # (
+	parameter	BYTE_ADDR_WD								= 27		,	//有效地址位宽，DDR3容量不同，位宽不同
+	parameter	PKT_LENGTH_WD								= 13			//packet length 包长寄存器宽度
+	)
+	(
+	//  -------------------------------------------------------------------------------------
+	//  时钟和复位信号
+	//  -------------------------------------------------------------------------------------
+	input							clk									,	//帧存模块工作时钟
+	input							reset								,	//帧存模块工作时钟域的复位信号，高有效
+	//  -------------------------------------------------------------------------------------
+	//  控制数据
+	//  -------------------------------------------------------------------------------------
+	input  	[PKT_LENGTH_WD-1:0]		iv_pkt_length						,	//clk时钟域，packet length 正常包包长
+	//  -------------------------------------------------------------------------------------
+	//  与 fb_read_plugins 交互协议 输入部分
+	//  -------------------------------------------------------------------------------------
+	output							o_ardy								,	//clk时钟域，地址准备好信号，高有效，有效时表示可以接受下一个地址
+	input							i_fval								,	//clk时钟域，场有效信号，高有效
+	input							i_aval								,	//clk时钟域，地址有效信号，高有效
+	input							i_info_flag							,	//clk时钟域，信息段标志，高有效
+	input							i_image_flag						,	//clk时钟域，图像段标志，高有效
+	input							i_statis_flag						,	//clk时钟域，统计段标志，高有效
+	input	[BYTE_ADDR_WD-1:0]		iv_rd_addr							,	//clk时钟域，读地址
+	input	[BYTE_ADDR_WD-1:0]		iv_rd_length						,	//clk时钟域，读长度，以byte为单位
+
+	//  -------------------------------------------------------------------------------------
+	//  与 fb_read_cmd 交互协议 输出部分
+	//  -------------------------------------------------------------------------------------
+	input							i_ardy								,	//clk时钟域，地址准备好信号，高有效，有效时表示可以接受下一个地址
+	output							o_fval								,	//clk时钟域，场有效信号，高有效
+	output							o_pval								,	//clk时钟域，一个网络包有效数据标志，是连续信号，期间发出的地址对应一个包长的数据
+	output							o_aval								,	//clk时钟域，地址有效信号，高有效
+	output							o_info_flag							,	//clk时钟域，信息段标志，高有效
+	output							o_image_flag						,	//clk时钟域，图像段标志，高有效
+	output							o_statis_flag						,	//clk时钟域，统计段标志，高有效
+	output	[BYTE_ADDR_WD-1:0]		ov_rd_addr							,	//clk时钟域，读地址
+	output	[BYTE_ADDR_WD-1:0]		ov_rd_length							//clk时钟域，读长度，以byte为单位
+	);
+
+
+	//	ref paramters
+	localparam	ADDER_TYPE_IMAGE 	= "LUT";
+	localparam	ADDER_TYPE_ACK 		= "LUT";
+
+	//FSM Parameter Define
+	localparam	S_IDLE			= 5'b00001;
+	localparam	S_FLAG_ACK		= 5'b00010;
+	localparam	S_INFO			= 5'b00100;
+	localparam	S_IMAGE			= 5'b01000;
+	localparam	S_STATIS		= 5'b10000;
+
+	reg		[4:0]	current_state	= S_IDLE;
+	reg		[4:0]	next_state		= S_IDLE;
+
+	//FSM for sim
+	// synthesis translate_off
+	reg		[127:0]			state_ascii;
+	always @ ( * ) begin
+		case(current_state)
+			5'b00001 :	state_ascii	= "S_IDLE";
+			5'b00010 :	state_ascii	= "S_FLAG_ACK";
+			5'b00100 :	state_ascii	= "S_INFO";
+			5'b01000 :	state_ascii	= "S_IMAGE";
+			5'b10000 :	state_ascii	= "S_STATIS";
+			default	  :	state_ascii	= "ERROR";
+		endcase
+	end
+	// synthesis translate_on
+
+	//	ref signals
+	reg								fval_dly					= 1'b0;
+	wire							fval_rise					;
+
+	reg								fval_reg					= 1'b0;
+	reg								pval_reg					= 1'b0;
+	reg								ardy_reg					= 1'b0;
+
+	reg		[BYTE_ADDR_WD	-1:0]	packet_divide_remain		= {BYTE_ADDR_WD{1'b0}};
+	reg		[PKT_LENGTH_WD	-1:0]	packet_byte_cnt				= {PKT_LENGTH_WD{1'b0}};
+	reg		[BYTE_ADDR_WD	-1:0]	packet_addr_cnt				= {BYTE_ADDR_WD{1'b0}};
+	reg		[PKT_LENGTH_WD	-1:0]	rd_length_image_reg			= {PKT_LENGTH_WD{1'b0}};
+	reg								image_flag_reg				= 1'b0;
+
+	reg		[BYTE_ADDR_WD	-1:0]	rd_addr_latch				= {BYTE_ADDR_WD{1'b0}};
+	reg		[BYTE_ADDR_WD	-1:0]	rd_length_latch				= {BYTE_ADDR_WD{1'b0}};
+
+	wire							aval_info					;
+	wire							aval_image					;
+	reg								aval_image_dly				= 1'b0;
+	wire							aval_statis					;
+
+	reg		[1:0]					info_ack_cnt				= 2'b0	;
+	reg		[1:0]					statis_ack_cnt				= 2'b0	;
+
+	wire	[BYTE_ADDR_WD	-1:0]	rd_addr_info				;
+	wire	[BYTE_ADDR_WD	-1:0]	rd_addr_image				;
+	wire	[BYTE_ADDR_WD	-1:0]	rd_addr_statis				;
+
+	wire	[BYTE_ADDR_WD	-1:0]	rd_length_info				;
+	wire	[PKT_LENGTH_WD	-1:0]	rd_length_image				;
+	wire	[BYTE_ADDR_WD	-1:0]	rd_length_statis			;
+
+	wire	[47:0]					adder_result_image			;
+	wire	[BYTE_ADDR_WD	-1:0]	packet_addr_prejudge_image	;
+	wire	[47:0]					adder_result_ack			;
+	wire	[BYTE_ADDR_WD	-1:0]	packet_addr_prejudge_ack	;
+
+
+	//	ref ARCHITECTURE
+	//	===============================================================================================
+	//	ref ***edge、delay、latch、divide channel***
+	//	===============================================================================================
+	//	-------------------------------------------------------------------------------------
+	//	i_fval 取上升沿
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		fval_dly	<= i_fval;
+	end
+	assign	fval_rise = (i_fval==1'b1 && fval_dly==1'b0) ? 1'b1 : 1'b0;
+
+	//	-------------------------------------------------------------------------------------
+	//	在响应info和statis时，锁存地址
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		if(current_state==S_FLAG_ACK && (i_info_flag==1'b1||i_statis_flag==1'b1) && i_aval==1'b1) begin
+			rd_addr_latch <= iv_rd_addr;
+		end
+	end
+
+	//	-------------------------------------------------------------------------------------
+	//	在响应info和statis时，锁存数据量
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		if(current_state==S_FLAG_ACK && (i_info_flag==1'b1||i_statis_flag==1'b1) && i_aval==1'b1) begin
+			rd_length_latch <= iv_rd_length;
+		end
+	end
+
+	//	===============================================================================================
+	//	ref ***info***
+	//	===============================================================================================
+	//	-------------------------------------------------------------------------------------
+	//	INFO 状态响应地址ready信号次数
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		if(current_state==S_INFO) begin
+			if(i_ardy==1'b1) begin
+				info_ack_cnt	<= info_ack_cnt + 1'b1;
+			end
+		end
+		else begin
+			info_ack_cnt	<= 2'b0;
+		end
+	end
+	//	-------------------------------------------------------------------------------------
+	//	info 段数据对应的起始地址、数据量、地址有效标志
+	//	-------------------------------------------------------------------------------------
+	assign rd_addr_info 	= (current_state==S_INFO && i_ardy==1'b1) ? rd_addr_latch : {BYTE_ADDR_WD{1'b0}};
+	assign rd_length_info 	= (current_state==S_INFO && i_ardy==1'b1) ? rd_length_latch : {BYTE_ADDR_WD{1'b0}};
+	assign aval_info 		= (current_state==S_INFO && i_ardy==1'b1 && info_ack_cnt<2'd1) ? 1'b1 : 1'b0;
+	//	===============================================================================================
+	//	ref ***statis***
+	//	===============================================================================================
+	//	-------------------------------------------------------------------------------------
+	//	STATIS 状态响应地址ready信号次数
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		if(current_state==S_STATIS) begin
+			if(i_ardy==1'b1) begin
+				statis_ack_cnt	<= statis_ack_cnt + 1'b1;
+			end
+		end
+		else begin
+			statis_ack_cnt	<= 2'b0;
+		end
+	end
+	//	-------------------------------------------------------------------------------------
+	//	statis 段数据对应的起始地址、数据量、地址有效标志
+	//	-------------------------------------------------------------------------------------
+	assign rd_addr_statis 	= (current_state==S_STATIS && i_ardy==1'b1) ? rd_addr_latch : {BYTE_ADDR_WD{1'b0}};
+	assign rd_length_statis = (current_state==S_STATIS && i_ardy==1'b1) ? rd_length_latch : {BYTE_ADDR_WD{1'b0}};
+	assign aval_statis		= (current_state==S_STATIS && i_ardy==1'b1 && statis_ack_cnt<2'd1) ? 1'b1 : 1'b0;
+	//	===============================================================================================
+	//	ref ***packet divide***
+	//	===============================================================================================
+	//	-------------------------------------------------------------------------------------
+	//	包使能信号，作为其他逻辑分包逻辑开始的标志，只有在包使能有效期间，才能响应i_ardy
+	//	1.在IMAGE状态，如果包内数据量计数器为0且aval对应数据剩余量不为0，就将pval拉高，表明下
+	//	个包准备发出
+	//	2.在IMAGE状态，一旦包内数据量计数器为一个包长，且地址ready信号有效，则pval拉低，表明
+	//	一个包发送完成
+	//	3.在S_FLAG_ACK状态，响应到了statis标志，则表示image数据已经发送完毕，pval拉低，最后一
+	//	个发送的包可能是残包
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		if(current_state==S_IDLE) begin
+			pval_reg <= 1'b0;
+		end
+		else if(current_state==S_IMAGE && packet_byte_cnt=={PKT_LENGTH_WD{1'b0}} && packet_divide_remain!={BYTE_ADDR_WD{1'b0}} && i_ardy==1'b1) begin
+			pval_reg <= 1'b1;
+		end
+		else if((current_state==S_IMAGE&&packet_byte_cnt==iv_pkt_length&&i_ardy==1'b1)||(current_state==S_FLAG_ACK&&i_statis_flag==1'b1)||i_fval==1'b0) begin
+			pval_reg <= 1'b0;
+		end
+	end
+
+	//	-------------------------------------------------------------------------------------
+	//	包内数据量计数器，记满一个包长后会清零
+	//	1.在IMAGE状态，一旦包内数据量计数器为一个包长，且地址ready信号有效，则包内数据量计数器
+	//	清0，表明一个包发送完成
+	//	2.否则，在image段输出aval时，累加输出的数据量
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		if(current_state==S_IDLE) begin
+			packet_byte_cnt <= {PKT_LENGTH_WD{1'b0}};
+		end
+		else if(current_state==S_IMAGE && pval_reg==1'b1) begin
+			if(packet_byte_cnt==iv_pkt_length && i_ardy==1'b1) begin
+				packet_byte_cnt <= {PKT_LENGTH_WD{1'b0}};
+			end
+			else begin
+				if(aval_image==1'b1) begin
+					packet_byte_cnt <= packet_byte_cnt + rd_length_image_reg;
+				end
+			end
+		end
+	end
+	//	-------------------------------------------------------------------------------------
+	//	image段地址有效标志：
+	//	1.状态机处于S_IMAGE状态
+	//	2.包有效标志生效
+	//	3.包内数据量计数器不等于包长
+	//	4.剩余量不等于0
+	//	5.后级模块输出的地址ready信号生效
+	//	-------------------------------------------------------------------------------------
+	assign aval_image = (current_state==S_IMAGE&&pval_reg==1'b1&&packet_byte_cnt!=iv_pkt_length&&packet_divide_remain!={BYTE_ADDR_WD{1'b0}}&&i_ardy==1'b1) ? 1'b1 : 1'b0;
+	//	-------------------------------------------------------------------------------------
+	//	aval_image延迟1拍
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		aval_image_dly 	<= aval_image;
+	end
+	//	-------------------------------------------------------------------------------------
+	//	S_IMAGE阶段 发送一个包中数据的提前判断，用于判断是否要结束一个包
+	//	-------------------------------------------------------------------------------------
+	generate
+		if(ADDER_TYPE_IMAGE == "DSP48") begin
+			packet_divide_adder_dsp packet_divide_adder_dsp_image_inst (
+			.A		({{(47-PKT_LENGTH_WD){1'b0}},packet_byte_cnt}		),
+			.B		({{(47-BYTE_ADDR_WD){1'b0}},packet_divide_remain}	),
+			.S		(adder_result_image									)
+			);
+		end
+		else begin
+			packet_divide_adder_fabric packet_divide_adder_fabric_image_inst (
+			.A		({{(47-PKT_LENGTH_WD){1'b0}},packet_byte_cnt}		),
+			.B		({{(47-BYTE_ADDR_WD){1'b0}},packet_divide_remain}	),
+			.S		(adder_result_image									)
+			);
+		end
+	endgenerate
+	assign packet_addr_prejudge_image = adder_result_image[BYTE_ADDR_WD-1:0];
+	//	-------------------------------------------------------------------------------------
+	//	S_FLAG_ACK阶段 发送一个包中数据的提前判断，用于判断是否要结束一个包
+	//	-------------------------------------------------------------------------------------
+	generate
+		if(ADDER_TYPE_ACK == "DSP48") begin
+			packet_divide_adder_dsp packet_divide_adder_dsp_ack_inst (
+			.A		({{(47-PKT_LENGTH_WD){1'b0}},packet_byte_cnt}		),
+			.B		({{(47-BYTE_ADDR_WD){1'b0}},iv_rd_length}			),
+			.S		(adder_result_ack									)
+			);
+		end
+		else begin
+			packet_divide_adder_fabric packet_divide_adder_fabric_ack_inst (
+			.A		({{(47-PKT_LENGTH_WD){1'b0}},packet_byte_cnt}		),
+			.B		({{(47-BYTE_ADDR_WD){1'b0}},iv_rd_length}			),
+			.S		(adder_result_ack									)
+			);
+		end
+	endgenerate
+	assign packet_addr_prejudge_ack = adder_result_ack[BYTE_ADDR_WD-1:0];
+
+	//	-------------------------------------------------------------------------------------
+	//	对应一个image段aval数据量，在发包阶段的剩余量，减少到0时，状态跳转，响应下个aval并更
+	//	新数据量
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		if(current_state==S_IDLE) begin
+			packet_divide_remain <= {BYTE_ADDR_WD{1'b0}};
+		end
+		else if(current_state==S_FLAG_ACK && i_image_flag==1'b1 && i_aval==1'b1) begin
+			packet_divide_remain <= iv_rd_length;
+		end
+		else if(current_state==S_IMAGE && aval_image==1'b1) begin
+			if(packet_addr_prejudge_image<iv_pkt_length) begin
+				packet_divide_remain <= {BYTE_ADDR_WD{1'b0}};
+			end
+			else begin
+				packet_divide_remain <= packet_addr_prejudge_image - iv_pkt_length;
+			end
+		end
+	end
+	//	-------------------------------------------------------------------------------------
+	//	每次输出的o_aval对应的数据量，根据包内数据量计数器和剩余量计算而来
+	//	1.在新的image段aval到来时：
+	//		a.判断包内数据量计数器加上输入aval对应的数据量是否大于包长，大于则下次输出一个包
+	//		长的数据量，小于则直接输出i_aval对应的数据量
+	//	2.在输出image段地址有效标志的下一拍，且包内数据量计数器小于包长：
+	//		a.判断包内数据量计数器加上输入aval对应数据剩余量是否大于包长，大于则下次输出一个
+	//		包长的数据量，小于则直接输出i_aval对应数据剩余量
+	//	3.在输出image段地址有效标志的下一拍，且包内数据量计数器等于包长：
+	//		a.输入aval对应数据剩余量是否大于包长，大于则下次输出一个包长的数据量，小于则直接
+	//		输出i_aval对应数据剩余量
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		if(current_state==S_IDLE) begin
+			rd_length_image_reg <= {PKT_LENGTH_WD{1'b0}};
+		end
+		else if(current_state==S_FLAG_ACK && i_image_flag==1'b1 && i_aval==1'b1) begin
+			if(packet_addr_prejudge_ack<iv_pkt_length) begin
+				rd_length_image_reg <= iv_rd_length;
+			end
+			else begin
+				rd_length_image_reg <= iv_pkt_length - packet_byte_cnt;
+			end
+		end
+		else if(aval_image_dly==1'b1) begin
+			if(packet_byte_cnt<iv_pkt_length) begin
+				if(packet_addr_prejudge_image<iv_pkt_length) begin
+					rd_length_image_reg <= packet_divide_remain;
+				end
+				else begin
+					rd_length_image_reg <= iv_pkt_length - packet_byte_cnt;
+				end
+			end
+			else begin
+				if(packet_divide_remain<iv_pkt_length) begin
+					rd_length_image_reg <= packet_divide_remain;
+				end
+				else begin
+					rd_length_image_reg <= iv_pkt_length;
+				end
+			end
+		end
+	end
+	assign rd_length_image = rd_length_image_reg;
+	//	-------------------------------------------------------------------------------------
+	//	每次输出的o_aval对应的起始地址，以字节为单位，在新的image段aval到来时更新，否则，在每
+	//	次o_aval输出时，地址累加上次发送的数据量
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		if(current_state==S_IDLE) begin
+			packet_addr_cnt <= {BYTE_ADDR_WD{1'b0}};
+		end
+		else if(current_state==S_FLAG_ACK && i_image_flag==1'b1 && i_aval==1'b1) begin
+			packet_addr_cnt <= iv_rd_addr;
+		end
+		else if(aval_image==1'b1) begin
+			packet_addr_cnt <= packet_addr_cnt + rd_length_image_reg;
+		end
+	end
+	assign rd_addr_image = packet_addr_cnt;
+
+	//	-------------------------------------------------------------------------------------
+	//	image flag 赋值
+	//	在ACK状态响应到image段的aval时，image flag置1
+	//	在ACK状态响应到statis段标志时，image flag拉低
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		if(current_state==S_IDLE) begin
+			image_flag_reg <= 1'b0;
+		end
+		else if(current_state==S_FLAG_ACK && i_image_flag==1'b1 && i_aval==1'b1) begin
+			image_flag_reg <= 1'b1;
+		end
+		else if(current_state==S_FLAG_ACK && i_statis_flag==1'b1) begin
+			image_flag_reg <= 1'b0;
+		end
+	end
+
+	//	===============================================================================================
+	//	ref ***输出***
+	//	===============================================================================================
+	//	-------------------------------------------------------------------------------------
+	//	输出地址ready信号
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		if(current_state==S_IDLE && i_ardy==1'b1) begin
+			ardy_reg <= 1'b1;
+		end
+		else if(current_state==S_FLAG_ACK && i_ardy==1'b1 && i_aval==1'b0) begin
+			ardy_reg <= 1'b1;
+		end
+		else begin
+			ardy_reg <= 1'b0;
+		end
+	end
+	assign o_ardy = ardy_reg;
+
+	//	-------------------------------------------------------------------------------------
+	//	输出地址场有效
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		if(current_state==S_IDLE && fval_rise==1'b0) begin
+			fval_reg <= 1'b0;
+		end
+		else if(fval_rise==1'b1) begin
+			fval_reg <= 1'b1;
+		end
+		else if(i_fval==1'b0) begin
+			fval_reg <= 1'b0;
+		end
+	end
+	assign o_fval = fval_reg;
+	//	-------------------------------------------------------------------------------------
+	//	image flag 赋值
+	//	-------------------------------------------------------------------------------------
+	assign o_info_flag 		= (current_state==S_INFO) ? 1'b1 : 1'b0;
+	assign o_image_flag 	= image_flag_reg;
+	assign o_statis_flag	= (current_state==S_STATIS) ? 1'b1 : 1'b0;
+	//	-------------------------------------------------------------------------------------
+	//	输出包有效标志
+	//	-------------------------------------------------------------------------------------
+	assign o_pval = pval_reg;
+	//	-------------------------------------------------------------------------------------
+	//	输出地址有效标志
+	//	-------------------------------------------------------------------------------------
+	assign o_aval	= aval_info | aval_image | aval_statis;
+	//	-------------------------------------------------------------------------------------
+	//	输出地址有效标志对应的地址
+	//	-------------------------------------------------------------------------------------
+	assign	ov_rd_addr 	= (o_info_flag==1'b1) 	? 	rd_addr_info 			:
+						  (o_image_flag==1'b1) 	? 	rd_addr_image 			:
+						  (o_statis_flag==1'b1) ? 	rd_addr_statis 			:
+						  							{BYTE_ADDR_WD{1'b0}}	;
+	//	-------------------------------------------------------------------------------------
+	//	输出地址有效标志对应的数据量
+	//	-------------------------------------------------------------------------------------
+	assign	ov_rd_length = (o_info_flag==1'b1) 	 ? 	rd_length_info 			:
+						   (o_image_flag==1'b1)  ? 	{{(BYTE_ADDR_WD-PKT_LENGTH_WD){1'b0}},rd_length_image} :
+						   (o_statis_flag==1'b1) ? 	rd_length_statis 		:
+						  							{BYTE_ADDR_WD{1'b0}}	;
+
+	//	===============================================================================================
+	//	ref ***FSM***
+	//	===============================================================================================
+	//	-------------------------------------------------------------------------------------
+	//	FSM Sequential Logic
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		if(reset) begin
+			current_state	<= S_IDLE;
+		end
+		else begin
+			current_state	<= next_state;
+		end
+	end
+
+	//	-------------------------------------------------------------------------------------
+	//	FSM Conbinatial Logic
+	//	-------------------------------------------------------------------------------------
+	always @ ( * ) begin
+		case(current_state)
+			S_IDLE	:
+			//	-------------------------------------------------------------------------------------
+			//	IDLE -> S_FLAG_ACK
+			//		1.场信号上升沿
+			//	-------------------------------------------------------------------------------------
+			if(fval_rise==1'b1) begin
+				next_state	= S_FLAG_ACK;
+			end
+			else begin
+				next_state	= S_IDLE;
+			end
+			S_FLAG_ACK	:
+			//	-------------------------------------------------------------------------------------
+			//	S_FLAG_ACK -> S_IDLE
+			//		1.场消隐
+			//	S_FLAG_ACK -> S_INFO
+			//		1.info flag有效
+			//		2.地址有效信号生效
+			//	S_FLAG_ACK -> S_IMAGE
+			//		1.image flag有效
+			//		2.地址有效信号生效
+			//	S_FLAG_ACK -> S_STATIS
+			//		1.statis flag有效
+			//		2.地址有效信号生效
+			//	-------------------------------------------------------------------------------------
+			if(i_fval==1'b0) begin
+				next_state	= S_IDLE;
+			end
+			else if(i_info_flag==1'b1 && i_aval==1'b1) begin
+				next_state	= S_INFO;
+			end
+			else if(i_image_flag==1'b1 && i_aval==1'b1) begin
+				next_state	= S_IMAGE;
+			end
+			else if(i_statis_flag==1'b1 && i_aval==1'b1) begin
+				next_state	= S_STATIS;
+			end
+			else begin
+				next_state	= S_FLAG_ACK;
+			end
+
+			S_INFO	:
+			//	-------------------------------------------------------------------------------------
+			//	S_INFO -> S_IDLE
+			//		1.场消隐
+			//	S_INFO -> S_FLAG_ACK
+			//		1.info段地址ready信号长度计数器为2
+			//	-------------------------------------------------------------------------------------
+			if(i_fval==1'b0) begin
+				next_state	= S_IDLE;
+			end
+			else if(info_ack_cnt==2'd2) begin
+				next_state	= S_FLAG_ACK;
+			end
+			else begin
+				next_state	= S_INFO;
+			end
+			S_IMAGE	:
+			//	-------------------------------------------------------------------------------------
+			//	S_IMAGE -> S_IDLE
+			//		1.场消隐
+			//	S_IMAGE -> S_FLAG_ACK
+			//		1.地址ready信号生效
+			//		2.image段每个地址有效信号对应数据量的剩余量为0
+			//	-------------------------------------------------------------------------------------
+			if(i_fval==1'b0) begin
+				next_state	= S_IDLE;
+			end
+			else if(i_ardy==1'b1 && packet_divide_remain=={BYTE_ADDR_WD{1'b0}}) begin
+				next_state	= S_FLAG_ACK;
+			end
+			else begin
+				next_state	= S_IMAGE;
+			end
+			S_STATIS	:
+			//	-------------------------------------------------------------------------------------
+			//	S_STATIS -> S_IDLE
+			//		1.场消隐
+			//	S_STATIS -> S_FLAG_ACK
+			//		1.statis段地址ready信号长度计数器为2
+			//	-------------------------------------------------------------------------------------
+			if(i_fval==1'b0) begin
+				next_state	= S_IDLE;
+			end
+			else if(statis_ack_cnt==2'd2) begin
+				next_state	= S_FLAG_ACK;
+			end
+			else begin
+				next_state	= S_STATIS;
+			end
+			default	:
+			next_state	= S_IDLE;
+		endcase
+	end
+
+
+endmodule

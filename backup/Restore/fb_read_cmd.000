@@ -1,0 +1,687 @@
+//-------------------------------------------------------------------------------------------------
+//  -- 版权所有者   : 中国大恒（集团）有限公司北京图像视觉技术分公司, 2010 -2015.
+//  -- 保密级别     ：绝密.
+//  -- 部门         : 硬件部，FPGA工作组
+//  -- 模块名       : fb_read_cmd
+//  -- 设计者       : 邢海涛
+//-------------------------------------------------------------------------------------------------
+//
+//  -- 版本记录 :
+//
+//  -- 作者         :| 版本号	:| 修改日期				:|  修改说明
+//-------------------------------------------------------------------------------------------------
+//  -- 邢海涛       :| V1.0		:| 2018/7/18 18:31:40	:|  划分模块端口
+//-------------------------------------------------------------------------------------------------
+//
+//  -- 模块描述     :
+//              1)  :
+//
+//              2)  :
+//
+//              3)  :
+//
+//-------------------------------------------------------------------------------------------------
+//`include			"fb_read_cmd_def.v"
+//仿真单位/精度
+`timescale 1ns/1ps
+//-------------------------------------------------------------------------------------------------
+module fb_read_cmd # (
+	parameter	MIG_BYTE_NUM								= 32		,	//MIG fifo 位宽的byte个数。读写MIG fifo一次，操作的byte个数
+	parameter	MIG_DATA_BYTE_NUM_WD						= 5			,	//MIG fifo 位宽的byte个数对应的位宽
+	parameter	INFO_SIZE									= 256		,	//INFO段数据量，以byte为单位
+	parameter	STATIS_SIZE									= 0			,	//STATIS段数据量，以byte为单位
+	parameter	PTR_WD										= 2			,	//读写指针的位宽
+	parameter	BYTE_ADDR_WD								= 32		,	//有效地址位宽，DDR3容量不同，位宽不同
+	parameter	RD_ADDR_WD   								= 27		,	//帧内地址位宽
+	parameter	ADDR_BUFFER_WD								= 36			//addr_buffer接口位宽
+	)
+	(
+	//  -------------------------------------------------------------------------------------
+	//  时钟和复位信号
+	//  -------------------------------------------------------------------------------------
+	input							clk									,	//帧存模块工作时钟
+	input							reset								,	//帧存模块工作时钟域的复位信号，高有效
+	//  -------------------------------------------------------------------------------------
+	//  控制数据
+	//  -------------------------------------------------------------------------------------
+	input							i_stream_enable						,	//clk时钟域，流停止信号，高有效，有效时允许数据从帧存读出，无效时立即停止读出，并复位读写地址指针，清帧存
+	input	[PTR_WD-1:0]			iv_frame_depth						,	//clk时钟域，帧缓存深度，已同步,wrap_wr_logic模块已做生效时机控制
+	//  -------------------------------------------------------------------------------------
+	//  与 fb_read_core 交互
+	//  -------------------------------------------------------------------------------------
+	output							o_addr_buffer_wr					,	//clk时钟域，addr_buffer写使能，高有效
+	output	[ADDR_BUFFER_WD-1:0]	ov_addr_buffer_din					,	//clk时钟域，addr_buffer写数据
+	output							o_addr_cmd_wr_done					,	//clk时钟域，一帧地址及数据全部写入addr_buffer完毕标志
+	input							i_addr_buffer_prog_full				,	//clk时钟域，addr_buffer可编程满标志，高有效
+	input							i_addr_buffer_wr_rst_busy			,	//clk时钟域，addr_buffer复位之后的busy信号，在busy信号有效时，不可以对fifo进行操作
+	input							i_normal_frame_done					,	//clk时钟域，core模块输出，一帧正常流图像读取完成标志，高有效，单bit脉冲
+	//  -------------------------------------------------------------------------------------
+	//  与 fb_read_init 交互
+	//  -------------------------------------------------------------------------------------
+	input	[PTR_WD-1:0]			iv_rd_ptr_normal					,	//clk时钟域，读帧号，表示当前正常读的帧号
+	//  -------------------------------------------------------------------------------------
+	//  与 fb_read_plugins 交互，输入内容
+	//  -------------------------------------------------------------------------------------
+	input							i_fval								,	//clk时钟域，场有效信号，高有效
+	input							i_pval								,	//clk时钟域，一个网络包有效数据标志，是连续信号，期间发出的地址对应一个包长的数据
+	input							i_aval								,	//clk时钟域，地址有效信号，高有效
+	input							i_info_flag							,	//clk时钟域，信息段标志，高有效
+	input							i_image_flag						,	//clk时钟域，图像段标志，高有效
+	input							i_statis_flag						,	//clk时钟域，统计段标志，高有效
+	input	[BYTE_ADDR_WD-1:0]		iv_rd_addr							,	//clk时钟域，读地址
+	input	[BYTE_ADDR_WD-1:0]		iv_rd_length						,	//clk时钟域，读长度，以byte为单位
+	output							o_ardy								,	//clk时钟域，地址准备好信号，高有效，有效时表示可以接受下一个地址
+	//  -------------------------------------------------------------------------------------
+	//  与 fb_read_resend 交互
+	//  -------------------------------------------------------------------------------------
+	input							i_interrupt								//clk时钟域，正常读停止标志，高有效
+	);
+
+
+	//	ref functions
+
+	//	-------------------------------------------------------------------------------------
+	//	取对数，上取整
+	//	log2取对数的时候，有两种情况。分别是计算计数器的位宽和计算通道偏移的bit数
+	//	1.计算计数器的位宽，使用 y = log2(x+1)，当x=2^n时，y=n+1，可以表示0-2^(n+1)-1的数值
+	//	2.计算通道偏移的bit数，使用 y = log2(x)，当x=2^n时，y=n，可以表示0-2^n-1的数值
+	//	-------------------------------------------------------------------------------------
+	function integer log2 (input integer xx);
+		integer x;
+		begin
+			x	= xx-1 ;
+			for (log2=0;x>0;log2=log2+1) begin
+				x	= x >> 1;
+			end
+		end
+	endfunction
+
+
+	//	-------------------------------------------------------------------------------------
+	//	动态位宽拼接
+	//	1.由于verilog中的位宽拼接运算符中不允许出现变量，因此用function的方式实现动态位宽拼接
+	//	-------------------------------------------------------------------------------------
+	//	frame_depth             ptr_and_addr
+	//
+	//	0		        |------------------------|
+	//	1		        ||-----------------------|
+	//	2-3		        | |----------------------|
+	//	4-7		        |  |---------------------|
+	//	8-15	        |   |--------------------|
+	//	16-31	        |    |-------------------|
+	//                    ^           ^
+	//			        |ptr |       addr        |
+	//	-------------------------------------------------------------------------------------
+	//	for 循环展开之后
+	//	查看帧存深度落在哪个区间，选择对应的指针和地址的拼接方式
+	//  -------------------------------------------------------------------------------------
+	//	PTR_WD	最大帧数	frame_depth区间		byte_addr实际排布
+	//	1			1			0					{rd_addr[RD_ADDR_WD-1:0],{(MCB_BYTE_NUM_WIDTH){1'b0}}}
+	//	1			2			1       			{rd_ptr[0:0],rd_addr[RD_ADDR_WD-2:0],{(MCB_BYTE_NUM_WIDTH){1'b0}}}
+	//	2			4			2-3					{rd_ptr[1:0],rd_addr[RD_ADDR_WD-3:0],{(MCB_BYTE_NUM_WIDTH){1'b0}}}
+	//	3	 		8			4-7					{rd_ptr[2:0],rd_addr[RD_ADDR_WD-4:0],{(MCB_BYTE_NUM_WIDTH){1'b0}}}
+	//	4			16			8-15				{rd_ptr[3:0],rd_addr[RD_ADDR_WD-5:0],{(MCB_BYTE_NUM_WIDTH){1'b0}}}
+	//	5			32			16-31				{rd_ptr[4:0],rd_addr[RD_ADDR_WD-6:0],{(MCB_BYTE_NUM_WIDTH){1'b0}}}
+	//	6			64			32-63				{rd_ptr[5:0],rd_addr[RD_ADDR_WD-7:0],{(MCB_BYTE_NUM_WIDTH){1'b0}}}
+	//	7			128			64-127				{rd_ptr[6:0],rd_addr[RD_ADDR_WD-8:0],{(MCB_BYTE_NUM_WIDTH){1'b0}}}
+	//	8			256			128-255				{rd_ptr[7:0],rd_addr[RD_ADDR_WD-9:0],{(MCB_BYTE_NUM_WIDTH){1'b0}}}
+	//	......
+	//	-------------------------------------------------------------------------------------
+	function [RD_ADDR_WD-1:0] ptr_and_addr;
+		input	[PTR_WD-1:0]			ptr_int;
+		input	[RD_ADDR_WD-1:0]		addr_int;
+		input	[PTR_WD-1:0]			depth_int;
+		integer	i;
+		integer	j;
+		begin
+			//	-------------------------------------------------------------------------------------
+			//	如果帧存深度是1帧，直接把地址赋值给输出
+			//	-------------------------------------------------------------------------------------
+			if(depth_int==0) begin
+				ptr_and_addr	= addr_int;
+			end
+			//	-------------------------------------------------------------------------------------
+			//	如果帧存深度是多帧，要看帧存深度落在哪个区间内
+			//	-------------------------------------------------------------------------------------
+			for(i=1;i<=PTR_WD;i=i+1) begin
+				//	-------------------------------------------------------------------------------------
+				//	此处的判断条件是检查帧存深度是否落在对应的区间内
+				//	在不同的帧存深度区间内，指针和地址的拼接方式是不一样的
+				//	-------------------------------------------------------------------------------------
+				if(depth_int>=(2**(i-1)) && depth_int<=((2**i)-1)) begin
+					//	-------------------------------------------------------------------------------------
+					//	当检测到帧存深度落在某一个区间之后，就要按照这个区间的排布方式，分配指针和地址
+					//	由于function不允许地址拼接运算，所以只能按位赋值
+					//	-------------------------------------------------------------------------------------
+					for(j=0;j<RD_ADDR_WD;j=j+1) begin
+						//	-------------------------------------------------------------------------------------
+						//	根据映射规律，落在i区间内，高i位是指针，剩余低位是地址
+						//
+						//	ptr_and_addr :	-|  ptr  |        addr         |-
+						//						i        RD_ADDR_WD-i
+						//
+						//	-------------------------------------------------------------------------------------
+						if(j<RD_ADDR_WD-i) begin
+							ptr_and_addr[j]	= addr_int[j];
+						end
+						else begin
+							ptr_and_addr[j]	= ptr_int[j-(RD_ADDR_WD-i)];
+						end
+					end
+				end
+			end
+		end
+	endfunction
+
+	//	ref paramters
+	localparam	FRAME_START_CMD 				= 36'h100000004;
+	localparam	FRAME_END_CMD 					= 36'h100000104;
+	localparam	INFO_START_CMD 					= 36'h100000404 + ((INFO_SIZE>>8)<<16) + ((INFO_SIZE-256*(INFO_SIZE>>8))<<24);
+	localparam	IMAGE_START_CMD 				= 36'h100000504;
+	localparam	STATIS_START_CMD 				= 36'h100000604 + ((STATIS_SIZE>>8)<<16) + ((STATIS_SIZE-256*(STATIS_SIZE>>8))<<24);
+	localparam	PACKET_START_CMD 				= 36'h100000704;
+
+	localparam 	INFO_ADDR_CNT					= (INFO_SIZE>>MIG_DATA_BYTE_NUM_WD);
+	localparam 	INFO_ADDR_WD					= log2(INFO_ADDR_CNT+1);
+	localparam 	STATIS_ADDR_CNT					= (STATIS_SIZE>>MIG_DATA_BYTE_NUM_WD);
+	localparam 	STATIS_ADDR_WD					= (STATIS_ADDR_CNT==0) ? 1 : log2(STATIS_ADDR_CNT+1);
+
+	localparam	UNIT_BYTE_NUM					= 4;
+	localparam	UNIT_BYTE_NUM_WD				= log2(UNIT_BYTE_NUM);
+
+	localparam	VALID_BIT_NUM					= MIG_BYTE_NUM/UNIT_BYTE_NUM;
+	localparam 	PURE_ADDRESS_WD					= ADDR_BUFFER_WD-VALID_BIT_NUM-1;
+
+	localparam	RST_CYCLE_NUM					= 8;
+
+	//FSM Parameter Define
+	localparam	S_IDLE			= 5'b00001;
+	localparam	S_FLAG_ACK		= 5'b00010;
+	localparam	S_INFO			= 5'b00100;
+	localparam	S_IMAGE			= 5'b01000;
+	localparam	S_STATIS		= 5'b10000;
+
+	reg		[4:0]	current_state	= S_IDLE;
+	reg		[4:0]	next_state		= S_IDLE;
+
+	//FSM for sim
+	// synthesis translate_off
+	reg		[127:0]			state_ascii;
+	always @ ( * ) begin
+		case(current_state)
+			5'b00001 :	state_ascii	= "S_IDLE";
+			5'b00010 :	state_ascii	= "S_FLAG_ACK";
+			5'b00100 :	state_ascii	= "S_INFO";
+			5'b01000 :	state_ascii	= "S_IMAGE";
+			5'b10000 :	state_ascii	= "S_STATIS";
+			default	  :	state_ascii	= "ERROR";
+		endcase
+	end
+	// synthesis translate_on
+
+	//	ref signals
+	reg										ardy_reg					= 1'b0;
+	reg										fval_dly 					= 1'b0;
+	wire									fval_rise					;
+	wire									fval_fall					;
+	reg										pval_dly 					= 1'b0;
+	wire									pval_rise					;
+	reg										aval_dly 					= 1'b0;
+	reg										info_flag_dly 				= 1'b0;
+	wire									info_flag_rise				;
+	reg										image_flag_dly 				= 1'b0;
+	wire									image_flag_rise				;
+	reg										statis_flag_dly 			= 1'b0;
+	wire									statis_flag_rise			;
+
+	reg										addr_cmd_wr_done_reg			= 1'b0;
+
+	reg		[BYTE_ADDR_WD-1:0]				rd_addr_latch				= {BYTE_ADDR_WD{1'b0}};
+	reg		[BYTE_ADDR_WD-1:0]				rd_length_latch				= {BYTE_ADDR_WD{1'b0}};
+
+	wire 	[PURE_ADDRESS_WD-1:0]			info_read_addr 				;
+	wire 	[PURE_ADDRESS_WD-1:0]			image_read_addr 			;
+	wire 	[PURE_ADDRESS_WD-1:0]			statis_read_addr 			;
+
+	reg 	[INFO_ADDR_WD-1:0]				info_read_cnt 				= {INFO_ADDR_WD{1'b0}};
+	reg 	[RD_ADDR_WD-1:0]				image_read_cnt 				= {RD_ADDR_WD{1'b0}};
+	reg 	[STATIS_ADDR_WD-1:0]			statis_read_cnt 			= {STATIS_ADDR_WD{1'b0}};
+	reg 									info_addr_flag				= 1'b0;
+	reg 									image_addr_flag				= 1'b0;
+	wire 									statis_addr_flag			;
+	reg 									statis_addr_flag_int		= 1'b0;
+	reg 									statis_addr_flag_int_dly	= 1'b0;
+	wire 									statis_addr_flag_int_fall	;
+	reg 									statis_waiting_flag			= 1'b0;
+	reg 									statis_waiting_flag_dly		= 1'b0;
+
+	wire 									frame_end_flag				;
+
+	wire 	[INFO_ADDR_WD-1:0]				info_addr_length 			;
+	reg		[RD_ADDR_WD-1:0]				image_addr_length			= {RD_ADDR_WD{1'b0}};
+	wire									image_first_addr_flag		;
+	wire									image_last_addr_flag		;
+
+	wire	[MIG_DATA_BYTE_NUM_WD:0]		flag_data_head				;
+	wire	[BYTE_ADDR_WD-1:0]				flag_data_remove_head		;
+	wire	[VALID_BIT_NUM-1:0]				flag_valid_bit				;
+	wire	[VALID_BIT_NUM-1:0]				flag_valid_bit_first		;
+	wire	[VALID_BIT_NUM-1:0]				flag_valid_bit_last			;
+
+	//	ref ARCHITECTURE
+	//	===============================================================================================
+	//	ref ***edge、delay、divide channel***
+	//	===============================================================================================
+	//	-------------------------------------------------------------------------------------
+	//	取场信号上升沿和下降沿
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		fval_dly <= i_fval;
+	end
+	assign fval_rise = i_fval & ~fval_dly & ~i_interrupt;
+	assign fval_fall = ~i_fval & fval_dly;
+	//	-------------------------------------------------------------------------------------
+	//	取包有效信号上升沿
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		pval_dly <= i_pval;
+	end
+	assign pval_rise = i_pval & ~pval_dly & ~i_interrupt;
+	//	-------------------------------------------------------------------------------------
+	//	aval信号延迟一拍
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		aval_dly <= i_aval;
+	end
+	//	-------------------------------------------------------------------------------------
+	//	取info有效标志信号上升沿
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		info_flag_dly <= i_info_flag;
+	end
+	assign info_flag_rise = i_info_flag & ~info_flag_dly & ~i_interrupt;
+	//	-------------------------------------------------------------------------------------
+	//	取image有效标志信号上升沿
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		image_flag_dly <= i_image_flag;
+	end
+	assign image_flag_rise = i_image_flag & ~image_flag_dly & ~i_interrupt;
+	//	-------------------------------------------------------------------------------------
+	//	取statis有效标志信号上升沿
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		statis_flag_dly <= i_statis_flag;
+	end
+	assign statis_flag_rise = (iv_rd_length>{BYTE_ADDR_WD{1'b0}} && (i_statis_flag&~statis_flag_dly)==1'b1 && i_interrupt==1'b0) ? 1'b1 : 1'b0;
+	//	-------------------------------------------------------------------------------------
+	//	在响应aval时，锁存地址
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		if(current_state==S_IDLE) begin
+			rd_addr_latch	<= {BYTE_ADDR_WD{1'b0}};
+		end
+		else if(current_state==S_FLAG_ACK && i_aval==1'b1) begin
+			rd_addr_latch <= iv_rd_addr;
+		end
+	end
+	//	-------------------------------------------------------------------------------------
+	//	在响应info和statis时，锁存数据量
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		if(current_state==S_IDLE) begin
+			rd_length_latch	<= {BYTE_ADDR_WD{1'b0}};
+		end
+		else if(current_state==S_FLAG_ACK && i_aval==1'b1) begin
+			rd_length_latch <= iv_rd_length;
+		end
+	end
+	//	===============================================================================================
+	//	ref *** INFO段MIG对应地址计算 ***
+	//	===============================================================================================
+	//	-------------------------------------------------------------------------------------
+	//	INFO段读地址计数器需要累加的个数
+	//	-------------------------------------------------------------------------------------
+	assign info_addr_length = (rd_length_latch>>MIG_DATA_BYTE_NUM_WD);
+	//	-------------------------------------------------------------------------------------
+	//	INFO段读地址计数器计数
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		if(current_state==S_INFO) begin
+			if(info_read_cnt==info_addr_length-1) begin
+				info_read_cnt <= info_read_cnt;
+			end
+			else if(info_addr_flag==1'b1 && i_addr_buffer_prog_full==1'b0) begin
+				info_read_cnt <= info_read_cnt + 1'b1;
+			end
+		end
+		else begin
+			info_read_cnt <= {INFO_ADDR_WD{1'b0}};
+		end
+	end
+	//	-------------------------------------------------------------------------------------
+	//	INFO段读地址计数器计数期间标志
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		if(current_state==S_IDLE) begin
+			info_addr_flag <= 1'b0;
+		end
+		else if(info_read_cnt==info_addr_length-1 && i_addr_buffer_prog_full==1'b0 && info_addr_flag==1'b1) begin
+			info_addr_flag <= 1'b0;
+		end
+		else if(current_state==S_INFO && info_read_cnt=={INFO_ADDR_WD{1'b0}} && i_addr_buffer_prog_full==1'b0) begin
+			info_addr_flag <= 1'b1;
+		end
+	end
+	//	-------------------------------------------------------------------------------------
+	//	INFO段MIG对应地赋值
+	//	-------------------------------------------------------------------------------------
+	assign	info_read_addr 	= {{(PURE_ADDRESS_WD-INFO_ADDR_WD){1'b0}},ptr_and_addr(iv_rd_ptr_normal,((rd_addr_latch>>MIG_DATA_BYTE_NUM_WD)+info_read_cnt),iv_frame_depth)};
+
+	//	===============================================================================================
+	//	ref *** IMAGE段MIG对应地址计算 ***
+	//	===============================================================================================
+	//	-------------------------------------------------------------------------------------
+	//	image阶段，第1个写入addr_buffer中地址对应的有效字节个数
+	//	-------------------------------------------------------------------------------------
+	assign	flag_data_head 			= MIG_BYTE_NUM - rd_addr_latch[MIG_DATA_BYTE_NUM_WD-1:0];
+	//	-------------------------------------------------------------------------------------
+	//	image阶段，第1个写入addr_buffer中地址对应的4字节有效标志位
+	//	-------------------------------------------------------------------------------------
+	assign	flag_valid_bit_first 	= ({VALID_BIT_NUM{1'b1}} << (rd_addr_latch[MIG_DATA_BYTE_NUM_WD-1:0]>>UNIT_BYTE_NUM_WD));
+	//	-------------------------------------------------------------------------------------
+	//	image阶段，除去第1个写入地址对应的有效字节数外，剩余的数据量
+	//	-------------------------------------------------------------------------------------
+	assign	flag_data_remove_head 	= rd_length_latch - flag_data_head;
+	//	-------------------------------------------------------------------------------------
+	//	image阶段，最后1个写入addr_buffer中地址对应的4字节有效标志位
+	//	-------------------------------------------------------------------------------------
+	assign	flag_valid_bit_last 	= ({VALID_BIT_NUM{1'b1}} >> ((MIG_BYTE_NUM-flag_data_remove_head[MIG_DATA_BYTE_NUM_WD-1:0])>>UNIT_BYTE_NUM_WD));
+	//	-------------------------------------------------------------------------------------
+	//	image阶段，对应每个aval，读操作计数器需要计的个数
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		if(flag_data_remove_head[MIG_DATA_BYTE_NUM_WD-1:0]=={MIG_DATA_BYTE_NUM_WD{1'b0}}) begin
+			image_addr_length <= (flag_data_remove_head>>MIG_DATA_BYTE_NUM_WD) + 1;
+		end
+		else begin
+			image_addr_length <= (flag_data_remove_head>>MIG_DATA_BYTE_NUM_WD) + 2;
+		end
+	end
+	//	-------------------------------------------------------------------------------------
+	//	image阶段，向addr_buffer写第1个地址的标志
+	//	-------------------------------------------------------------------------------------
+	assign	image_first_addr_flag 	= (image_read_cnt==0 && image_addr_flag==1'b1) ? 1'b1 : 1'b0;
+	//	-------------------------------------------------------------------------------------
+	//	image阶段，向addr_buffer写最后1个地址的标志
+	//	-------------------------------------------------------------------------------------
+	assign	image_last_addr_flag 	= (image_read_cnt==image_addr_length-1 && image_addr_flag==1'b1) ? 1'b1 : 1'b0;
+	//	-------------------------------------------------------------------------------------
+	//	image阶段，向addr_buffer写入地址对应的4字节有效标志位
+	//	-------------------------------------------------------------------------------------
+	assign	flag_valid_bit		 	= (image_first_addr_flag == 1'b1) ? flag_valid_bit_first 																			:
+									  (image_last_addr_flag  == 1'b1) ? ((flag_valid_bit_last=={VALID_BIT_NUM{1'b0}}) ? {VALID_BIT_NUM{1'b1}} : flag_valid_bit_last)  	:
+									  									{VALID_BIT_NUM{1'b1}};
+	//	-------------------------------------------------------------------------------------
+	//	IMAGE段读地址计数器计数
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		if(current_state==S_IMAGE) begin
+			if(image_read_cnt==image_addr_length-1) begin
+				image_read_cnt <= image_read_cnt;
+			end
+			else if(image_addr_flag==1'b1 && i_addr_buffer_prog_full==1'b0) begin
+				image_read_cnt <= image_read_cnt + 1'b1;
+			end
+		end
+		else begin
+			image_read_cnt <= {RD_ADDR_WD{1'b0}};
+		end
+	end
+	//	-------------------------------------------------------------------------------------
+	//	IMAGE段读地址计数器计数期间标志
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		if(current_state==S_IDLE) begin
+			image_addr_flag <= 1'b0;
+		end
+		else if(image_read_cnt==image_addr_length-1 && i_addr_buffer_prog_full==1'b0 && image_addr_flag==1'b1) begin
+			image_addr_flag <= 1'b0;
+		end
+		else if(current_state==S_IMAGE && image_read_cnt=={RD_ADDR_WD{1'b0}} && i_addr_buffer_prog_full==1'b0) begin
+			image_addr_flag <= 1'b1;
+		end
+	end
+	//	-------------------------------------------------------------------------------------
+	//	IMAGE段MIG对应地址赋值
+	//	-------------------------------------------------------------------------------------
+	assign	image_read_addr = {{(PURE_ADDRESS_WD-RD_ADDR_WD){1'b0}},ptr_and_addr(iv_rd_ptr_normal,((rd_addr_latch>>MIG_DATA_BYTE_NUM_WD)+image_read_cnt),iv_frame_depth)};
+
+	//	===============================================================================================
+	//	ref *** STATIS段MIG对应地址计算 ***
+	//	===============================================================================================
+	//	-------------------------------------------------------------------------------------
+	//	STATIS段读地址计数器计数
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		if(current_state==S_STATIS) begin
+			if(statis_read_cnt==STATIS_ADDR_CNT) begin
+				statis_read_cnt <= statis_read_cnt;
+			end
+			else if(statis_addr_flag_int==1'b1 && i_addr_buffer_prog_full==1'b0) begin
+				statis_read_cnt <= statis_read_cnt + 1'b1;
+			end
+		end
+		else begin
+			statis_read_cnt <= {STATIS_ADDR_WD{1'b0}};
+		end
+	end
+	//	-------------------------------------------------------------------------------------
+	//	STATIS段读地址及发送命令计数器计数期间标志
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		if(current_state==S_IDLE) begin
+			statis_addr_flag_int <= 1'b0;
+		end
+		else if(statis_read_cnt==STATIS_ADDR_CNT && i_addr_buffer_prog_full==1'b0 && statis_addr_flag_int==1'b1) begin
+			statis_addr_flag_int <= 1'b0;
+		end
+		else if(current_state==S_STATIS && statis_read_cnt=={STATIS_ADDR_WD{1'b0}} && i_addr_buffer_prog_full==1'b0 && statis_addr_flag_int_fall==1'b0 && statis_waiting_flag==1'b0) begin
+			statis_addr_flag_int <= 1'b1;
+		end
+	end
+	//	-------------------------------------------------------------------------------------
+	//	STATIS段读地址及发送命令计数器计数期间标志取下降沿
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		statis_addr_flag_int_dly <= statis_addr_flag_int;
+	end
+	assign statis_addr_flag_int_fall = ~statis_addr_flag_int & statis_addr_flag_int_dly;
+	//	-------------------------------------------------------------------------------------
+	//	STATIS段发送完帧结束命令到接收到 i_normal_frame_done 信号之间的等待时间标志
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		if(current_state==S_IDLE) begin
+			statis_waiting_flag <= 1'b0;
+		end
+		else if(statis_addr_flag_int_fall==1'b1) begin
+			statis_waiting_flag <= 1'b1;
+		end
+		else if(i_normal_frame_done==1'b1) begin
+			statis_waiting_flag <= 1'b0;
+		end
+	end
+	//	-------------------------------------------------------------------------------------
+	//	STATIS段MIG对应地址赋值
+	//	-------------------------------------------------------------------------------------
+	assign	statis_read_addr = {{(PURE_ADDRESS_WD-STATIS_ADDR_WD){1'b0}},ptr_and_addr(iv_rd_ptr_normal,((rd_addr_latch>>MIG_DATA_BYTE_NUM_WD)+statis_read_cnt),iv_frame_depth)};
+	//	-------------------------------------------------------------------------------------
+	//	STATIS段发送读地址期间标志
+	//	-------------------------------------------------------------------------------------
+	assign statis_addr_flag = (statis_addr_flag_int==1'b1 && statis_read_cnt<STATIS_ADDR_CNT) ? 1'b1 : 1'b0;
+	//	-------------------------------------------------------------------------------------
+	//	STATIS段发送帧结束命令标志
+	//	-------------------------------------------------------------------------------------
+	assign frame_end_flag = (statis_addr_flag_int==1'b1 && statis_read_cnt==STATIS_ADDR_CNT) ? 1'b1 : 1'b0;
+
+	//	===============================================================================================
+	//	ref ***输出***
+	//	===============================================================================================
+	//	-------------------------------------------------------------------------------------
+	//	输出地址ready信号
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		if((i_aval|aval_dly)==1'b1 || i_addr_buffer_wr_rst_busy==1'b1 || i_addr_buffer_prog_full==1'b1) begin
+			ardy_reg <= 1'b0;
+		end
+		else if(current_state==S_IDLE || current_state==S_FLAG_ACK) begin
+			ardy_reg <= 1'b1;
+		end
+		else begin
+			ardy_reg <= 1'b0;
+		end
+	end
+	assign o_ardy = ardy_reg & ~i_interrupt;
+	//	-------------------------------------------------------------------------------------
+	//	addr_buffer的写使能信号
+	//	-------------------------------------------------------------------------------------
+	assign	o_addr_buffer_wr = fval_rise | info_flag_rise | image_flag_rise | statis_flag_rise | pval_rise | ((info_addr_flag|image_addr_flag|statis_addr_flag_int)&~i_addr_buffer_prog_full);
+	//	-------------------------------------------------------------------------------------
+	//	addr_buffer的写数据
+	//	-------------------------------------------------------------------------------------
+	assign	ov_addr_buffer_din	 = (fval_rise==1'b1)  			?  FRAME_START_CMD 								:
+		                           (info_flag_rise==1'b1) 		?  INFO_START_CMD 								:
+		                           (info_addr_flag==1'b1) 		?  {1'b1,info_read_addr,{VALID_BIT_NUM{1'b1}}} 	:
+		                           (image_flag_rise==1'b1) 		?  IMAGE_START_CMD 								:
+		                           (image_addr_flag==1'b1) 		?  {1'b1,image_read_addr,flag_valid_bit} 		:
+		                           (statis_flag_rise==1'b1) 	?  STATIS_START_CMD 							:
+		                           (statis_addr_flag==1'b1) 	?  {1'b1,statis_read_addr,{VALID_BIT_NUM{1'b1}}}:
+		                           (frame_end_flag==1'b1) 		?  FRAME_END_CMD 								:
+		                           (pval_rise==1'b1) 			?  PACKET_START_CMD 							:
+		                                  				 	  	   {ADDR_BUFFER_WD{1'b0}}						;
+	//	-------------------------------------------------------------------------------------
+	//	输出一帧地址及数据全部写入addr_buffer完毕标志
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		if(current_state==S_IDLE || i_normal_frame_done==1'b1) begin
+			addr_cmd_wr_done_reg	<= 1'b0;
+		end
+		else if(frame_end_flag==1'b1) begin
+			addr_cmd_wr_done_reg	<= 1'b1;
+		end
+	end
+	assign	o_addr_cmd_wr_done = addr_cmd_wr_done_reg;
+
+	//	===============================================================================================
+	//	ref ***FSM***
+	//	===============================================================================================
+	//	-------------------------------------------------------------------------------------
+	//	FSM Sequential Logic
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		if(reset==1'b1 || i_stream_enable==1'b0) begin
+			current_state	<= S_IDLE;
+		end
+		else begin
+			current_state	<= next_state;
+		end
+	end
+
+	//	-------------------------------------------------------------------------------------
+	//	FSM Conbinatial Logic
+	//	-------------------------------------------------------------------------------------
+	always @ ( * ) begin
+		case(current_state)
+			S_IDLE	:
+			//	-------------------------------------------------------------------------------------
+			//	IDLE -> S_FLAG_ACK
+			//		1.场信号上升沿
+			//	-------------------------------------------------------------------------------------
+			if(i_stream_enable==1'b1 && fval_rise==1'b1 && i_interrupt==1'b0) begin
+				next_state	= S_FLAG_ACK;
+			end
+			else begin
+				next_state	= S_IDLE;
+			end
+
+			S_FLAG_ACK	:
+			//	-------------------------------------------------------------------------------------
+			//	S_FLAG_ACK -> S_IDLE
+			//		1.场信号下降沿
+			//		2.中断信号无效
+			//	S_FLAG_ACK -> S_INFO
+			//		1.info flag有效
+			//		2.地址有效标志生效
+			//		3.中断信号无效
+			//	S_FLAG_ACK -> S_IMAGE
+			//		1.image flag有效
+			//		2.地址有效标志生效
+			//		3.中断信号无效
+			//	S_FLAG_ACK -> S_STATIS
+			//		1.statis flag有效
+			//		2.地址有效标志生效
+			//		3.中断信号无效
+			//	-------------------------------------------------------------------------------------
+			if(fval_fall==1'b1&&i_interrupt==1'b0) begin
+				next_state	= S_IDLE;
+			end
+			else if(info_flag_dly==1'b1 && aval_dly==1'b1 && i_interrupt==1'b0) begin
+				next_state	= S_INFO;
+			end
+			else if(image_flag_dly==1'b1 && aval_dly==1'b1 && i_interrupt==1'b0) begin
+				next_state	= S_IMAGE;
+			end
+			else if(statis_flag_dly==1'b1 && aval_dly==1'b1 && i_interrupt==1'b0) begin
+				next_state	= S_STATIS;
+			end
+			else begin
+				next_state	= S_FLAG_ACK;
+			end
+
+			S_INFO	:
+			//	-------------------------------------------------------------------------------------
+			//	S_INFO -> S_FLAG_ACK
+			//		1.info段计数器计到需要发送的地址个数
+			//		2.addr_buffer可编程满信号无效
+			//	-------------------------------------------------------------------------------------
+			if(info_read_cnt==info_addr_length-1 && i_addr_buffer_prog_full==1'b0) begin
+				next_state	= S_FLAG_ACK;
+			end
+			else begin
+				next_state	= S_INFO;
+			end
+
+			S_IMAGE	:
+			//	-------------------------------------------------------------------------------------
+			//	S_IMAGE -> S_FLAG_ACK
+			//		1.image段计数器计到需要发送的地址个数
+			//		2.addr_buffer可编程满信号无效
+			//	-------------------------------------------------------------------------------------
+			if(image_read_cnt==image_addr_length-1 && i_addr_buffer_prog_full==1'b0) begin
+				next_state	= S_FLAG_ACK;
+			end
+			else begin
+				next_state	= S_IMAGE;
+			end
+
+			S_STATIS:
+			//	-------------------------------------------------------------------------------------
+			//	S_STATIS -> S_FLAG_ACK
+			//		1.statis段计数器计到需要发送的地址个数
+			//		2.addr_buffer可编程满信号无效
+			//		3.STATIS段读地址及发送命令计数器计数期间标志无效
+			//		4.addr_buffer空信号有效
+			//	-------------------------------------------------------------------------------------
+			if(i_normal_frame_done==1'b1) begin
+				next_state	= S_FLAG_ACK;
+			end
+			else begin
+				next_state	= S_STATIS;
+			end
+			default	:
+			next_state	= S_IDLE;
+		endcase
+	end
+
+
+endmodule

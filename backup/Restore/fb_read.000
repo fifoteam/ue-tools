@@ -1,0 +1,347 @@
+//-------------------------------------------------------------------------------------------------
+//  -- 版权所有者   : 中国大恒（集团）有限公司北京图像视觉技术分公司, 2010 -2015.
+//  -- 保密级别     ：绝密.
+//  -- 部门         : 硬件部，FPGA工作组
+//  -- 模块名       : fb_read
+//  -- 设计者       : 邢海涛
+//-------------------------------------------------------------------------------------------------
+//
+//  -- 版本记录 :
+//
+//  -- 作者         :| 版本号	:| 修改日期				:|  修改说明
+//-------------------------------------------------------------------------------------------------
+//  -- 邢海涛       :| V1.0		:| 2018/7/17 11:14:07	:|  划分模块端口
+//-------------------------------------------------------------------------------------------------
+//
+//  -- 模块描述     :
+//              1)  :
+//
+//              2)  :
+//
+//              3)  :
+//
+//-------------------------------------------------------------------------------------------------
+//`include			"fb_read_def.v"
+//仿真单位/精度
+`timescale 1ns/1ps
+//-------------------------------------------------------------------------------------------------
+module fb_read # (
+	parameter	SHORT_REG_WD   								= 16		,	//短寄存器位宽
+	parameter	LONG_REG_WD  						 		= 64		,	//长寄存器位宽
+	parameter	REG_WD  						 			= 32		,	//寄存器位宽
+	parameter	DATA_WD										= 64		,	//输入数据位宽
+	parameter	PTR_WD										= 2			,	//读写指针的位宽
+	parameter	BYTE_ADDR_WD								= 27		,	//有效地址位宽，DDR3容量不同，位宽不同
+	parameter	WR_ADDR_WD   								= 19		,	//帧内地址位宽
+	parameter	RD_ADDR_WD   								= 19		,	//帧内地址位宽
+	parameter	PKT_CNT_WD									= 18		,	//一帧图像中包含的完整包个数的位宽
+	parameter	FBOUT_DE_WD									= 2			,	//帧存输出数据使能位宽，4byte数据使用一个使能位
+	parameter	FBOUT_DATA_WD								= 64		,	//输出数据位宽，支持32、64、128...，最小是32。每32位数据，有3个使能信号。
+	parameter	BURST_SIZE									= 32			//突发长度，以DATA_WD为单位
+	)
+	(
+	//	===============================================================================================
+	//	重传命令写入时钟域
+	//	===============================================================================================
+	//  -------------------------------------------------------------------------------------
+	//  时钟和复位信号
+	//  -------------------------------------------------------------------------------------
+	input							clk_gev								,	//gev工作时钟
+	input							reset_gev							,	//gev工作时钟域的复位信号，高有效
+	//	-------------------------------------------------------------------------------------
+	//	写入的重传信息
+	//	-------------------------------------------------------------------------------------
+	input	[LONG_REG_WD-1:0]		iv_resend_block_id					,	//clk_gev时钟域，block id
+	input	[REG_WD-1:0]			iv_resend_packet_id_first			,	//clk_gev时钟域，packet id first，重传起始
+	input	[REG_WD-1:0]			iv_resend_packet_id_last			,	//clk_gev时钟域，packet id last，重传结束
+	input							i_resend_en							,	//clk_gev时钟域，ov_resend_cmd写使能，发送给重传命令fifo，高有效
+	//	===============================================================================================
+	//	图像输出时钟域
+	//	===============================================================================================
+	//  -------------------------------------------------------------------------------------
+	//  图像输出数据
+	//  -------------------------------------------------------------------------------------
+	input							clk_out								,	//后端FIFO读出时钟
+	input							i_fb_rd								,	//clk_out时钟域，后端fifo读出使能信号，高有效
+	output							o_fb_empty							,	//clk_out时钟域，后端fifo空信号，高有效
+	output	[FBOUT_DE_WD-1:0]		ov_data_is_cmd						,	//clk_out时钟域，帧存后端fifo输出数据是命令数据，单bit代表4byte，1-表示是命令数据，0-表示是图像数据
+	output	[FBOUT_DE_WD-1:0]		ov_dval								,	//clk_out时钟域，帧存后端fifo输出数据有效信号，单bit代表4byte，1-表示数据有效，0-表示数据无效
+	output	[FBOUT_DATA_WD-1:0]		ov_data								,	//clk_out时钟域，后端fifo输出数据
+	//	===============================================================================================
+	//	帧缓存工作时钟域
+	//	===============================================================================================
+	//  -------------------------------------------------------------------------------------
+	//  时钟和复位信号
+	//  -------------------------------------------------------------------------------------
+	input							clk									,	//帧存模块工作时钟
+	input							reset								,	//帧存模块工作时钟域的复位信号，高有效
+	//  -------------------------------------------------------------------------------------
+	//  控制数据
+	//  -------------------------------------------------------------------------------------
+	input							i_stream_enable						,	//clk时钟域，流停止信号，高有效，有效时允许数据从帧存读出，无效时立即停止读出，并复位读写地址指针，清帧存
+	input							i_fb_transfer_start					,	//clk时钟域，帧存传输有效信号，高有效，以一个完整帧为单位，有效时允许数据从帧存读出，无效时不能读出数据，但是不会复位读帧号
+	input	[PTR_WD-1:0]			iv_frame_depth						,	//clk时钟域，帧缓存深度，0-单帧，1-2帧，2-3帧，3-4帧，经过生效时机控制
+	input							i_calib_done						,	//时钟域未知，DDR3校准完成信号，高有效
+	input	[BYTE_ADDR_WD-1:0]		iv_image_size						,	//clk时钟域，帧存写入的一帧图像的大小，以byte为单位
+	input							i_mroi_global_en					,	//clk时钟域，multi-roi全局打开使能，高有效
+	input	[REG_WD-1:0]			iv_mroi_single_en					,	//clk时钟域，multi-roi单独roi的使能位，高有效
+	//  -------------------------------------------------------------------------------------
+	//  与 fb_write 交互
+	//  -------------------------------------------------------------------------------------
+	input							i_wr_ptr_changing					,	//clk时钟域，写帧号正在变化信号，高有效，当该信号有效时，读帧号不能变化
+	input	[PTR_WD-1:0]			iv_wr_ptr							,	//clk时钟域，写帧号，表示当前正在写的帧号
+	input	[WR_ADDR_WD-1:0]		iv_wr_addr							,	//clk时钟域，写地址，表示当前正在写的一帧内的地址
+	input							i_writing							,	//clk时钟域，正在写标志，高有效
+	output	[PTR_WD-1:0]			ov_rd_ptr_normal					,	//clk时钟域，读帧号，表示当前正常读的帧号
+	output	[PTR_WD-1:0]			ov_rd_ptr_resend					,	//clk时钟域，读帧号，表示当前重传读的帧号
+	output							o_reading							,	//clk时钟域，正在读标志，高有效
+	//  -------------------------------------------------------------------------------------
+	//  与 fb_read_plugins 交互，重传内容
+	//  -------------------------------------------------------------------------------------
+	input	[PKT_CNT_WD-1:0]		iv_pic_pkt_cnt						,	//clk时钟域，图像包含的完整数据包个数（不包括残包）
+	input	[4:0]					iv_mroi_num_en						,	//clk时钟域，roi使能个数，0表示1个roi或者multi-roi没有使能，最大是31表示32个roi使能
+	output	[4:0]					ov_mroi_num_resend					,	//clk时钟域，重传帧是mroi的第几个，0表示1个roi或者multi-roi没有使能，最大是31表示32个roi使能
+	output							o_reading_resend					,	//clk时钟域，重传读标志，高有效
+	output							o_stop_normal_read					,	//clk时钟域，可以停止前端正常读，高有效，一个时钟脉冲
+	//  -------------------------------------------------------------------------------------
+	//  与 fb_read_plugins 交互，输出内容
+	//  -------------------------------------------------------------------------------------
+	input							i_ardy								,	//clk时钟域，地址准备好信号，高有效，有效时表示可以接受下一个地址
+	output							o_fval								,	//clk时钟域，场有效信号，高有效
+	output							o_aval								,	//clk时钟域，地址有效信号，高有效
+	output							o_info_flag							,	//clk时钟域，信息段标志，高有效
+	output							o_image_flag						,	//clk时钟域，图像段标志，高有效
+	output							o_statis_flag						,	//clk时钟域，统计段标志，高有效
+	output	[RD_ADDR_WD-1:0]		ov_rd_addr							,	//clk时钟域，读地址
+	output	[RD_ADDR_WD-1:0]		ov_rd_length						,	//clk时钟域，读长度，以byte为单位
+	//  -------------------------------------------------------------------------------------
+	//  与 fb_read_plugins 交互，输入内容
+	//  -------------------------------------------------------------------------------------
+	output							o_ardy								,	//clk时钟域，地址准备好信号，高有效，有效时表示可以接受下一个地址
+	input							i_fval								,	//clk时钟域，场有效信号，高有效
+	input							i_aval								,	//clk时钟域，地址有效信号，高有效
+	input							i_info_flag							,	//clk时钟域，信息段标志，高有效
+	input							i_image_flag						,	//clk时钟域，图像段标志，高有效
+	input							i_statis_flag						,	//clk时钟域，统计段标志，高有效
+	input	[RD_ADDR_WD-1:0]		iv_rd_addr							,	//clk时钟域，读地址
+	input	[RD_ADDR_WD-1:0]		iv_rd_length						,	//clk时钟域，读长度，以byte为单位
+	//  -------------------------------------------------------------------------------------
+	//  与 MIG read port 交互
+	//  -------------------------------------------------------------------------------------
+	input							i_rd_valid							,	//clk时钟域，MIG数据有效信号，高有效，在该信号有效时MIG输出的数据有效
+	input	[DATA_WD-1:0]			iv_rd_data							,	//clk时钟域，MIG数据输出
+	//  -------------------------------------------------------------------------------------
+	//  与 MIG cmd port 交互
+	//  -------------------------------------------------------------------------------------
+	output							i_rd_cmd_req						,	//clk时钟域，读请求信号，高有效，发出写命令之前先发出写请求，写命令全部写完之后写请求要清除
+	output							o_rd_cmd_en							,	//clk时钟域，读命令使能，高有效
+	input							i_rd_cmd_rdy						,	//clk时钟域，读命令准备好信号，高有效，在该信号有效时才能写命令
+	output	[BYTE_ADDR_WD-1:0]		ov_rd_cmd_byte_addr						//clk时钟域，读命令地址
+	);
+
+
+	//	ref paramters
+
+
+	//	ref functions
+
+
+	//	ref signals
+
+
+	//	-------------------------------------------------------------------------------------
+	//	fb_init 交互信号
+	//	-------------------------------------------------------------------------------------
+	wire							w_reading_resend					;	//fb_read_resend输出，clk时钟域，重传读标志，高有效
+	wire							w_reading_normal					;	//fb_read_resend输出，clk时钟域，正常读标志，高有效
+	wire							w_stop_normal_read					;	//fb_read_resend输出，clk时钟域，正常读停止标志，高有效
+	//	-------------------------------------------------------------------------------------
+	//	fb_resend 交互信号
+	//	-------------------------------------------------------------------------------------
+	wire	[PTR_WD-1:0]			wv_rd_ptr_now						;	//fb_read_core输出，clk时钟域，读帧号，表示当前正在读的这一帧的帧号
+	wire	[LONG_REG_WD-1:0]		wv_block_id_now						;	//fb_read_core输出，clk时钟域，block id，表示当前正在读的这一帧的block id
+	wire							w_resend_rdy						;	//fb_read_cmd输出，clk时钟域，重传准备好信号，高有效，有效时表示上一个重传命令处理完且可以接收下一个重传命令，无效时表示正在处理重传命令
+	wire							w_resend_valid						;	//fb_read_resend输出，clk时钟域，重传使能信号，高有效
+	wire							w_resend_need_info					;	//fb_read_resend输出，clk时钟域，重传需要info段，高有效
+	wire							w_resend_unavail					;	//fb_read_resend输出，clk时钟域，重传不可见信号，高有效
+	wire	[LONG_REG_WD-1:0]		wv_resend_block_id					;	//fb_read_resend输出，clk时钟域，block id
+	wire	[REG_WD-1:0]			wv_resend_packet_id_first			;	//fb_read_resend输出，clk时钟域，packet id first，重传起始
+	wire	[RD_ADDR_WD-1:0]		wv_resend_invalid_length			;	//fb_read_resend输出，clk时钟域，重传部分不需要的数据长度，以byte为单位，只计算图像部分，在i_resend_valid有效时，该数据有效
+	wire	[RD_ADDR_WD-1:0]		wv_resend_require_length			;	//fb_read_resend输出，clk时钟域，重传部分请求的数据长度，以byte为单位，只计算图像部分，在i_resend_valid有效时，该数据有效
+
+	//	-------------------------------------------------------------------------------------
+	//	fb_cmd 交互信号
+	//	-------------------------------------------------------------------------------------
+	wire							w_addr_buffer_wr					;	//fb_read_cmd输出，clk时钟域，addr_buffer写使能，高有效
+	wire	[35:0]					wv_addr_buffer_din					;	//fb_read_cmd输出，clk时钟域，addr_buffer写数据
+	wire							w_addr_buffer_full					;	//fb_read_core输出，clk时钟域，addr_buffer满标志，高有效
+
+	//	ref ARCHITECTURE
+
+	//	-------------------------------------------------------------------------------------
+	//	读起始模块
+	//	-------------------------------------------------------------------------------------
+	fb_read_init # (
+	.REG_WD					(REG_WD					),
+	.DATA_WD				(DATA_WD				),
+	.PTR_WD					(PTR_WD					),
+	.BYTE_ADDR_WD			(BYTE_ADDR_WD			),
+	.RD_ADDR_WD				(RD_ADDR_WD				),
+	.BURST_SIZE				(BURST_SIZE				)
+	)
+	fb_read_init_inst (
+	.clk					(clk					),
+	.reset					(reset					),
+	.i_stream_enable		(i_stream_enable		),
+	.i_fb_transfer_start	(i_fb_transfer_start	),
+	.iv_frame_depth			(iv_frame_depth			),
+	.i_calib_done			(i_calib_done			),
+	.iv_image_size			(iv_image_size			),
+	.i_wr_ptr_changing		(i_wr_ptr_changing		),
+	.iv_wr_ptr				(iv_wr_ptr				),
+	.ov_rd_ptr_normal		(ov_rd_ptr_normal		),
+	.o_reading_normal		(w_reading_normal		),
+	.i_stop_normal_read		(w_stop_normal_read		),
+	.i_ardy					(i_ardy					),
+	.o_fval					(o_fval					),
+	.o_aval					(o_aval					),
+	.o_info_flag			(o_info_flag			),
+	.o_image_flag			(o_image_flag			),
+	.o_statis_flag			(o_statis_flag			),
+	.ov_rd_addr				(ov_rd_addr				),
+	.ov_rd_length			(ov_rd_length			)
+	);
+
+	assign	o_reading			= w_reading_normal | w_reading_resend;
+	assign	o_reading_resend	= w_reading_resend;
+	assign	o_stop_normal_read	= w_stop_normal_read;
+
+	//	-------------------------------------------------------------------------------------
+	//	重传解析模块
+	//	-------------------------------------------------------------------------------------
+	fb_read_resend # (
+	.PTR_WD							(PTR_WD							),
+	.SHORT_REG_WD					(SHORT_REG_WD					),
+	.REG_WD							(REG_WD							),
+	.LONG_REG_WD					(LONG_REG_WD					),
+	.RD_ADDR_WD						(RD_ADDR_WD						),
+	.PKT_CNT_WD						(PKT_CNT_WD						)
+	)
+	fb_read_resend_inst (
+	.clk_gev						(clk_gev						),
+	.reset_gev						(reset_gev						),
+	.iv_resend_block_id				(iv_resend_block_id				),
+	.iv_resend_packet_id_first		(iv_resend_packet_id_first		),
+	.iv_resend_packet_id_last		(iv_resend_packet_id_last		),
+	.i_resend_en					(i_resend_en					),
+	.clk							(clk							),
+	.reset							(reset							),
+	.i_stream_enable				(i_stream_enable				),
+	.iv_frame_depth					(iv_frame_depth					),
+	.iv_pic_pkt_cnt					(iv_pic_pkt_cnt					),
+	.iv_mroi_num_en					(iv_mroi_num_en					),
+	.ov_mroi_num_resend				(ov_mroi_num_resend				),
+	.i_wr_ptr_changing				(i_wr_ptr_changing				),
+	.iv_wr_ptr						(iv_wr_ptr						),
+	.i_writing						(i_writing						),
+	.i_fval							(o_fval							),
+	.iv_rd_ptr_normal				(ov_rd_ptr_normal				),
+	.ov_rd_ptr_resend				(ov_rd_ptr_resend				),
+	.o_reading_resend				(w_reading_resend				),
+	.o_stop_normal_read				(w_stop_normal_read				),
+	.i_resend_rdy					(w_resend_rdy					),
+	.o_resend_valid					(w_resend_valid					),
+	.o_resend_unavail				(w_resend_unavail				),
+	.o_resend_need_info				(w_resend_need_info				),
+	.ov_resend_block_id				(wv_resend_block_id				),
+	.ov_resend_packet_id_first		(wv_resend_packet_id_first		),
+	.ov_resend_invalid_length		(wv_resend_invalid_length		),
+	.ov_resend_require_length		(wv_resend_require_length		),
+	.iv_rd_ptr_now					(wv_rd_ptr_now					),
+	.iv_block_id_now				(wv_block_id_now				)
+	);
+
+	//	-------------------------------------------------------------------------------------
+	//	命令模块
+	//	-------------------------------------------------------------------------------------
+	fb_read_cmd # (
+	.DATA_WD						(DATA_WD						),
+	.FBOUT_DE_WD					(FBOUT_DE_WD					),
+	.FBOUT_DATA_WD					(FBOUT_DATA_WD					),
+	.PTR_WD							(PTR_WD							),
+	.BYTE_ADDR_WD					(BYTE_ADDR_WD					),
+	.RD_ADDR_WD						(RD_ADDR_WD						),
+	.REG_WD							(REG_WD							),
+	.LONG_REG_WD					(LONG_REG_WD					),
+	.BURST_SIZE						(BURST_SIZE						)
+	)
+	fb_read_cmd_inst (
+	.clk							(clk							),
+	.reset							(reset							),
+	.i_stream_enable				(i_stream_enable				),
+	.o_addr_buffer_wr				(w_addr_buffer_wr				),
+	.ov_addr_buffer_din				(wv_addr_buffer_din				),
+	.i_addr_buffer_full				(w_addr_buffer_full				),
+	.i_reading_resend				(w_reading_resend				),
+	.iv_rd_ptr_normal				(ov_rd_ptr_normal				),
+	.iv_rd_ptr_resend				(ov_rd_ptr_resend				),
+	.i_fval							(i_fval							),
+	.i_aval							(i_aval							),
+	.i_info_flag					(i_info_flag					),
+	.i_image_flag					(i_image_flag					),
+	.i_statis_flag					(i_statis_flag					),
+	.iv_rd_addr						(iv_rd_addr						),
+	.iv_rd_length					(iv_rd_length					),
+	.o_ardy							(o_ardy							),
+	.o_resend_rdy					(w_resend_rdy					),
+	.i_resend_valid					(w_resend_valid					),
+	.i_resend_need_info				(w_resend_need_info				),
+	.i_resend_unavail				(w_resend_unavail				),
+	.iv_resend_block_id				(wv_resend_block_id				),
+	.iv_resend_packet_id_first		(wv_resend_packet_id_first		),
+	.iv_resend_invalid_length		(wv_resend_invalid_length		),
+	.iv_resend_require_length		(wv_resend_require_length		)
+	);
+
+	//	-------------------------------------------------------------------------------------
+	//	帧存读核心模块
+	//	-------------------------------------------------------------------------------------
+	fb_read_core # (
+	.DATA_WD				(DATA_WD				),
+	.FBOUT_DE_WD			(FBOUT_DE_WD			),
+	.FBOUT_DATA_WD			(FBOUT_DATA_WD			),
+	.PTR_WD					(PTR_WD					),
+	.BYTE_ADDR_WD			(BYTE_ADDR_WD			),
+	.RD_ADDR_WD				(RD_ADDR_WD				),
+	.WR_ADDR_WD				(WR_ADDR_WD				),
+	.LONG_REG_WD			(LONG_REG_WD			),
+	.BURST_SIZE				(BURST_SIZE				)
+	)
+	fb_read_core_inst (
+	.clk_out				(clk_out				),
+	.i_fb_rd				(i_fb_rd				),
+	.o_fb_empty				(o_fb_empty				),
+	.ov_data_is_cmd			(ov_data_is_cmd			),
+	.ov_dval				(ov_dval				),
+	.ov_data				(ov_data				),
+	.clk					(clk					),
+	.reset					(reset					),
+	.i_stream_enable		(i_stream_enable		),
+	.i_writing				(i_writing				),
+	.iv_wr_ptr				(iv_wr_ptr				),
+	.iv_wr_addr				(iv_wr_addr				),
+	.i_addr_buffer_wr		(w_addr_buffer_wr		),
+	.iv_addr_buffer_din		(wv_addr_buffer_din		),
+	.o_addr_buffer_full		(w_addr_buffer_full		),
+	.ov_rd_ptr_now			(wv_rd_ptr_now			),
+	.ov_block_id_now		(wv_block_id_now		),
+	.i_rd_valid				(i_rd_valid				),
+	.iv_rd_data				(iv_rd_data				),
+	.i_rd_cmd_req			(i_rd_cmd_req			),
+	.o_rd_cmd_en			(o_rd_cmd_en			),
+	.i_rd_cmd_rdy			(i_rd_cmd_rdy			),
+	.ov_rd_cmd_byte_addr	(ov_rd_cmd_byte_addr	)
+	);
+
+
+endmodule
