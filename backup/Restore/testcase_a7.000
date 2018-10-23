@@ -1,0 +1,177 @@
+//-------------------------------------------------------------------------------------------------
+//  -- 版权所有者   : 中国大恒（集团）有限公司北京图像视觉技术分公司, 2010 -2015.
+//  -- 保密级别     ：绝密.
+//  -- 部门         : 硬件部，FPGA工作组
+//  -- 模块名       : testcase_a7
+//  -- 设计者       : 邢海涛
+//-------------------------------------------------------------------------------------------------
+//
+//  -- 版本记录 :
+//
+//  -- 作者         :| 修改日期				:|  修改说明
+//-------------------------------------------------------------------------------------------------
+//  -- 邢海涛       :| 2015/4/10 16:50:28	:|  初始版本
+//-------------------------------------------------------------------------------------------------
+//
+//  -- 模块描述     : 窗口大小是16x16，开采信号有效，正常模式下的运行状况
+//              1)  : ... ...
+//
+//              2)  : ... ...
+//
+//              3)  : ... ...
+//
+//-------------------------------------------------------------------------------------------------
+//仿真单位/精度
+`timescale 1ns/1ps
+//-------------------------------------------------------------------------------------------------
+
+module testcase_a7 ();
+
+	//	ref signals
+	//	===============================================================================================
+	//	--ref parameter
+	//	===============================================================================================
+	//	-------------------------------------------------------------------------------------
+	//	TESTCASE
+	//	-------------------------------------------------------------------------------------
+	parameter	TESTCASE_NUM			= "testcase_a7"			;	//其他模块需要使用字符串
+
+	//	-------------------------------------------------------------------------------------
+	//	clk_gen
+	//	-------------------------------------------------------------------------------------
+	parameter	CLK_PERIOD_NS_0			= 100	;	//frame info add 时钟频率，10MHz
+	parameter	CLK_PERIOD_NS_1			= 25	;	//frame info add 时钟频率，40MHz
+	parameter	CLK_PERIOD_NS_2			= 100	;	//RESERVED
+	parameter	CLK_PERIOD_NS_3			= 100	;	//RESERVED
+	parameter	CLK_PERIOD_NS_4			= 100	;	//RESERVED
+	parameter	CLK_PERIOD_NS_5			= 100	;	//RESERVED
+	parameter	CLK_PERIOD_NS_6			= 100	;	//RESERVED
+	parameter	CLK_PERIOD_NS_7			= 100	;	//RESERVED
+
+	//	-------------------------------------------------------------------------------------
+	//	common
+	//	-------------------------------------------------------------------------------------
+	parameter	STATIS_VALID					= "FALSE"	;
+	parameter	INFO_WAIT_TIME					= 16	;
+	parameter	IMAGE_WAIT_TIME					= 16	;
+	parameter	STATIS_WAIT_TIME				= 16	;
+	parameter	FVAL_FALL_WAIT_TIME				= 16	;
+	parameter	BID_INIT_VALUE					= 1	;
+	parameter	INFO_SIZE						= 256	;
+	parameter	STATIS_SIZE						= 256	;
+	parameter	MROI_MAX_NUM					= 1	;
+	parameter	DATA_WD							= 256	;
+
+	parameter	SHORT_REG_WD					= 16	;
+	parameter	REG_WD							= 32	;
+	parameter	LONG_REG_WD						= 64	;
+	parameter	GEV_DE_WD						= 2	;
+	parameter	GEV_DATA_WD						= 64	;
+	parameter	MROI_OFFSET_WD					= MROI_MAX_NUM*SHORT_REG_WD	;
+	parameter	MROI_IMAGE_SIZE_WD				= MROI_MAX_NUM*REG_WD	;
+	//	-------------------------------------------------------------------------------------
+	//	sensor model parameter
+	//	-------------------------------------------------------------------------------------
+	parameter	IMAGE_SRC				= "LINE_INC"			;	//"RANDOM" or "FILE" or "LINE_INC" or "FRAME_INC" or "FRAME_INC_NO_RST" or "PIX_INC_NO_FVAL" or "PIX_INC"
+	parameter	DATA_WIDTH				= 16					;	//8 10 12 max is 16
+	parameter	CHANNEL_NUM				= 16					;	//8 10 12 max is 16
+	parameter	SENSOR_CLK_DELAY_VALUE	= 0						;	//Sensor 芯片内部延时 单位ns
+	parameter	CLK_DATA_ALIGN			= "RISING"				;	//"RISING" - 输出时钟的上升沿与数据对齐。"FALLING" - 输出时钟的下降沿与数据对齐
+	parameter	FVAL_LVAL_ALIGN			= "FALSE"				;	//"TRUE" - fval 与 lval 之间的距离固定为3个时钟。"FALSE" - fval 与 lval 之间的距离自由设定
+	parameter	SOURCE_FILE_PATH		= "file/testcase_83/source_file/"	;	//数据源文件路径
+	parameter	GEN_FILE_EN				= 0						;	//0-生成的图像不写入文件，1-生成的图像写入文件
+	parameter	GEN_FILE_PATH			= "file/testcase_83/gen_file/"		;	//产生的数据要写入的路径
+	parameter	NOISE_EN				= 0						;	//0-不加入噪声，1-加入噪声
+
+
+
+
+
+
+	//	ref ARCHITECTURE
+
+
+	//	-------------------------------------------------------------------------------------
+	//	--ref sim time
+	//	-------------------------------------------------------------------------------------
+
+	initial begin
+		#20
+		driver.common.set_reset(1'b1);
+		#200
+		driver.common.set_reset(1'b0);
+		driver.driver_mt9p031.bfm_mt9p031.reset_high();
+		driver.driver_mt9p031.bfm_mt9p031.pattern_5para(256,2000,8,4,1000);
+		#200
+		driver.driver_mt9p031.bfm_mt9p031.reset_low();
+		driver.common.info_add_random();
+
+		forever begin
+			@(negedge driver.driver_mt9p031.o_fval);
+			driver.common.info_add_random();
+		end
+
+	end
+
+	integer			i = 0;
+	integer			j = 0;
+	parameter		REPEAT_NUM	= 8;
+
+	initial begin
+		#200
+		wait(driver.common.i_stream_enable==1'b1);
+		@ (posedge driver.driver_mt9p031.o_fval);
+		@ (posedge driver.driver_mt9p031.o_fval);
+		@ (posedge driver.driver_mt9p031.o_fval);
+
+
+		//	-------------------------------------------------------------------------------------
+		//	两层循环
+		//	1.外层循环，停采
+		//	2.内存循环，开采
+		//	-------------------------------------------------------------------------------------
+		for(i=0;i<REPEAT_NUM;i=i+1) begin
+			@ (posedge driver.driver_mt9p031.o_fval);
+			@ (negedge driver.driver_mt9p031.o_fval);
+			//	-------------------------------------------------------------------------------------
+			//	fval=0 中间附近停采
+			//	-------------------------------------------------------------------------------------
+			@ (negedge driver.driver_mt9p031.o_fval);
+			repeat(i+2) @ (posedge driver.driver_mt9p031.o_lval);
+			driver.common.set_i_stream_enable(0);
+
+			//	-------------------------------------------------------------------------------------
+			//	经过一个完整帧，即停采超过一帧的时间
+			//	-------------------------------------------------------------------------------------
+			@ (posedge driver.driver_mt9p031.o_fval);
+			@ (negedge driver.driver_mt9p031.o_fval);
+
+			for(j=0;j<REPEAT_NUM;j=j+1) begin
+				//	-------------------------------------------------------------------------------------
+				//	fval=0中间附近开采
+				//	-------------------------------------------------------------------------------------
+				@ (negedge driver.driver_mt9p031.o_fval);
+				repeat(j) @ (posedge driver.driver_mt9p031.o_lval);
+				//	repeat(j) @ (posedge driver.driver_clk_gen.clk_0);
+				driver.common.set_i_stream_enable(1);
+			end
+		end
+		$stop;
+	end
+
+	initial begin
+		#200
+		driver.driver_mt9p031.bfm_mt9p031.continue_lval_high;
+	end
+	//	//	-------------------------------------------------------------------------------------
+	//	//	--ref sim time
+	//	//	-------------------------------------------------------------------------------------
+	//	initial begin
+	//		#200
+	//		repeat(10) @ (negedge driver.driver_mt9p031.o_fval);
+	//		#2000
+	//		$stop;
+	//	end
+
+
+endmodule
