@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<UETheme>
+  <Window>
+    <Look>Custom</Look>
+    <Font Category="Dockable Windows" Face="Segoe UI">-12:0:0:0:400:0:0:0:1:0:0:0:3</Font>
+    <Font Category="Output Window" Face="Consolas">-13:0:0:0:400:0:0:0:0:0:0:0:3</Font>
+    <Color ID="" Category="" Description="" Value="#000000"/>
+  </Window>
+  <Editor>
+    <Font Category="Normal" Face="Courier New">-13:0:0:0:400:0:0:0:255:0:0:0:3</Font>
+    <Font Category="Hex/Column" Face="Courier New">-13:0:0:0:400:0:0:0:255:0:0:0:3</Font>
+  </Editor>
+  <Languages>
+    <Language Name="UE Themes">
+      <ColorPair Category="Color Group 3" Foreground="#FF8000" Background="#C7EDCC" Auto="true"/>
+      <FontStyle Category="Color Group 3">Normal</FontStyle>
+    </Language>
+  </Languages>
+  <Output/>
+</UETheme>
