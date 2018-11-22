@@ -892,4 +892,6 @@ function integer cycle_acc;&#xD;&#xD;
 			cycle_acc	= cycle_acc + in_cnt[i];&#xD;&#xD;
 		end&#xD;&#xD;
 	end&#xD;&#xD;
-endfunction</Template></Templates>
+endfunction</Template><Template Name="joint" Description="" Comments="0" Strings="0">{GREY_OFFSET_WIDTH{1'b0}}&#xD;&#xD;
+{1'b1,{(SHORT_REG_WD-GREY_OFFSET_WIDTH){1'b0}}}&#xD;&#xD;
+{{{{16'b0},wv_height_lane[roi_cnt]}},iv_pixel_format};</Template></Templates>

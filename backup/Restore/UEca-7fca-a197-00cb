@@ -1,0 +1,57 @@
+i2c_slave_ctrl i2c_slave_ctrl_inst (
+.clk					(clk					),
+.reset					(reset					),
+.o_start				(o_start				),
+.o_we					(o_we					),
+.ov_addr				(ov_addr				),
+.ov_data				(ov_data				),
+.i_ack					(i_ack					),
+.iv_data				(iv_data				),
+.ov_reg_addr			(ov_reg_addr			),
+.o_wr_reg_en			(o_wr_reg_en			),
+.ov_wr_data				(ov_wr_data				),
+.o_rd_reg_en			(o_rd_reg_en			),
+.iv_reg_din				(iv_reg_din				),
+.o_state_in_dummy		(o_state_in_dummy		),
+.o_state_in_trrdy		(o_state_in_trrdy		),
+.o_state_in_rxdr		(o_state_in_rxdr		)
+);
+
+
+reg		clk					= 1'b0	;
+reg		reset					= 1'b0	;
+wire	o_start				;
+wire	o_we					;
+wire	[3:0]	ov_addr				;
+wire	[7:0]	ov_data				;
+reg		i_ack					= 1'b0	;
+reg		[7:0]	iv_data				= 8'b0	;
+wire	[15:0]	ov_reg_addr			;
+wire	o_wr_reg_en			;
+wire	[7:0]	ov_wr_data				;
+wire	o_rd_reg_en			;
+reg		[7:0]	iv_reg_din				= 8'b0	;
+wire	o_state_in_dummy		;
+wire	o_state_in_trrdy		;
+wire	o_state_in_rxdr		;
+
+
+
+
+
+wire	clk					;
+wire	reset					;
+wire	o_start				;
+wire	o_we					;
+wire	[3:0]	ov_addr				;
+wire	[7:0]	ov_data				;
+wire	i_ack					;
+wire	[7:0]	iv_data				;
+wire	[15:0]	ov_reg_addr			;
+wire	o_wr_reg_en			;
+wire	[7:0]	ov_wr_data				;
+wire	o_rd_reg_en			;
+wire	[7:0]	iv_reg_din				;
+wire	o_state_in_dummy		;
+wire	o_state_in_trrdy		;
+wire	o_state_in_rxdr		;

@@ -69,6 +69,11 @@ get_timing_paths
 add_cells_to_pblock
 report_operating_conditions
 reset_operating_conditions
+create_debug_core
+connect_debug_port
+
+
+
 
 /C2"XDC Parameter"
 all_clocks
@@ -86,10 +91,29 @@ all_rams
 current_design
 current_instance
 group_path
-filter
-period
+-name
+-period
+-from
+-to
+-through
+-setup
+-hold
+-hierarchical
+-filter
+-of_objects
+-datapath_only
+-asynchronous
+-group
+-of
+-hier
+-start
+-clock
+
+
 
 /C3"XDC Constants"
+PRIMITIVE_SUBGROUP
+NAME
 NO
 YES
 FALSE
@@ -153,8 +177,10 @@ HSTL_I_DCI
 HSTL_I_DCI_18
 HSUL_12_DCI
 LVCMOS12
+LVCMOS15
 LVCMOS18
 LVCMOS25
+LVCMOS33
 LVDCI_15
 LVDCI_18
 LVDCI_DV2_15
@@ -218,6 +244,12 @@ PULLUP
 SLEW
 VCCAUX_IO
 IO_BUFFER_TYPE
+CONFIG_VOLTAGE
+CFGBVS
+VCCO
+
+
+
 
 /C4"XDC Unsupport command"
 set_wire_load_min_block_size
@@ -274,3 +306,4 @@ foreach_in_collection
 eq
 in
 ne ni
+=~

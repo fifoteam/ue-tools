@@ -1,0 +1,615 @@
+//-------------------------------------------------------------------------------------------------
+//  -- 版权所有者   : 中国大恒（集团）有限公司北京图像视觉技术分公司, 2010 -2015.
+//  -- 保密级别     ：绝密.
+//  -- 部门         : 硬件部，FPGA工作组
+//  -- 模块名       : i2c_slave_ctrl
+//  -- 设计者       : 邢海涛
+//-------------------------------------------------------------------------------------------------
+//
+//  -- 版本记录 :
+//
+//  -- 作者         :| 版本号	:| 修改日期				:|  修改说明
+//-------------------------------------------------------------------------------------------------
+//  -- 邢海涛       :| V1.0		:| 2018/10/17 16:09:03	:|  初始版本
+//-------------------------------------------------------------------------------------------------
+//
+//  -- 模块描述     :
+//              1)  :
+//
+//              2)  :
+//
+//              3)  :
+//
+//-------------------------------------------------------------------------------------------------
+//`include			"i2c_slave_ctrl_def.v"
+//仿真单位/精度
+`timescale 1ns/1ps
+//-------------------------------------------------------------------------------------------------
+
+module i2c_slave_ctrl (
+	//输入信号
+	input					clk					,	//输入时钟
+	input					reset				,	//复位信号
+	output					o_start				,	//高有效，控制器启动信号
+	output					o_we				,	//1-wr  0-rd
+	output	[3:0]			ov_addr				,	//reg addr
+	output	[7:0]			ov_data				,	//reg data
+	input					i_ack				,	//高有效
+	input	[7:0]			iv_data				,	//i2c 数据输出
+
+	output	[15:0]			ov_reg_addr			,	//reg file address
+	output					o_wr_reg_en			,	//reg wr en
+	output	[7:0]			ov_wr_data			,	//reg file write data
+	output					o_rd_reg_en			,	//reg read en
+	input	[7:0]			iv_reg_din			,	//reg file read data
+
+	output					o_state_in_dummy	,
+	output					o_state_in_trrdy	,
+	output					o_state_in_rxdr
+
+
+
+	);
+	//	ref paramters
+
+	//FSM Parameter Define
+	parameter	S_IDLE		 		= 5'd0;
+	parameter	S_WR_CMDR_4 		= 5'd1;
+	parameter	S_RD_BUSY_0			= 5'd2;
+	parameter	S_RD_DUMMY_0		= 5'd3;
+	parameter	S_RD_DUMMY_1		= 5'd4;
+	parameter	S_RD_TRRDY_1_0		= 5'd5;
+	parameter	S_RD_RXDR_0			= 5'd6;
+	parameter	S_RD_TRRDY_1_1		= 5'd7;
+	parameter	S_RD_RXDR_1			= 5'd8;
+	parameter	S_RD_SRW_TRRDY		= 5'd9;
+	parameter	S_RD_RXDR_2			= 5'd10;
+	parameter	S_RD_TRRDY_1_3		= 5'd11;
+	parameter	S_RD_RXDR_3			= 5'd12;
+	parameter	S_WR_TXDR_0			= 5'd13;
+	parameter	S_RD_TRRDY_1_WR		= 5'd14;
+	parameter	S_WR_TXDR_1			= 5'd15;
+	parameter	S_WR_REG			= 5'd16;
+
+
+	reg		[4:0]	current_state	= S_IDLE;
+	reg		[4:0]	next_state		= S_IDLE;
+
+	//FSM for sim
+	// synthesis translate_off
+	reg		[127:0]			state_ascii;
+	always @ ( * ) begin
+		case(current_state)
+			5'd0	:	state_ascii	= "S_IDLE";
+			5'd1	:	state_ascii	= "S_WR_CMDR_4";
+			5'd2	:	state_ascii	= "S_RD_BUSY_0";
+			5'd3	:	state_ascii	= "S_RD_DUMMY_0";
+			5'd4	:	state_ascii	= "S_RD_DUMMY_1";
+			5'd5	:	state_ascii	= "S_RD_TRRDY_1_0";
+			5'd6	:	state_ascii	= "S_RD_RXDR_0";
+			5'd7	:	state_ascii	= "S_RD_TRRDY_1_1";
+			5'd8	:	state_ascii	= "S_RD_RXDR_1";
+			5'd9	:	state_ascii	= "S_RD_SRW_TRRDY";
+			5'd10	:	state_ascii	= "S_RD_RXDR_2";
+			5'd11 	:	state_ascii	= "S_RD_TRRDY_1_3";
+			5'd12 	:	state_ascii	= "S_RD_RXDR_3";
+			5'd13 	:	state_ascii	= "S_WR_TXDR_0";
+			5'd14 	:	state_ascii	= "S_RD_TRRDY_1_WR";
+			5'd15 	:	state_ascii	= "S_WR_TXDR_1";
+			5'd16 	:	state_ascii	= "S_WR_REG";
+			default	:	state_ascii	= "ERROR";
+		endcase
+	end
+	// synthesis translate_on
+
+	//	ref functions
+
+
+	//	ref signals
+
+	wire						hgc					;
+	wire						troe				;
+	wire						trrdy				;
+	wire						arbl				;
+	wire						srw					;
+	wire						rarc				;
+	wire						busy				;
+	wire						tip					;
+
+
+	reg							start_reg			= 'b0;
+	reg							we_reg				= 'b0;
+	reg		[3:0]				addr_reg			= 'b0;
+	reg		[7:0]				data_reg			= 'b0;
+
+	reg							step_cnt			= 'b0;
+	reg							rd_reg_en			= 'b0;
+	reg							wr_reg_en			= 'b0;
+
+	reg		[15:0]				reg_addr_int		= 'b0;
+//	reg		[15:0]				reg_data_int		= 'b0;
+	reg		[7:0]				reg_data_int		= 'b0;
+
+
+
+
+
+	//	ref ARCHITECTURE
+
+	reg				state_in_dummy	= 'b0;
+	always @ (posedge clk) begin
+		if(current_state==S_RD_DUMMY_0) begin
+			state_in_dummy	<= 1'b1;
+		end
+	end
+
+	reg				state_in_trrdy	= 'b0;
+	always @ (posedge clk) begin
+		if(current_state==S_RD_TRRDY_1_0) begin
+			state_in_trrdy	<= 1'b1;
+		end
+	end
+
+	reg				state_in_rxdr	= 'b0;
+	always @ (posedge clk) begin
+		if(current_state==S_WR_TXDR_0) begin
+			state_in_rxdr	<= 1'b1;
+		end
+	end
+
+	assign	o_state_in_dummy	= state_in_dummy;
+	assign	o_state_in_trrdy	= state_in_trrdy;
+	assign	o_state_in_rxdr	= state_in_rxdr;
+
+
+
+	//  ===============================================================================================
+	//	ref ***create edge***
+	//  ===============================================================================================
+	//  -------------------------------------------------------------------------------------
+	//	fval edge
+	//  -------------------------------------------------------------------------------------
+	assign	hgc			= iv_data[0];
+	assign	troe		= iv_data[1];
+	assign	trrdy		= iv_data[2];
+	assign	arbl		= iv_data[3];
+	assign	srw			= iv_data[4];
+	assign	rarc		= iv_data[5];
+	assign	busy		= iv_data[6];
+	assign	tip			= iv_data[7];
+
+	assign	o_start		= start_reg;
+	assign	o_we		= we_reg;
+	assign	ov_addr		= addr_reg;
+	assign	ov_data		= data_reg;
+
+
+	//  ===============================================================================================
+	//	ref ***output***
+	//  ===============================================================================================
+
+
+
+
+	assign	ov_reg_addr		= reg_addr_int;
+	assign	o_rd_reg_en		= rd_reg_en;
+	assign	o_wr_reg_en		= wr_reg_en;
+	assign	ov_wr_data		= reg_data_int;
+
+
+	always @ (posedge clk) begin
+		if(i_ack==1'b1 || current_state==S_WR_REG || current_state==S_IDLE) begin
+			step_cnt	<= 'b0;
+		end
+		else begin
+			step_cnt	<= 1'b1;
+		end
+	end
+
+
+	//	-------------------------------------------------------------------------------------
+	//	i2c wr
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		if(current_state==S_WR_REG) begin
+			wr_reg_en	<= 1'b1;
+		end
+		else begin
+			wr_reg_en	<= 1'b0;
+		end
+	end
+
+	//	-------------------------------------------------------------------------------------
+	//	i2c rd
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		if(current_state==S_RD_SRW_TRRDY && i_ack==1'b1 && srw==1'b1) begin
+			rd_reg_en	<= 1'b1;
+		end
+		else begin
+			rd_reg_en	<= 1'b0;
+		end
+	end
+
+
+
+
+	always @ (posedge clk) begin
+		case(current_state)
+			S_IDLE	: begin
+				start_reg		<= 1'b0;
+				we_reg			<= 1'b0;
+				addr_reg		<= 4'h0;
+				data_reg		<= 8'h0;
+			end
+			S_WR_CMDR_4	:
+			if(step_cnt==1'b0) begin
+				start_reg		<= 1'b1;
+				we_reg			<= 1'b1;
+				addr_reg		<= 4'h7;
+				data_reg		<= 8'h4;
+			end
+			else begin
+				start_reg		<= 1'b0;
+			end
+			S_RD_BUSY_0	:
+			if(step_cnt==1'b0) begin
+				start_reg		<= 1'b1;
+				we_reg			<= 1'b0;
+				addr_reg		<= 4'hb;
+				data_reg		<= 8'h0;
+			end
+			else begin
+				start_reg		<= 1'b0;
+			end
+			S_RD_DUMMY_0	:
+			if(step_cnt==1'b0) begin
+				start_reg		<= 1'b1;
+				we_reg			<= 1'b0;
+				addr_reg		<= 4'h9;
+				data_reg		<= 8'h0;
+			end
+			else begin
+				start_reg		<= 1'b0;
+			end
+			S_RD_DUMMY_1	:
+			if(step_cnt==1'b0) begin
+				start_reg		<= 1'b1;
+				we_reg			<= 1'b0;
+				addr_reg		<= 4'h9;
+				data_reg		<= 8'h0;
+			end
+			else begin
+				start_reg		<= 1'b0;
+			end
+			S_RD_TRRDY_1_0	:
+			if(step_cnt==1'b0) begin
+				start_reg		<= 1'b1;
+				we_reg			<= 1'b0;
+				addr_reg		<= 4'hb;
+				data_reg		<= 8'h0;
+			end
+			else begin
+				start_reg		<= 1'b0;
+			end
+			S_RD_RXDR_0	:begin
+				if(step_cnt==1'b0) begin
+					start_reg		<= 1'b1;
+					we_reg			<= 1'b0;
+					addr_reg		<= 4'h9;
+					data_reg		<= 8'h0;
+				end
+				else begin
+					start_reg		<= 1'b0;
+				end
+				if(i_ack==1'b1) begin
+					reg_addr_int[15:8]	<= iv_data;
+				end
+			end
+			S_RD_TRRDY_1_1	:
+			if(step_cnt==1'b0) begin
+				start_reg		<= 1'b1;
+				we_reg			<= 1'b0;
+				addr_reg		<= 4'hb;
+				data_reg		<= 8'h0;
+			end
+			else begin
+				start_reg		<= 1'b0;
+			end
+			S_RD_RXDR_1	:begin
+				if(step_cnt==1'b0) begin
+					start_reg		<= 1'b1;
+					we_reg			<= 1'b0;
+					addr_reg		<= 4'h9;
+					data_reg		<= 8'h0;
+				end
+				else begin
+					start_reg		<= 1'b0;
+				end
+				if(i_ack==1'b1) begin
+					reg_addr_int[7:0]	<= iv_data;
+				end
+			end
+			S_RD_SRW_TRRDY	: begin
+				if(step_cnt==1'b0) begin
+					start_reg		<= 1'b1;
+					we_reg			<= 1'b0;
+					addr_reg		<= 4'hb;
+					data_reg		<= 8'h0;
+				end
+				else begin
+					start_reg		<= 1'b0;
+				end
+			end
+			S_RD_RXDR_2	:begin
+				if(step_cnt==1'b0) begin
+					start_reg		<= 1'b1;
+					we_reg			<= 1'b0;
+					addr_reg		<= 4'h9;
+					data_reg		<= 8'h0;
+				end
+				else begin
+					start_reg		<= 1'b0;
+				end
+				if(i_ack==1'b1) begin
+					reg_data_int[7:0]	<= iv_data;
+				end
+			end
+//			S_RD_TRRDY_1_3	:
+//			if(step_cnt==1'b0) begin
+//				start_reg		<= 1'b1;
+//				we_reg			<= 1'b0;
+//				addr_reg		<= 4'hb;
+//				data_reg		<= 8'h0;
+//			end
+//			else begin
+//				start_reg		<= 1'b0;
+//			end
+//			S_RD_RXDR_3	: begin
+//				if(step_cnt==1'b0) begin
+//					start_reg		<= 1'b1;
+//					we_reg			<= 1'b0;
+//					addr_reg		<= 4'h9;
+//					data_reg		<= 8'h0;
+//				end
+//				else begin
+//					start_reg		<= 1'b0;
+//				end
+//				if(i_ack==1'b1) begin
+//					reg_data_int[7:0]	<= iv_data;
+//				end
+//			end
+			S_WR_TXDR_0	:
+			if(step_cnt==1'b0) begin
+				start_reg		<= 1'b1;
+				we_reg			<= 1'b1;
+				addr_reg		<= 4'h8;
+				data_reg		<= iv_reg_din[7:0];
+			end
+			else begin
+				start_reg		<= 1'b0;
+			end
+//			S_RD_TRRDY_1_WR	:
+//			if(step_cnt==1'b0) begin
+//				start_reg		<= 1'b1;
+//				we_reg			<= 1'b0;
+//				addr_reg		<= 4'hb;
+//				data_reg		<= 8'h0;
+//			end
+//			else begin
+//				start_reg		<= 1'b0;
+//			end
+//			S_WR_TXDR_1	:
+//			if(step_cnt==1'b0) begin
+//				start_reg		<= 1'b1;
+//				we_reg			<= 1'b1;
+//				addr_reg		<= 4'h8;
+//				data_reg		<= iv_reg_din[7:0];
+//			end
+//			else begin
+//				start_reg		<= 1'b0;
+//			end
+		endcase
+	end
+
+
+
+
+
+
+
+
+	//	===============================================================================================
+	//	ref ***FSM***
+	//	===============================================================================================
+	//	-------------------------------------------------------------------------------------
+	//	FSM Sequential Logic
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		if(reset) begin
+			current_state	<= S_IDLE;
+		end
+		else begin
+			current_state	<= next_state;
+		end
+	end
+
+	//	-------------------------------------------------------------------------------------
+	//	FSM Conbinatial Logic
+	//	-------------------------------------------------------------------------------------
+	always @ ( * ) begin
+		case(current_state)
+			S_IDLE	:
+			next_state	= S_WR_CMDR_4;
+			//	-------------------------------------------------------------------------------------
+			//	CMDR reg wr 0x04
+			//	-------------------------------------------------------------------------------------
+			S_WR_CMDR_4	:
+			if(i_ack==1'b1) begin
+				next_state	= S_RD_BUSY_0;
+			end
+			else begin
+				next_state	= S_WR_CMDR_4;
+			end
+			//	-------------------------------------------------------------------------------------
+			//	wait for busy
+			//	-------------------------------------------------------------------------------------
+			S_RD_BUSY_0	:
+			if(i_ack==1'b1) begin
+				if(busy==1'b0) begin
+					next_state	= S_RD_DUMMY_0;
+				end
+				else begin
+					next_state	= S_RD_BUSY_0;
+				end
+			end
+			else begin
+				next_state	= S_RD_BUSY_0;
+			end
+			//	-------------------------------------------------------------------------------------
+			//	rd dummy byte
+			//	-------------------------------------------------------------------------------------
+			S_RD_DUMMY_0	:
+			if(i_ack==1'b1) begin
+				next_state	= S_RD_DUMMY_1;
+			end
+			else begin
+				next_state	= S_RD_DUMMY_0;
+			end
+			//	-------------------------------------------------------------------------------------
+			//	rd dummy byte
+			//	-------------------------------------------------------------------------------------
+			S_RD_DUMMY_1	:
+			if(i_ack==1'b1) begin
+				next_state	= S_RD_TRRDY_1_0;
+			end
+			else begin
+				next_state	= S_RD_DUMMY_1;
+			end
+			//	-------------------------------------------------------------------------------------
+			//	wait trrdy
+			//	-------------------------------------------------------------------------------------
+			S_RD_TRRDY_1_0	:
+			if(i_ack==1'b1 && trrdy==1'b1) begin
+				next_state	= S_RD_RXDR_0;
+			end
+			else begin
+				next_state	= S_RD_TRRDY_1_0;
+			end
+			//	-------------------------------------------------------------------------------------
+			//	rd reg addr high
+			//	-------------------------------------------------------------------------------------
+			S_RD_RXDR_0	:
+			if(i_ack==1'b1) begin
+				next_state	= S_RD_TRRDY_1_1;
+			end
+			else begin
+				next_state	= S_RD_RXDR_0;
+			end
+			//	-------------------------------------------------------------------------------------
+			//	wait trrdy
+			//	-------------------------------------------------------------------------------------
+			S_RD_TRRDY_1_1	:
+			if(i_ack==1'b1 && trrdy==1'b1) begin
+				next_state	= S_RD_RXDR_1;
+			end
+			else begin
+				next_state	= S_RD_TRRDY_1_1;
+			end
+			//	-------------------------------------------------------------------------------------
+			//	rd reg addr low
+			//	-------------------------------------------------------------------------------------
+			S_RD_RXDR_1	:
+			if(i_ack==1'b1) begin
+				next_state	= S_RD_SRW_TRRDY;
+			end
+			else begin
+				next_state	= S_RD_RXDR_1;
+			end
+			//	-------------------------------------------------------------------------------------
+			//	2 byte reg addr 已经接收完，下一步是判断是读还是写
+			//	如果 srw=1 ，说明是slave接收到读命令，那么发出读使能，准备返回数据
+			//	如果 srw=0 ，说明是slave接收到写命令，那么再接收1byte写数据
+			//	-------------------------------------------------------------------------------------
+			S_RD_SRW_TRRDY	:
+			if(i_ack==1'b1) begin
+				if(srw==1'b1) begin
+					next_state	= S_WR_TXDR_0;
+				end
+				else if(trrdy==1'b1) begin
+					next_state	= S_RD_RXDR_2;
+				end
+			end
+			else begin
+				next_state	= S_RD_SRW_TRRDY;
+			end
+			//	-------------------------------------------------------------------------------------
+			//	***写流程***
+			//	-------------------------------------------------------------------------------------
+			//	-------------------------------------------------------------------------------------
+			//	再接收一个byte
+			//	-------------------------------------------------------------------------------------
+			S_RD_RXDR_2	:
+			if(i_ack==1'b1) begin
+				//				next_state	= S_RD_TRRDY_1_3;
+				next_state	= S_WR_REG;
+			end
+			else begin
+				next_state	= S_RD_RXDR_2;
+			end
+			//			S_RD_TRRDY_1_3	:
+			//			if(i_ack==1'b1 && trrdy==1'b1) begin
+			//				next_state	= S_RD_RXDR_3;
+			//			end
+			//			else begin
+			//				next_state	= S_RD_TRRDY_1_3;
+			//			end
+			//			S_RD_RXDR_3	:
+			//			if(i_ack==1'b1) begin
+			//				next_state	= S_WR_REG;
+			//			end
+			//			else begin
+			//				next_state	= S_RD_RXDR_3;
+			//			end
+
+			S_WR_REG	:
+//			next_state	= S_WR_CMDR_4;
+			next_state	= S_IDLE;
+			//	-------------------------------------------------------------------------------------
+			//	***读流程***
+			//	-------------------------------------------------------------------------------------
+			//	-------------------------------------------------------------------------------------
+			//	发出1个byte，返回
+			//	-------------------------------------------------------------------------------------
+			S_WR_TXDR_0	:
+			if(i_ack==1'b1) begin
+//				next_state	= S_RD_TRRDY_1_WR;
+				next_state	= S_IDLE;
+			end
+			else begin
+				next_state	= S_WR_TXDR_0;
+			end
+//			S_RD_TRRDY_1_WR	:
+//			if(i_ack==1'b1 && trrdy==1'b1) begin
+//				next_state	= S_WR_TXDR_1;
+//			end
+//			else begin
+//				next_state	= S_RD_TRRDY_1_WR;
+//			end
+//			S_WR_TXDR_1	:
+//			if(i_ack==1'b1) begin
+//				next_state	= S_IDLE;
+//			end
+//			else begin
+//				next_state	= S_WR_TXDR_1;
+//			end
+
+
+
+			default	:
+			next_state	= S_IDLE;
+		endcase
+	end
+
+
+endmodule
