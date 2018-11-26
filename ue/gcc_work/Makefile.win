@@ -4,12 +4,12 @@
 CPP      = g++.exe
 CC       = gcc.exe
 WINDRES  = windres.exe
-OBJ      = ../gcc_work/test.o
-LINKOBJ  = ../gcc_work/test.o
+OBJ      = ../gcc_work/hello.o
+LINKOBJ  = ../gcc_work/hello.o
 LIBS     = -L"D:/Tools/Dev-Cpp/MinGW64/lib" -L"D:/Tools/Dev-Cpp/MinGW64/x86_64-w64-mingw32/lib" -static-libgcc
 INCS     = -I"D:/Tools/Dev-Cpp/MinGW64/include" -I"D:/Tools/Dev-Cpp/MinGW64/x86_64-w64-mingw32/include" -I"D:/Tools/Dev-Cpp/MinGW64/lib/gcc/x86_64-w64-mingw32/4.8.1/include"
 CXXINCS  = -I"D:/Tools/Dev-Cpp/MinGW64/include" -I"D:/Tools/Dev-Cpp/MinGW64/x86_64-w64-mingw32/include" -I"D:/Tools/Dev-Cpp/MinGW64/lib/gcc/x86_64-w64-mingw32/4.8.1/include" -I"D:/Tools/Dev-Cpp/MinGW64/lib/gcc/x86_64-w64-mingw32/4.8.1/include/c++"
-BIN      = test.exe
+BIN      = hello.exe
 CXXFLAGS = $(CXXINCS)
 CFLAGS   = $(INCS)
 RM       = rm.exe -f
@@ -24,5 +24,5 @@ clean: clean-custom
 $(BIN): $(OBJ)
 	$(CC) $(LINKOBJ) -o $(BIN) $(LIBS)
 
-../gcc_work/test.o: ../gcc_work/test.cpp
-	$(CC) -c ../gcc_work/test.cpp -o ../gcc_work/test.o $(CFLAGS)
+../gcc_work/hello.o: ../gcc_work/hello.c
+	$(CC) -c ../gcc_work/hello.c -o ../gcc_work/hello.o $(CFLAGS)
