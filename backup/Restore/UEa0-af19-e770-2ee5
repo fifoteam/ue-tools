@@ -1,0 +1,4 @@
+Traceback (most recent call last):
+  File "f:\FifoTeam\python-tools\rtl_parser\rtl_parser.py", line 170, in <module>
+  File "f:\FifoTeam\python-tools\rtl_parser\rtl_parser.py", line 36, in rtl_parser
+IndexError: list index out of range

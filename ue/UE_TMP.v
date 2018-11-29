@@ -1,9 +1,6 @@
-rst
-wr_clk
-wr_en
-din
-full
-rd_clk
-rd_en
-dout
-empty
+CLK
+A
+B
+CE
+SCLR
+P
