@@ -1,0 +1,546 @@
+//-------------------------------------------------------------------------------------------------
+//  -- 版权所有者   : 中国大恒（集团）有限公司北京图像视觉技术分公司, 2010 -2015.
+//  -- 保密级别     ：绝密.
+//  -- 部门         : 硬件部，FPGA工作组
+//  -- 模块名       : ctrl_channel
+//  -- 设计者       : 张强
+//-------------------------------------------------------------------------------------------------
+//
+//  -- 版本记录 :
+//
+//  -- 作者         :| 版本号	:| 修改日期				:|  修改说明
+//-------------------------------------------------------------------------------------------------
+//  -- 张  强       :| V1.0		:| 2018/12/08 12:39:57	:|  初始版本
+//-------------------------------------------------------------------------------------------------
+//
+//  -- 模块描述     :
+//              1)  :clk_axi时钟域总线，偏移地址:0xc0_0000,对应microblaze  axi_lite0接口
+//              2)  :clk_sensor时钟域总线，偏移地址:0x80_0000,对应microblaze  axi_lite1接口
+//              3)  :clk_pix时钟域总线，偏移地址:0x90_0000,对应microblaze  axi_lite2接口
+//				4)  :clk_fb时钟域总线，偏移地址:0xa0_0000,对应microblaze  axi_lite3接口
+//				5)  :clk_gev时钟域总线，偏移地址，0xb0_0000,对应microblaze  axi_lite4接口
+//-------------------------------------------------------------------------------------------------
+//`include			"ctrl_channel_def.v"
+//仿真单位/精度
+`timescale 1ns/1ps
+//-------------------------------------------------------------------------------------------------
+
+module ctrl_channel # (
+	parameter							SHORT_REG_WD		= 16		,	//短寄存器位宽
+	parameter							REG_WD				= 32		,	//寄存器位宽
+	parameter							LONG_REG_WD			= 64		,	//长寄存器位宽
+	parameter							AXI_WD				= 32		,	//AXI寄存器位宽
+	parameter							CTRL_CH_ADDR_WD		= 16    	    //AXI控制通路地址位宽
+	)
+	(
+	//clk_axi时钟域总线，偏移地址，0xc0_0000,对应microblaze  axi_lite0接口
+	input								reset_axi						,	//clk_axi时钟复位
+	input								clk_axi							,	//clk_axi时钟
+	input		[CTRL_CH_ADDR_WD-1	 :0]iv_raddr_axi					,	//clk_axi时钟域，控制通道读地址总线
+	input		[CTRL_CH_ADDR_WD-1	 :0]iv_waddr_axi					,	//clk_axi时钟域，控制通道写地址总线
+	input		[AXI_WD-1			 :0]iv_wdata_axi					,	//clk_axi时钟域，控制通道写数据总线
+	input								i_rd_en_axi						,	//clk_axi时钟域，高有效，控制通道读使能
+	input								i_rd_valid_axi					,	//clk_axi时钟域，高有效，控制通道读有效
+	input								i_wr_en_axi						,   //clk_axi时钟域，高有效，控制通道写使能
+	input								i_wr_valid_axi					,   //clk_axi时钟域，高有效，控制通道写有效
+	output		[AXI_WD-1			 :0]ov_rdata_axi					,	//clk_axi时钟域，高有效，控制通道读数据总线
+	//clk_sensor时钟域总线，偏移地址，0x80_0000,对应microblaze  axi_lite1接口
+	input								reset_sensor					,	//clk_sensor时钟复位
+	input								clk_sensor						,	//clk_sensor时钟
+	input		[CTRL_CH_ADDR_WD-1	 :0]iv_raddr_sensor					,	//clk_sensor时钟域，控制通道读地址总线
+	input		[CTRL_CH_ADDR_WD-1	 :0]iv_waddr_sensor					,	//clk_sensor时钟域，控制通道写地址总线
+	input		[AXI_WD-1			 :0]iv_wdata_sensor					,	//clk_sensor时钟域，控制通道写数据总线
+	input								i_rd_en_sensor					,	//clk_sensor时钟域，高有效，控制通道读使能
+	input								i_rd_valid_sensor				,	//clk_sensor时钟域，高有效，控制通道读有效
+	input								i_wr_en_sensor					,   //clk_sensor时钟域，高有效，控制通道写使能
+	input								i_wr_valid_sensor				,   //clk_sensor时钟域，高有效，控制通道写有效
+	output		[AXI_WD-1			 :0]ov_rdata_sensor					,	//clk_sensor时钟域，高有效，控制通道读数据总线
+	//clk_pix时钟域总线，偏移地址，0x90_0000,对应microblaze  axi_lite2接口
+	input								reset_pix						,	//clk_pix时钟复位
+	input								clk_pix							,	//clk_pix时钟
+	input		[CTRL_CH_ADDR_WD-1	 :0]iv_raddr_pix					,	//clk_pix时钟域，控制通道读地址总线
+	input		[CTRL_CH_ADDR_WD-1	 :0]iv_waddr_pix					,	//clk_pix时钟域，控制通道写地址总线
+	input		[AXI_WD-1			 :0]iv_wdata_pix					,	//clk_pix时钟域，控制通道写数据总线
+	input								i_rd_en_pix						,	//clk_pix时钟域，高有效，控制通道读使能
+	input								i_rd_valid_pix					,	//clk_pix时钟域，高有效，控制通道读有效
+	input								i_wr_en_pix						,   //clk_pix时钟域，高有效，控制通道写使能
+	input								i_wr_valid_pix					,   //clk_pix时钟域，高有效，控制通道写有效
+	output		[AXI_WD-1			 :0]ov_rdata_pix					,	//clk_pix时钟域，高有效，控制通道读数据总线
+	//clk_fb时钟域总线，偏移地址，0xa0_0000,对应microblaze  axi_lite3接口
+	input								reset_fb						,	//clk_fb时钟复位
+	input								clk_fb							,	//clk_fb时钟
+	input		[CTRL_CH_ADDR_WD-1	 :0]iv_raddr_fb						,	//clk_fb时钟域，控制通道读地址总线
+	input		[CTRL_CH_ADDR_WD-1	 :0]iv_waddr_fb						,	//clk_fb时钟域，控制通道写地址总线
+	input		[AXI_WD-1			 :0]iv_wdata_fb						,	//clk_fb时钟域，控制通道写数据总线
+	input								i_rd_en_fb						,	//clk_fb时钟域，高有效，控制通道读使能
+	input								i_rd_valid_fb					,	//clk_fb时钟域，高有效，控制通道读有效
+	input								i_wr_en_fb						,   //clk_fb时钟域，高有效，控制通道写使能
+	input								i_wr_valid_fb					,   //clk_fb时钟域，高有效，控制通道写有效
+	output		[AXI_WD-1			 :0]ov_rdata_fb						,	//clk_fb时钟域，高有效，控制通道读数据总线
+	//clk_gev时钟域总线，偏移地址，0xb0_0000,对应microblaze  axi_lite4接口
+	input								reset_gev						,	//clk_gev时钟复位
+	input								clk_gev							,	//clk_gev时钟
+	input		[CTRL_CH_ADDR_WD-1	 :0]iv_raddr_gev					,	//clk_gev时钟域，控制通道读地址总线
+	input		[CTRL_CH_ADDR_WD-1	 :0]iv_waddr_gev					,	//clk_gev时钟域，控制通道写地址总线
+	input		[AXI_WD-1			 :0]iv_wdata_gev					,	//clk_gev时钟域，控制通道写数据总线
+	input								i_rd_en_gev						,	//clk_gev时钟域，高有效，控制通道读使能
+	input								i_rd_valid_gev					,	//clk_gev时钟域，高有效，控制通道读有效
+	input								i_wr_en_gev						,   //clk_gev时钟域，高有效，控制通道写使能
+	input								i_wr_valid_gev					,   //clk_gev时钟域，高有效，控制通道写有效
+	output		 [AXI_WD-1			 :0]ov_rdata_gev					,	//clk_gev时钟域，高有效，控制通道读数据总线
+
+	//clk_axi寄存器
+	input		[       8			 :0]iv_state                   		,
+	output								o_timestamp_reset          		,
+	output								o_timestamp_load           		,
+	output		[REG_WD-1			 :0]ov_timestamp_l             		,
+	output		[REG_WD-1			 :0]ov_timestamp_h             		,
+	output		[REG_WD-1			 :0]ov_exposure_timestamp_l    		,
+	output		[REG_WD-1			 :0]ov_exposure_timestamp_h    		,
+	output		[REG_WD-1			 :0]ov_trig_mask_timestamp_l   		,
+	output		[REG_WD-1			 :0]ov_trig_mask_timestamp_h   		,
+	output		[REG_WD-1			 :0]ov_public_timestamp_l      		,
+	output		[REG_WD-1			 :0]ov_public_timestamp_h      		,
+	output		[REG_WD-1			 :0]ov_temperature_sensor      		,	//sensor板温度寄存器，宽度待确认
+	output		[REG_WD-1			 :0]ov_temperature_be          		,
+	output								o_load_user_param          		,
+	output		[REG_WD-1			 :0]ov_dna_reg_l               		,
+	output		[      24			 :0]ov_dna_reg_h               		,
+	output		[REG_WD-1			 :0]ov_encrypt_reg_l           		,
+	output		[REG_WD-1			 :0]ov_encrypt_reg_h           		,
+	output								o_encrypt_state            		,
+	output								o_flash_wp                 		,
+	output		[REG_WD-1			 :0]o_watchdog_enable          		,
+	output		[REG_WD-1			 :0]ov_watchdog_thd_reg        		,
+	output		[REG_WD-1			 :0]ov_watchdog_cnt_reg        		,
+	output		[REG_WD-1			 :0]o_microb_reboot            		,
+	output		[REG_WD-1			 :0]ov_heartbeat_time          		,
+	output								o_irq_global_reg           		,
+	output		[      14			 :0]ov_irq_enable_reg          		,
+	output		[      14			 :0]ov_irq_clr_reg             		,
+	output		[      14			 :0]ov_irq_status_reg          		,
+	output		[REG_WD-1			 :0]ov_event_timeout_cnt       		,
+	output		[REG_WD-1			 :0]ov_dhcp_timeout            		,
+	output								o_gvcp_ack_txen					,
+	output		[REG_WD-1			 :0]ov_gvcp_ack_length				,
+
+	//clk_senosr寄存器
+	output								o_acquisition_start        		,	//
+	output		[REG_WD-1			 :0]ov_useroutput_level        		,
+	output		[REG_WD-1			 :0]ov_physic_line0            		,
+	output		[REG_WD-1			 :0]ov_physic_line1            		,
+	output		[REG_WD-1			 :0]ov_physic_line2            		,
+	output		[REG_WD-1			 :0]ov_physic_line3            		,
+	input		[REG_WD-1			 :0]iv_line_status             		,
+	output		[REG_WD-1			 :0]ov_linein_sel_rise_cnt     		,
+	output		[REG_WD-1			 :0]ov_linein_sel_fall_cnt     		,
+	output		[REG_WD-1			 :0]ov_linein_filter_rise_cnt  		,
+	output		[REG_WD-1			 :0]ov_linein_filter_fall_cnt  		,
+	output		[REG_WD-1			 :0]ov_linein_active_cnt       		,
+	output		[REG_WD-1			 :0]ov_trigger_n_rise_cnt      		,
+	output		[REG_WD-1			 :0]ov_trigger_mode            		,
+	output		[REG_WD-1			 :0]ov_trigger_source          		,
+	output		[REG_WD-1			 :0]ov_trigger_soft            		,
+	output		[REG_WD-1			 :0]ov_trigger_active          		,
+	output		[REG_WD-1			 :0]ov_trigger_filter_rise     		,
+	output		[REG_WD-1			 :0]ov_trigger_filter_fall     		,
+	output		[REG_WD-1			 :0]ov_trigger_delay           		,
+	output		[REG_WD-1			 :0]ov_frame_period_us         		,
+	output		[REG_WD-1			 :0]ov_frame_period_line       		,
+	output		[REG_WD-1			 :0]ov_trigger_soft_cnt        		,
+	output		[REG_WD-1			 :0]ov_strobe_length           		,
+	output		[REG_WD-1			 :0]ov_exposure_time           		,
+	output		[REG_WD-1			 :0]ov_led_ctrl                		,
+	output		[REG_WD-1			 :0]o_reset_sensor             		,
+	output		[REG_WD-1			 :0]o_sensor_init_done         		,
+	output		[REG_WD-1			 :0]o_reset_deser_pll          		,
+	output		[REG_WD-1			 :0]ov_slave_hmax              		,
+	output		[REG_WD-1			 :0]ov_slave_exposure_delay    		,
+	output		[REG_WD-1			 :0]ov_slave_exposure_time     		,
+	output		[REG_WD-1			 :0]ov_slave_trigger_interval  		,
+	output		[REG_WD-1			 :0]ov_imx_stop_info           		,
+	output		[REG_WD-1			 :0]ov_imx_pad_info            		,
+	output		[REG_WD-1			 :0]ov_imx_state_info          		,
+	output		[REG_WD-1			 :0]ov_python_exposure_delay   		,
+	output		[REG_WD-1			 :0]ov_python_exposure_time    		,
+	output		[REG_WD-1			 :0]ov_python_trigger_interval 		,
+	output		[REG_WD-1			 :0]ov_python_readout_time     		,
+	//clk_pix寄存器
+	output								o_param_cfg_done				,
+	output		[REG_WD-1			 :0]ov_pixel_format             	,
+	output		[REG_WD-1			 :0]ov_test_image_sel           	,
+	output		[REG_WD-1			 :0]ov_sensor_offset_x          	,
+	output		[REG_WD-1			 :0]ov_sensor_offset_y          	,
+	output		[REG_WD-1			 :0]ov_sensor_width             	,
+	output		[REG_WD-1			 :0]ov_sensor_height            	,
+	output		[REG_WD-1			 :0]ov_single_roi_offset_x_0    	,
+	output		[REG_WD-1			 :0]ov_single_roi_offset_y_0    	,
+	output		[REG_WD-1			 :0]ov_single_roi_pic_width_0   	,
+	output		[REG_WD-1			 :0]ov_single_roi_pic_height_0  	,
+	output		[REG_WD-1			 :0]ov_reverse_xy               	,
+	output		[REG_WD-1			 :0]ov_binning_mode             	,
+	output		[REG_WD-1			 :0]ov_binning_region_x         	,
+	output		[REG_WD-1			 :0]ov_binning_region_y         	,
+	output		[REG_WD-1			 :0]ov_roi_offsetx_bf_binning   	,
+	output		[REG_WD-1			 :0]ov_roi_offsety_bf_binning   	,
+	output		[REG_WD-1			 :0]ov_roi_width_bf_binning     	,
+	output		[REG_WD-1			 :0]ov_roi_height_bf_binning    	,
+	output		[REG_WD-1			 :0]ov_block_id_l               	,
+	output		[REG_WD-1			 :0]ov_block_id_h               	,
+	output		[REG_WD-1			 :0]ov_frame_interval_l         	,
+	output		[REG_WD-1			 :0]ov_frame_interval_h         	,
+	output		[REG_WD-1			 :0]ov_wb_offset_x_start        	,
+	output		[REG_WD-1			 :0]ov_wb_offset_width          	,
+	output		[REG_WD-1			 :0]ov_wb_offset_y_start        	,
+	output		[REG_WD-1			 :0]ov_wb_offset_height         	,
+	output		[REG_WD-1			 :0]ov_wb_gain_r                	,
+	output		[REG_WD-1			 :0]ov_wb_gain_g                	,
+	output		[REG_WD-1			 :0]ov_wb_gain_b                	,
+	input		[LONG_REG_WD-1		 :0]iv_wb_statis_r              	,
+	input		[LONG_REG_WD-1		 :0]iv_wb_statis_g              	,
+	input		[LONG_REG_WD-1		 :0]iv_wb_statis_b              	,
+	output		[REG_WD-1			 :0]ov_wb_num_r                 	,
+	output		[REG_WD-1			 :0]ov_wb_num_b                 	,
+	output								o_unsat_en                  	,
+	output		[REG_WD-1			 :0]ov_blacklevel_ratio         	,
+	output		[REG_WD-1			 :0]ov_blacklevel_value         	,
+	output								o_compensate_en             	,
+	output		[REG_WD-1			 :0]ov_compensate_gain_0        	,
+	output		[REG_WD-1			 :0]ov_compensate_gain_1        	,
+	output		[REG_WD-1			 :0]ov_grey_offset_x_start      	,
+	output		[REG_WD-1			 :0]ov_grey_offset_width        	,
+	output		[REG_WD-1			 :0]ov_grey_offset_y_start      	,
+	output		[REG_WD-1			 :0]ov_grey_offset_height       	,
+	input		[REG_WD-1			 :0]iv_grey_statis_sum_l        	,
+	input		[REG_WD-1			 :0]iv_grey_statis_sum_h        	,
+	output								o_pulse_filter_en           	,
+	output								o_gridding_remove_en        	,
+	output		[REG_WD-1			 :0]ov_edge_vote_method         	,
+	output		[REG_WD-1			 :0]ov_edge_threshold           	,
+	output								o_flat_field_en             	,
+	output								o_chunk_mode_active         	,
+	output		[REG_WD-1			 :0]ov_chunkid_en_img           	,
+	output								o_chunkid_en_fid            	,
+	output								o_chunkid_en_ts             	,
+	output								o_chunkid_en_fint           	,
+	output		[REG_WD-1			 :0]ov_chunk_size_fid           	,
+	output		[REG_WD-1			 :0]ov_chunk_size_ts            	,
+	output								o_mroi_global_en            	,
+	output		[REG_WD-1			 :0]ov_mroi_single_en_l         	,
+	output		[REG_WD-1			 :0]ov_mroi_single_en_h         	,
+	//clk_fb寄存器
+	output		[REG_WD-1			 :0]ov_single_roi_image_size_0_l	,
+	output		[REG_WD-1			 :0]ov_single_roi_image_size_0_h	,
+	output		[REG_WD-1			 :0]ov_frame_buffer_depth       	,
+	output		[REG_WD-1			 :0]o_frame_overwrite_enable   		,
+	output		[REG_WD-1			 :0]o_transfer_mode            		,
+	output		[REG_WD-1			 :0]o_transfer_start           		,
+	output		[REG_WD-1			 :0]o_cache_flush              		,
+	output		[REG_WD-1			 :0]ov_cache_frame_cnt          	,
+	output		[REG_WD-1			 :0]ov_cache_frame_depth        	,
+	output		[REG_WD-1			 :0]ov_cur_pkt_length           	,
+	output		[REG_WD-1			 :0]ov_cur_pic_pkt_cnt          	,
+	output		[REG_WD-1			 :0]ov_remain_pkt_length        	,
+	//clk_gev寄存器
+	output		[REG_WD-1			 :0]ov_single_roi_payload_size0_l	,
+	output		[REG_WD-1			 :0]ov_single_roi_payload_size0_h	,
+	output		[REG_WD-1			 :0]ov_pc_mac_l                  	,
+	output		[REG_WD-1			 :0]ov_pc_mac_h                  	,
+	output		[REG_WD-1			 :0]ov_camera_mac_l              	,
+	output		[REG_WD-1			 :0]ov_camera_mac_h              	,
+	output		[REG_WD-1			 :0]ov_camera_ip                 	,
+	output		[REG_WD-1			 :0]ov_pc_ip                     	,
+	output		[REG_WD-1			 :0]ov_ip_mask                   	,
+	output		[REG_WD-1			 :0]ov_camera_port               	,
+	output		[REG_WD-1			 :0]ov_pc_port_sc                	,
+	output		[REG_WD-1			 :0]ov_pc_port_cc                	,
+	output		[REG_WD-1			 :0]ov_pc_port_mc                	,
+	output		[REG_WD-1			 :0]ov_packet_gap                	,
+	output		[REG_WD-1			 :0]o_arp_filter_enable          	,
+	output		[REG_WD-1			 :0]ov_gige_functions            	,
+	output		[REG_WD-1			 :0]ov_speed_link                	,
+	output		[REG_WD-1			 :0]o_test_pkt_en
+	);
+	//	ref paramters
+
+
+	//  ===============================================================================================
+	//	模块例化
+	//  ===============================================================================================
+	//  -------------------------------------------------------------------------------------
+	//	clk_axi寄存器
+	//  -------------------------------------------------------------------------------------
+	clk_axi_reg    #(
+	.SHORT_REG_WD				(SHORT_REG_WD						),
+	.REG_WD						(REG_WD								),
+	.LONG_REG_WD				(LONG_REG_WD						),
+	.AXI_WD						(AXI_WD								),
+	.CTRL_CH_ADDR_WD			(CTRL_CH_ADDR_WD					)
+	)
+	clk_axi_reg_inst(
+	.reset						(reset_axi							),
+	.clk						(clk_axi			       			),
+	.iv_raddr					(iv_raddr_axi	           			),
+	.iv_waddr					(iv_waddr_axi	           			),
+	.iv_wdata					(iv_wdata_axi	           			),
+	.i_rd_en					(i_rd_en_axi		       			),
+	.i_rd_valid					(i_rd_valid_axi	           			),
+	.i_wr_en					(i_wr_en_axi		       			),
+	.i_wr_valid					(i_wr_valid_axi	           			),
+	.ov_rdata					(ov_rdata_axi	           			),
+	.iv_state                   (iv_state                          	),
+	.o_timestamp_reset          (o_timestamp_reset                 	),
+	.o_timestamp_load           (o_timestamp_load                  	),
+	.ov_timestamp_l             (ov_timestamp_l                    	),
+	.ov_timestamp_h             (ov_timestamp_h                    	),
+	.ov_exposure_timestamp_l    (ov_exposure_timestamp_l           	),
+	.ov_exposure_timestamp_h    (ov_exposure_timestamp_h           	),
+	.ov_trig_mask_timestamp_l   (ov_trig_mask_timestamp_l          	),
+	.ov_trig_mask_timestamp_h   (ov_trig_mask_timestamp_h          	),
+	.ov_public_timestamp_l      (ov_public_timestamp_l             	),
+	.ov_public_timestamp_h      (ov_public_timestamp_h             	),
+	.ov_temperature_sensor      (ov_temperature_sensor             	),
+	.ov_temperature_be          (ov_temperature_be                 	),
+	.o_load_user_param          (o_load_user_param                 	),
+	.ov_dna_reg_l               (ov_dna_reg_l                      	),
+	.ov_dna_reg_h               (ov_dna_reg_h                      	),
+	.ov_encrypt_reg_l           (ov_encrypt_reg_l                  	),
+	.ov_encrypt_reg_h           (ov_encrypt_reg_h                  	),
+	.o_encrypt_state            (o_encrypt_state                   	),
+	.o_flash_wp                 (o_flash_wp                        	),
+	.o_watchdog_enable          (o_watchdog_enable                 	),
+	.ov_watchdog_thd_reg        (ov_watchdog_thd_reg               	),
+	.ov_watchdog_cnt_reg        (ov_watchdog_cnt_reg               	),
+	.o_microb_reboot            (o_microb_reboot                   	),
+	.ov_heartbeat_time          (ov_heartbeat_time                 	),
+	.o_irq_global_reg           (o_irq_global_reg                  	),
+	.ov_irq_enable_reg          (ov_irq_enable_reg                 	),
+	.ov_irq_clr_reg             (ov_irq_clr_reg                    	),
+	.ov_irq_status_reg          (ov_irq_status_reg                 	),
+	.ov_event_timeout_cnt       (ov_event_timeout_cnt              	),
+	.ov_dhcp_timeout            (ov_dhcp_timeout                   	),
+	.o_gvcp_ack_txen			(o_gvcp_ack_txen			       	),
+	.ov_gvcp_ack_length         (ov_gvcp_ack_length                	)
+	);
+	//  -------------------------------------------------------------------------------------
+	//	clk_sensor寄存器
+	//  -------------------------------------------------------------------------------------
+	clk_sensor_reg # (
+	.SHORT_REG_WD				(SHORT_REG_WD						),
+	.REG_WD						(REG_WD				                ),
+	.LONG_REG_WD				(LONG_REG_WD		                ),
+	.AXI_WD						(AXI_WD				                ),
+	.CTRL_CH_ADDR_WD			(CTRL_CH_ADDR_WD	                )
+	)
+	clk_sensor_reg_inst(
+	.reset						(reset_sensor		    			),
+	.clk						(clk_sensor			    	        ),
+	.iv_raddr					(iv_raddr_sensor			        ),
+	.iv_waddr					(iv_waddr_sensor			        ),
+	.iv_wdata					(iv_wdata_sensor			        ),
+	.i_rd_en					(i_rd_en_sensor		    	        ),
+	.i_rd_valid					(i_rd_valid_sensor	    	        ),
+	.i_wr_en					(i_wr_en_sensor		    	        ),
+	.i_wr_valid					(i_wr_valid_sensor	    	        ),
+	.ov_rdata					(ov_rdata_sensor			        ),
+	.o_acquisition_start        (o_acquisition_start                ),
+	.ov_useroutput_level        (ov_useroutput_level                ),
+	.ov_physic_line0            (ov_physic_line0                    ),
+	.ov_physic_line1            (ov_physic_line1                    ),
+	.ov_physic_line2            (ov_physic_line2                    ),
+	.ov_physic_line3            (ov_physic_line3                    ),
+	.iv_line_status             (iv_line_status                     ),
+	.ov_linein_sel_rise_cnt     (ov_linein_sel_rise_cnt             ),
+	.ov_linein_sel_fall_cnt     (ov_linein_sel_fall_cnt             ),
+	.ov_linein_filter_rise_cnt  (ov_linein_filter_rise_cnt          ),
+	.ov_linein_filter_fall_cnt  (ov_linein_filter_fall_cnt          ),
+	.ov_linein_active_cnt       (ov_linein_active_cnt               ),
+	.ov_trigger_n_rise_cnt      (ov_trigger_n_rise_cnt              ),
+	.ov_trigger_mode            (ov_trigger_mode                    ),
+	.ov_trigger_source          (ov_trigger_source                  ),
+	.ov_trigger_soft            (ov_trigger_soft                    ),
+	.ov_trigger_active          (ov_trigger_active                  ),
+	.ov_trigger_filter_rise     (ov_trigger_filter_rise             ),
+	.ov_trigger_filter_fall     (ov_trigger_filter_fall             ),
+	.ov_trigger_delay           (ov_trigger_delay                   ),
+	.ov_frame_period_us         (ov_frame_period_us                 ),
+	.ov_frame_period_line       (ov_frame_period_line               ),
+	.ov_trigger_soft_cnt        (ov_trigger_soft_cnt                ),
+	.ov_strobe_length           (ov_strobe_length                   ),
+	.ov_exposure_time           (ov_exposure_time                   ),
+	.ov_led_ctrl                (ov_led_ctrl                        ),
+	.o_reset_sensor             (o_reset_sensor                     ),
+	.o_sensor_init_done         (o_sensor_init_done                 ),
+	.o_reset_deser_pll          (o_reset_deser_pll                  ),
+	.ov_slave_hmax              (ov_slave_hmax                      ),
+	.ov_slave_exposure_delay    (ov_slave_exposure_delay            ),
+	.ov_slave_exposure_time     (ov_slave_exposure_time             ),
+	.ov_slave_trigger_interval  (ov_slave_trigger_interval          ),
+	.ov_imx_stop_info           (ov_imx_stop_info                   ),
+	.ov_imx_pad_info            (ov_imx_pad_info                    ),
+	.ov_imx_state_info          (ov_imx_state_info                  ),
+	.ov_python_exposure_delay   (ov_python_exposure_delay           ),
+	.ov_python_exposure_time    (ov_python_exposure_time            ),
+	.ov_python_trigger_interval (ov_python_trigger_interval         ),
+	.ov_python_readout_time     (ov_python_readout_time             )
+	);
+	//  -------------------------------------------------------------------------------------
+	//	clk_pix寄存器
+	//  -------------------------------------------------------------------------------------
+	clk_pix_reg # (
+	.SHORT_REG_WD				(SHORT_REG_WD						),
+	.REG_WD						(REG_WD				                ),
+	.LONG_REG_WD				(LONG_REG_WD		                ),
+	.AXI_WD						(AXI_WD				                ),
+	.CTRL_CH_ADDR_WD			(CTRL_CH_ADDR_WD	                )
+	)
+	clk_pix_reg_inst(
+	.reset						(reset_pix		    				),
+	.clk                        (clk_pix			                ),
+	.iv_raddr                   (iv_raddr_pix	                    ),
+	.iv_waddr                   (iv_waddr_pix	                    ),
+	.iv_wdata                   (iv_wdata_pix	                    ),
+	.i_rd_en                    (i_rd_en_pix		                ),
+	.i_rd_valid                 (i_rd_valid_pix	                    ),
+	.i_wr_en                    (i_wr_en_pix		                ),
+	.i_wr_valid                 (i_wr_valid_pix	                    ),
+	.ov_rdata                   (ov_rdata_pix	                    ),
+	.o_param_cfg_done           (o_param_cfg_done                   ),
+	.ov_pixel_format            (ov_pixel_format                    ),
+	.ov_test_image_sel          (ov_test_image_sel                  ),
+	.ov_sensor_offset_x         (ov_sensor_offset_x                 ),
+	.ov_sensor_offset_y         (ov_sensor_offset_y                 ),
+	.ov_sensor_width            (ov_sensor_width                    ),
+	.ov_sensor_height           (ov_sensor_height                   ),
+	.ov_single_roi_offset_x_0   (ov_single_roi_offset_x_0           ),
+	.ov_single_roi_offset_y_0   (ov_single_roi_offset_y_0           ),
+	.ov_single_roi_pic_width_0  (ov_single_roi_pic_width_0          ),
+	.ov_single_roi_pic_height_0 (ov_single_roi_pic_height_0         ),
+	.ov_reverse_xy              (ov_reverse_xy                      ),
+	.ov_binning_mode            (ov_binning_mode                    ),
+	.ov_binning_region_x        (ov_binning_region_x                ),
+	.ov_binning_region_y        (ov_binning_region_y                ),
+	.ov_roi_offsetx_bf_binning  (ov_roi_offsetx_bf_binning          ),
+	.ov_roi_offsety_bf_binning  (ov_roi_offsety_bf_binning          ),
+	.ov_roi_width_bf_binning    (ov_roi_width_bf_binning            ),
+	.ov_roi_height_bf_binning   (ov_roi_height_bf_binning           ),
+	.ov_block_id_l              (ov_block_id_l                      ),
+	.ov_block_id_h              (ov_block_id_h                      ),
+	.ov_frame_interval_l        (ov_frame_interval_l                ),
+	.ov_frame_interval_h        (ov_frame_interval_h                ),
+	.ov_wb_offset_x_start       (ov_wb_offset_x_start               ),
+	.ov_wb_offset_width         (ov_wb_offset_width                 ),
+	.ov_wb_offset_y_start       (ov_wb_offset_y_start               ),
+	.ov_wb_offset_height        (ov_wb_offset_height                ),
+	.ov_wb_gain_r               (ov_wb_gain_r                       ),
+	.ov_wb_gain_g               (ov_wb_gain_g                       ),
+	.ov_wb_gain_b               (ov_wb_gain_b                       ),
+	.iv_wb_statis_r             (iv_wb_statis_r                     ),
+	.iv_wb_statis_g             (iv_wb_statis_g                     ),
+	.iv_wb_statis_b             (iv_wb_statis_b                     ),
+	.ov_wb_num_r                (ov_wb_num_r                        ),
+	.ov_wb_num_b                (ov_wb_num_b                        ),
+	.o_unsat_en                 (o_unsat_en                         ),
+	.ov_blacklevel_ratio        (ov_blacklevel_ratio                ),
+	.ov_blacklevel_value        (ov_blacklevel_value                ),
+	.o_compensate_en            (o_compensate_en                    ),
+	.ov_compensate_gain_0       (ov_compensate_gain_0               ),
+	.ov_compensate_gain_1       (ov_compensate_gain_1               ),
+	.ov_grey_offset_x_start     (ov_grey_offset_x_start             ),
+	.ov_grey_offset_width       (ov_grey_offset_width               ),
+	.ov_grey_offset_y_start     (ov_grey_offset_y_start             ),
+	.ov_grey_offset_height      (ov_grey_offset_height              ),
+	.iv_grey_statis_sum_l       (iv_grey_statis_sum_l               ),
+	.iv_grey_statis_sum_h       (iv_grey_statis_sum_h               ),
+	.o_pulse_filter_en          (o_pulse_filter_en                  ),
+	.o_gridding_remove_en       (o_gridding_remove_en               ),
+	.ov_edge_vote_method        (ov_edge_vote_method                ),
+	.ov_edge_threshold          (ov_edge_threshold                  ),
+	.o_flat_field_en            (o_flat_field_en                    ),
+	.o_chunk_mode_active        (o_chunk_mode_active                ),
+	.ov_chunkid_en_img          (ov_chunkid_en_img                  ),
+	.o_chunkid_en_fid           (o_chunkid_en_fid                   ),
+	.o_chunkid_en_ts            (o_chunkid_en_ts                    ),
+	.o_chunkid_en_fint          (o_chunkid_en_fint                  ),
+	.ov_chunk_size_fid          (ov_chunk_size_fid                  ),
+	.ov_chunk_size_ts           (ov_chunk_size_ts                   ),
+	.o_mroi_global_en           (o_mroi_global_en                   ),
+	.ov_mroi_single_en_l        (ov_mroi_single_en_l                ),
+	.ov_mroi_single_en_h        (ov_mroi_single_en_h                )
+	);
+	//  -------------------------------------------------------------------------------------
+	//	clk_fb寄存器
+	//  -------------------------------------------------------------------------------------
+	clk_fb_reg # (
+	.SHORT_REG_WD				(SHORT_REG_WD						),
+	.REG_WD						(REG_WD				                ),
+	.LONG_REG_WD				(LONG_REG_WD		                ),
+	.AXI_WD						(AXI_WD				                ),
+	.CTRL_CH_ADDR_WD			(CTRL_CH_ADDR_WD	                )
+	)
+	clk_fb_reg_inst(
+	.reset							(reset_fb		    			),
+	.clk							(clk_fb			    			),
+	.iv_raddr						(iv_raddr_fb					),
+	.iv_waddr						(iv_waddr_fb					),
+	.iv_wdata						(iv_wdata_fb					),
+	.i_rd_en						(i_rd_en_fb		    			),
+	.i_rd_valid						(i_rd_valid_fb	    			),
+	.i_wr_en						(i_wr_en_fb		    			),
+	.i_wr_valid						(i_wr_valid_fb	    			),
+	.ov_rdata						(ov_rdata_fb					),
+	.ov_single_roi_image_size_0_l	(ov_single_roi_image_size_0_l	),
+	.ov_single_roi_image_size_0_h	(ov_single_roi_image_size_0_h	),
+	.ov_frame_buffer_depth       	(ov_frame_buffer_depth       	),
+	.o_frame_overwrite_enable   	(o_frame_overwrite_enable   	),
+	.o_transfer_mode            	(o_transfer_mode            	),
+	.o_transfer_start           	(o_transfer_start           	),
+	.o_cache_flush              	(o_cache_flush              	),
+	.ov_cache_frame_cnt          	(ov_cache_frame_cnt          	),
+	.ov_cache_frame_depth        	(ov_cache_frame_depth        	),
+	.ov_cur_pkt_length           	(ov_cur_pkt_length           	),
+	.ov_cur_pic_pkt_cnt          	(ov_cur_pic_pkt_cnt          	),
+	.ov_remain_pkt_length        	(ov_remain_pkt_length        	)
+	);
+	//  -------------------------------------------------------------------------------------
+	//	clk_gev寄存器
+	//  -------------------------------------------------------------------------------------
+	clk_gev_reg # (
+	.SHORT_REG_WD					(SHORT_REG_WD					),
+	.REG_WD							(REG_WD					        ),
+	.LONG_REG_WD					(LONG_REG_WD			        ),
+	.AXI_WD							(AXI_WD					        ),
+	.CTRL_CH_ADDR_WD				(CTRL_CH_ADDR_WD		        )
+	)
+	clk_gev_reg_inst(
+	.reset							(reset_gev		    			),
+	.clk							(clk_gev						),
+	.iv_raddr						(iv_raddr_gev	    			),
+	.iv_waddr						(iv_waddr_gev	    			),
+	.iv_wdata						(iv_wdata_gev	    			),
+	.i_rd_en						(i_rd_en_gev					),
+	.i_rd_valid						(i_rd_valid_gev	    			),
+	.i_wr_en						(i_wr_en_gev					),
+	.i_wr_valid						(i_wr_valid_gev	    			),
+	.ov_rdata						(ov_rdata_gev	    			),
+	.ov_single_roi_payload_size0_l	(ov_single_roi_payload_size0_l	),
+	.ov_single_roi_payload_size0_h  (ov_single_roi_payload_size0_h  ),
+	.ov_pc_mac_l                    (ov_pc_mac_l                    ),
+	.ov_pc_mac_h                    (ov_pc_mac_h                    ),
+	.ov_camera_mac_l                (ov_camera_mac_l                ),
+	.ov_camera_mac_h                (ov_camera_mac_h                ),
+	.ov_camera_ip                   (ov_camera_ip                   ),
+	.ov_pc_ip                       (ov_pc_ip                       ),
+	.ov_ip_mask                     (ov_ip_mask                     ),
+	.ov_camera_port                 (ov_camera_port                 ),
+	.ov_pc_port_sc                  (ov_pc_port_sc                  ),
+	.ov_pc_port_cc                  (ov_pc_port_cc                  ),
+	.ov_pc_port_mc                  (ov_pc_port_mc                  ),
+	.ov_packet_gap                  (ov_packet_gap                  ),
+	.o_arp_filter_enable            (o_arp_filter_enable            ),
+	.ov_gige_functions              (ov_gige_functions              ),
+	.ov_speed_link                  (ov_speed_link                  ),
+	.o_test_pkt_en                  (o_test_pkt_en                  )
+	);
+
+endmodule

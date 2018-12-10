@@ -1,0 +1,188 @@
+//-------------------------------------------------------------------------------------------------
+//  -- 版权所有者   : 中国大恒（集团）有限公司北京图像视觉技术分公司, 2010 -2015.
+//  -- 保密级别     ：绝密.
+//  -- 部门         : 硬件部，FPGA工作组
+//  -- 模块名       : frame_info
+//  -- 设计者       : 邢海涛
+//-------------------------------------------------------------------------------------------------
+//
+//  -- 版本记录 :
+//
+//  -- 作者         :| 版本号	:| 修改日期				:|  修改说明
+//-------------------------------------------------------------------------------------------------
+//  -- 邢海涛       :| V1.0		:| 2018/12/06 13:12:36	:|  初始版本
+//-------------------------------------------------------------------------------------------------
+//
+//  -- 模块描述     :
+//              1)  :
+//
+//              2)  :
+//
+//              3)  :
+//
+//-------------------------------------------------------------------------------------------------
+//`include			"frame_info_def.v"
+//仿真单位/精度
+`timescale 1ns/1ps
+//-------------------------------------------------------------------------------------------------
+
+module frame_info # (
+	parameter		SENSOR_DAT_WIDTH									= 10					,	//sensor 数据宽度
+	parameter		CHANNEL_NUM											= 16					,	//sensor 通道数量
+	parameter		DATA_WD												= 256					,	//输入输出数据位宽，这里使用同一宽度
+	parameter		STATIS_VALID										= "FALSE"				,	//TRUE-statis段中的数据需要计算，FALSE-statis段中的数据填充为0
+	parameter		INFO_WAIT_TIME										= 16					,	//从i_fval上升沿到info_flag之间的距离，以clk为单位
+	parameter		IMAGE_WAIT_TIME										= 16					,	//从info_flag到image_flag之间的距离，以clk为单位
+	parameter		STATIS_WAIT_TIME									= 16					,	//从i_fval下降沿到statis_flag之间的距离，以clk为单位
+	parameter		FVAL_FALL_WAIT_TIME									= 16					,	//从statis_flag到i_fval下降沿之间的距离，以clk为单位
+	parameter		BID_INIT_VALUE										= 1						,	//开流之后，BID第一个是多少，U3是0，gige是1
+	parameter		INFO_SIZE											= 256					,	//INFO段数据量，以byte为单位
+	parameter		STATIS_SIZE											= 256					,	//STATIS段数据量，以byte为单位
+	parameter		MROI_MAX_NUM 										= 4						,	//Multi-ROI的最大个数,最大支持32
+	parameter		MROI_OFFSET_WD										= 64					,	//Multi-ROI模式下所有roi偏移位宽之和
+	parameter		MROI_IMAGE_SIZE_WD									= 128					,	//Multi-ROI模式下所有roi image size位宽之和
+	parameter		SHORT_REG_WD   										= 16					,	//短寄存器位宽
+	parameter		REG_WD  						 					= 32					,	//寄存器位宽
+	parameter		LONG_REG_WD  						 				= 64						//长寄存器位宽
+	)
+	(
+	//	-------------------------------------------------------------------------------------
+	//	时钟复位
+	//	-------------------------------------------------------------------------------------
+	input																clk						,	//时钟
+	input																reset					,	//复位
+	//	-------------------------------------------------------------------------------------
+	//	图像数据
+	//	-------------------------------------------------------------------------------------
+	input																i_fval					,	//clk时钟域，场信号
+	input																i_lval					,	//clk时钟域，行信号
+	input	[SENSOR_DAT_WIDTH*CHANNEL_NUM-1:0]							iv_pix_data				,	//clk时钟域，图像数据
+	//  -------------------------------------------------------------------------------------
+	//  控制数据
+	//  -------------------------------------------------------------------------------------
+	input																i_stream_enable			,	//clk时钟域，流停止信号，高有效
+	input																i_mroi_global_en		,	//clk时钟域，multi-roi全局打开使能，高有效
+	input	[REG_WD-1:0]												iv_mroi_single_en		,	//clk时钟域，multi-roi单独roi的使能位，高有效
+	input	[REG_WD-1:0]												iv_pixel_format			,	//clk时钟域，data_channel输出。像素格式寄存器，0x01080001:Mono8、0x01100003:Mono10、0x01080008:BayerGR8、0x0110000C:BayerGR10
+	//  -------------------------------------------------------------------------------------
+	//  打包信息输入
+	//  -------------------------------------------------------------------------------------
+	input	[LONG_REG_WD-1:0]											iv_timestamp			,	//未知时钟域，time stamp，保证在添加的时候已经准备好，通过时钟约束的方法保证数据采集正确
+	input	[LONG_REG_WD-1:0]											iv_frame_interval		,	//未知时钟域，frame interval，保证在添加的时候已经准备好，通过时钟约束的方法保证数据采集正确
+	input	[MROI_OFFSET_WD-1:0]										iv_single_roi_offset_x	,	//clk时钟域，roi相对于原始图像的横向坐标位置偏移，单位是像素
+	input	[MROI_OFFSET_WD-1:0]										iv_single_roi_offset_y	,	//clk时钟域，roi相对于原始图像的纵向坐标位置偏移，单位是像素
+	input	[MROI_OFFSET_WD-1:0]										iv_single_roi_width		,	//clk时钟域，roi宽度，单位是像素
+	input	[MROI_OFFSET_WD-1:0]										iv_single_roi_height	,	//clk时钟域，roi高度，单位是像素
+	input	[MROI_IMAGE_SIZE_WD-1:0]									iv_single_roi_image_size,	//clk时钟域，roi图像大小，以byte为单位
+	input	[MROI_IMAGE_SIZE_WD-1:0]									iv_single_roi_payload_size			,	//clk时钟域，roi图+chunk像大小，以byte为单位
+	input																i_chunk_mode_active		,	//clk时钟域，chunk开关寄存器
+	input																i_chunkid_en_img		,	//clk时钟域，image开关寄存器
+	input																i_chunkid_en_fid		,	//clk时钟域，frame id开关寄存器
+	input																i_chunkid_en_ts			,	//clk时钟域，时间戳开关寄存器
+	input																i_chunkid_en_fint		,	//clk时钟域，frame interval开关寄存器
+	input	[REG_WD-1:0]												iv_expect_payload_size	,	//clk时钟域，要写入到帧存的image size
+	//  -------------------------------------------------------------------------------------
+	//  输出数据
+	//  -------------------------------------------------------------------------------------
+	output																o_fval					,	//clk时钟域，场有效信号，高有效
+	output																o_dval					,	//clk时钟域，数据有效信号，高有效，数据有效不像行信号一样连续，可以是断续的信号
+	output																o_info_flag				,	//clk时钟域，信息段标志，高有效
+	output																o_image_flag			,	//clk时钟域，图像段标志，高有效
+	output																o_statis_flag			,	//clk时钟域，统计段标志，高有效
+	output	[DATA_WD-1:0]												ov_data						//clk时钟域，图像数据，位宽可变，支持64 128 256
+	);
+	//	ref paramters
+
+
+	//	ref functions
+
+
+	//	ref signals
+
+	//输出
+	wire																w_fval					;	//data_align输出，clk时钟域，场有效
+	wire																w_pix_data_en			;	//data_align输出，clk时钟域，数据有效信号，数据拼接之后的使能信号，相当于时钟的2分频或者4分频
+	wire	[DATA_WD-1:0]												wv_pix_data				;	//data_align输出，clk时钟域，图像数据
+
+
+	//	ref ARCHITECTURE
+
+
+	//	-------------------------------------------------------------------------------------
+	//	数据对齐模块，保证和帧存输入的位宽是一致的
+	//	-------------------------------------------------------------------------------------
+	data_align # (
+	.END_STYLE_PIX					("LITTLE"						),
+	.SENSOR_DAT_WIDTH				(SENSOR_DAT_WIDTH				),
+	.CHANNEL_NUM					(CHANNEL_NUM					),
+	.REG_WD							(REG_WD							),
+	.DATA_WD						(DATA_WD						)
+	)
+	data_align_inst (
+	.clk							(clk							),
+	.i_fval							(i_fval							),
+	.i_lval							(i_lval							),
+	.iv_pix_data					(iv_pix_data					),
+	.iv_pixel_format				(iv_pixel_format				),
+	.o_fval							(w_fval							),
+	.o_pix_data_en					(w_pix_data_en					),
+	.ov_pix_data					(wv_pix_data					)
+	);
+
+	//	-------------------------------------------------------------------------------------
+	//	添加帧信息
+	//	-------------------------------------------------------------------------------------
+	frame_info_add # (
+	.STATIS_VALID					(STATIS_VALID					),
+	.INFO_WAIT_TIME					(INFO_WAIT_TIME					),
+	.IMAGE_WAIT_TIME				(IMAGE_WAIT_TIME				),
+	.STATIS_WAIT_TIME				(STATIS_WAIT_TIME				),
+	.FVAL_FALL_WAIT_TIME			(FVAL_FALL_WAIT_TIME			),
+	.BID_INIT_VALUE					(BID_INIT_VALUE					),
+	.INFO_SIZE						(INFO_SIZE						),
+	.STATIS_SIZE					(STATIS_SIZE					),
+	.MROI_MAX_NUM					(MROI_MAX_NUM					),
+	.DATA_WD						(DATA_WD						),
+	.MROI_OFFSET_WD					(MROI_OFFSET_WD					),
+	.MROI_IMAGE_SIZE_WD				(MROI_IMAGE_SIZE_WD				),
+	.SHORT_REG_WD					(SHORT_REG_WD					),
+	.REG_WD							(REG_WD							),
+	.LONG_REG_WD					(LONG_REG_WD					)
+	)
+	frame_info_add_inst (
+	.clk							(clk							),
+	.reset							(reset							),
+	.i_fval							(w_fval							),
+	.i_dval							(w_pix_data_en					),
+	.iv_pix_data					(wv_pix_data					),
+	.i_stream_enable				(i_stream_enable				),
+	.i_mroi_global_en				(i_mroi_global_en				),
+	.iv_mroi_single_en				(iv_mroi_single_en				),
+	.o_fval							(o_fval							),
+	.o_dval							(o_dval							),
+	.o_info_flag					(o_info_flag					),
+	.o_image_flag					(o_image_flag					),
+	.o_statis_flag					(o_statis_flag					),
+	.ov_data						(ov_data						),
+	.iv_timestamp					(iv_timestamp					),
+	.iv_frame_interval				(iv_frame_interval				),
+	.iv_pixel_format				(iv_pixel_format				),
+	.iv_single_roi_offset_x			(iv_single_roi_offset_x			),
+	.iv_single_roi_offset_y			(iv_single_roi_offset_y			),
+	.iv_single_roi_width			(iv_single_roi_width			),
+	.iv_single_roi_height			(iv_single_roi_height			),
+	.iv_single_roi_image_size		(iv_single_roi_image_size		),
+	.iv_single_roi_payload_size		(iv_single_roi_payload_size		),
+	.i_chunk_mode_active			(i_chunk_mode_active			),
+	.i_chunkid_en_img				(i_chunkid_en_img				),
+	.i_chunkid_en_fid				(i_chunkid_en_fid				),
+	.i_chunkid_en_ts				(i_chunkid_en_ts				),
+	.i_chunkid_en_fint				(i_chunkid_en_fint				),
+	.iv_expect_payload_size			(iv_expect_payload_size			)
+	);
+
+
+
+
+
+endmodule
