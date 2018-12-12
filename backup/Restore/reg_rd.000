@@ -1,0 +1,528 @@
+
+//-------------------------------------------------------------------------------------------------
+//  -- 版权所有者   : 中国大恒（集团）有限公司北京图像视觉技术分公司, 2010 -2015.
+//  -- 保密级别     ：绝密.
+//  -- 部门         : 硬件部，FPGA工作组
+//  -- 模块名       : reg_rd.v
+//  -- 设计者       : 胡汉
+//-------------------------------------------------------------------------------------------------
+//
+//  --修改记录  :
+//
+//  -- 作者         :| 修改日期     :|  修改说明
+//---------------------------------------------------------------------------------------
+//  -- 胡汉         :| 12/27/2013   :|  初始版本
+//  -- 毛嵘         :| 08/20/2015   :|  曝光结束事件使用fval的上升沿，在reg_rd模块，输出给image_receive模块的block ID和Timestamp，在clk_pix时钟域fval上升沿延迟9个周期后给出；
+//  -- 毛嵘         :| 11/30/2015   :|  删除wv_stop_done_max，以节省资源
+//---------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
+//
+//  -- 模块描述     :
+//              1)  : 读相关的FPGA寄存器
+//
+//-------------------------------------------------------------------------------------------------
+//仿真单位/精度
+`timescale 1ns / 1ps
+`include "MARS_1230_9GX_DEF.v"
+
+//-------------------------------------------------------------------------------------------------
+module reg_rd(
+//  --------------------------------------------------------------------------------------
+//	时钟复位信号
+//  --------------------------------------------------------------------------------------
+	input						clk_axi						,			//microblaze时钟域
+//	input						clk_gtx						,			//数据发送时钟域
+	input						clk_pix						,			//像素时钟域
+	input						reset_axi					,			//microblaze时钟域高有效同步复位
+//	input						reset_gtx					,			//数据发送时钟域高有效同步复位
+	input						reset_pix					,			//像素时钟域高有效同步复位
+//  --------------------------------------------------------------------------------------
+//	AXI时钟域读写相关信号
+//  --------------------------------------------------------------------------------------
+	input						i_wr_en						,			//AXI时钟域写使能
+	input		[31:0]			iv_wr_data					,			//AXI时钟域写数据
+	input		[7:0]			iv_addr						,			//AXI时钟域读写使能
+	input						i_rd_en						,			//AXI时钟域读使能
+	output	reg	[31:0]			ov_rd_data					,			//AXI时钟域读数据							
+	
+//  --------------------------------------------------------------------------------------
+//	只读信号————————————clk_pix时钟域
+//  --------------------------------------------------------------------------------------
+	input						i_start_acquisit_pix		,			//开采时对i_acquist_stop_done清0信号
+	input		[1:0]			iv_acquist_stop_done		,			//停采结束信号，来自于顶层模块的逻辑输入
+	input						i_start_acquisit_axi		,			//开采时对i_acquist_stop_done清0信号
+	input		[31:0]			iv_wb_statis_r				,			//白平衡寄存器红分量统计值
+	input		[31:0]			iv_wb_statis_g				,           //白平衡寄存器绿分量统计值
+	input		[31:0]			iv_wb_statis_b				,           //白平衡寄存器红分量统计值
+	input		[	`AXI_WD - 1 : 0		]	iv_wb_num_r	,	//clk_pix时钟域，白平衡统计模块，红色非饱和点的个数
+	input		[	`AXI_WD - 1 : 0		]	iv_wb_num_b	,	//clk_pix时钟域，白平衡统计模块，蓝色非饱和点的个数
+	input		[`GRAY_WD - 1:0]iv_gray_statis_total		,         	//灰度值统计值
+	input						i_gray_statis_flag			,           //灰度值统计值更新标志
+	input		[ 3:0]			iv_line_status				,			//外部4路line电平状态
+	input		[31:0]			iv_microb_testtime_cnt_axi	,			//Time 调试寄存器，用于固件的调试
+	input		[31:0]			iv_ddr_status_err			,			//表明当前ddr3的状态
+//  --------------------------------------------------------------------------------------
+//	只读信号————————————clk_axi时钟域
+//  --------------------------------------------------------------------------------------
+	input [`IRQ_STATUS_WD-1:0]	iv_irq_status_reg			,           //中断状态寄存器
+	input		[2:0]			iv_link_speed				,			//网络速度和连接状态
+	input		[31:0]			iv_gvsp_pkt_total_gtx		,			//读出的PHY寄存器的值
+	output						o_fpga_ver_user				,			//表明FPGA版本是出厂还是用户程序，‘1’表明为用户区程序
+	input		[15:0]			iv_phy_rd_data				,			//读出的PHY寄存器的值
+//  --------------------------------------------------------------------------------------
+//	产生时间戳的标志信号
+//  --------------------------------------------------------------------------------------
+	input						i_exposure_flag				,           //曝光结束事件时间戳更新标志
+	input						i_trig_mask_flag			,           //触发屏蔽事件时间戳更新标志
+//	input						i_bitslip					,	//
+	output	reg	[63:0]			ov_exposure_timestamp_pix	,			//曝光结束时间戳
+	output	reg	[15:0]			ov_block_id_pix				,			//曝光结束block id
+
+//  --------------------------------------------------------------------------------------
+//	输出的调试寄存器的值
+//  --------------------------------------------------------------------------------------
+	input		[31:0]			iv_rx_trigger_cnt			,			//接收到的触发总个数
+	input		[31:0]			iv_trigger_valid_cnt		,			//有效的触发个数
+	input		[31:0]			iv_exp_end_irq_cnt			,			//曝光产生的中断的个数
+	input		[31:0]			iv_tx_frame_cnt				,			//mac端发送帧的个数
+	input		[31:0]			iv_rx_resend_cmd_cnt		,			//接收到重传命令的个数
+	input		[31:0]			iv_tx_resend_pkt_cnt		,			//FPGA发送重传数据包的个数
+	input						i_gvcp_ack_txen_gtx			,
+//	input		[	15 : 0]		iv_phy_cfg_speed_cnt		,
+	input		[   31 : 0]		iv_check_payload_block_id	,			//检测数据量是否够和block  id是否连续寄存器，地址0x304	//
+	input		[31:0]			iv_heartbeat_timer_cur_irq	,
+    input    	[31:0]			iv_gvcp_normal_clr_interv_max ,
+    input    	[1:0]			iv_heartbeat_timeout_status ,
+    input    					i_heartbeat_irq				,
+	input						i_mask_frame_mcb			,	//mcb时钟域，当前ddr写正在屏蔽场信号上升沿
+    input    					i_sensorspi_sdi				,
+	//  -------------------------------------------------------------------------------------
+	//  温度读出值
+	//  -------------------------------------------------------------------------------------		
+	input	[11:0]								iv_temperature_be		,
+	input	[11:0]	                            iv_temperature_sensor	    
+    );
+
+//  ===============================================================================================
+//  模块设计中，需要使用的线网和寄存器描述
+//  ===============================================================================================
+	reg		[9:0]				irq_enable_reg				;
+	reg		[15:0]				headblank_number			;
+	reg		[15:0]				vsync_start					;
+	reg		[15:0]				tailblank_start				;
+	reg		[15:0]				tailblank_number			;
+	reg		[15:0]				frame_period				;
+	reg		[15:0]				exposure_line_cnt			;
+	reg		[15:0]				exposure_xsg_cnt			;
+	reg		[15:0]				href_start					;
+	reg		[15:0]				href_end					;
+
+	wire	[1:0]				wv_acquist_stop_done		;
+	reg		[15:0]				wv_block_id					;
+	wire	[31:0]  			wv_wb_statis_r				;
+	wire	[31:0]  			wv_wb_statis_g				;
+	wire	[31:0]  			wv_wb_statis_b				;
+	wire	[`AXI_WD:0]			wv_wb_num_r					;
+	wire	[`AXI_WD:0]			wv_wb_num_b					;
+	wire	[`GRAY_WD - 1:0]  	wv_gray_statis_total		;
+	wire	[3:0]				wv_line_status				;
+	wire	[31:0]				wv_ddr_status_err			;
+
+	wire	[31:0]				piblic_timestamp_cnt_low	;
+	wire	[31:0]				piblic_timestamp_cnt_high	;
+	wire	[63:0]				piblic_timestamp_cnt		;
+	reg		[63:0]				latch_timestamp_cnt			;
+	reg		[63:0]				exposure_timestamp 			;
+	reg		[63:0]				trig_mask_timestamp 		;
+	reg		[15:0]				shift_exposure				;
+
+	wire	[56:0]				wv_dna						;
+	wire	[31:0]				wv_rw_rd_data				;
+
+	reg							exposure_flag_sync1			;
+	reg							exposure_flag_sync2			;
+	reg							exposure_flag_sync3			;
+	reg							mask_frame_axi_sync1		;
+	reg							mask_frame_axi_sync2		;
+	wire						fval_flag_rising			;
+	reg							trig_mask_flag_sync1		;
+	reg							trig_mask_flag_sync2		;
+	reg							trig_mask_flag_sync3		;
+	wire						trig_mask_flag_rising		;
+
+	reg [31:0] 					bitslip_cnt = 32'b0			;
+	reg [15:0] 					udp_dst_port_axi			;
+	reg 						udp_dst_port_open			;
+	reg 						udp_dst_port_open_dly1		;
+	reg 						timestamp_cnt_reset			;
+	reg							timestamp_cnt_latch			;
+	reg 						heartbeat_irq_dly1			;
+	reg 						heartbeat_irq_dly2			;
+	reg 						sensorspi_dly1				;
+	reg 						sensorspi_dly2				;
+	reg [15:0] 					heartbeat_irq_cnt			;
+	reg [31:0] 					gvsp_pkt_total_gtx_sync1	;
+	reg  						exposure_flag_pix_sync1		;
+
+
+	parameter					fpga_version = `FPGA_VERSION	;					//FPGA版本号
+	assign						o_fpga_ver_user = fpga_version[15] ;
+
+//  --------------------------------------------------------------------------------------
+//	gvcp_ack_txen 同步axi时钟域
+//  --------------------------------------------------------------------------------------
+	reg  					gvcp_ack_txen_gtx_axi_sync1	;
+	reg  					gvcp_ack_txen_gtx_axi_sync2	;
+	reg [31:0]				check_payload_block_id_sync1	;
+	reg [31:0]				check_payload_block_id_sync2	;
+
+	always @ (posedge clk_axi)
+    	begin
+			gvcp_ack_txen_gtx_axi_sync1		<= i_gvcp_ack_txen_gtx			;
+			gvcp_ack_txen_gtx_axi_sync2		<= gvcp_ack_txen_gtx_axi_sync1	;
+			gvsp_pkt_total_gtx_sync1		<= iv_gvsp_pkt_total_gtx		;
+			check_payload_block_id_sync1	<= iv_check_payload_block_id	;
+			check_payload_block_id_sync2	<= check_payload_block_id_sync1	;
+    	end
+
+
+
+
+//  --------------------------------------------------------------------------------------
+//	主要功能：clk_pix时钟域只读寄存器读出
+//  --------------------------------------------------------------------------------------
+	fifo_ro_pix fifo_ro_pix_inst(
+		.clk_axi				(clk_axi				),
+		.clk_pix				(clk_pix				),
+		.reset_axi				(reset_axi				),
+		.reset_pix				(reset_pix				),
+
+		.iv_acquist_stop_done	(iv_acquist_stop_done	),
+		.i_start_acquisit_axi	(i_start_acquisit_axi	),
+		.iv_wb_statis_r			(iv_wb_statis_r			),
+		.iv_wb_statis_g			(iv_wb_statis_g			),
+		.iv_wb_statis_b			(iv_wb_statis_b			),
+		.iv_wb_num_r			(iv_wb_num_r			),
+		.iv_wb_num_b			(iv_wb_num_b			),
+		.iv_gray_statis_total	(iv_gray_statis_total	),
+		.i_gray_statis_flag		(i_gray_statis_flag		),
+		.iv_line_status			(iv_line_status			),
+		.iv_ddr_status_err		(iv_ddr_status_err		),
+
+		.ov_acquist_stop_done	(wv_acquist_stop_done	),
+		.ov_wb_statis_r			(wv_wb_statis_r			),
+		.ov_wb_statis_g			(wv_wb_statis_g			),
+		.ov_wb_statis_b			(wv_wb_statis_b			),
+		.ov_wb_num_r			(wv_wb_num_r			),
+		.ov_wb_num_b			(wv_wb_num_b			),
+		.ov_gray_statis_total	(wv_gray_statis_total	),
+		.ov_line_status			(wv_line_status			),
+		.ov_ddr_status_err		(wv_ddr_status_err		)
+	);
+
+//  --------------------------------------------------------------------------------------
+//	主要功能：产生dna只读寄存器
+//  --------------------------------------------------------------------------------------
+
+	dna_generate dna_generate_inst(
+		.clk					(clk_axi				),
+		.reset					(reset_axi				),
+		.ov_dna					(wv_dna					)
+    );
+
+
+//  --------------------------------------------------------------------------------------
+//	主要功能：	写AXI的时候直接将可读可写的寄存器都放入到双口ram里存储，
+//				当AXI需要读取寄存时可以直接从双口ram里读取
+//  --------------------------------------------------------------------------------------
+	ram_rwreg_rd ram_rwreg_rd_inst(
+		.clka					(clk_axi				),
+		.ena					(i_wr_en				),
+		.wea					(1'b1					),
+		.addra					(iv_addr				),
+		.dina					(iv_wr_data				),
+		.clkb					(clk_axi				),
+		.rstb					(reset_axi				),
+		.enb					(i_rd_en				),
+		.addrb					(iv_addr				),
+		.doutb					(wv_rw_rd_data			)
+	);
+
+//  --------------------------------------------------------------------------------------
+//	主要功能：将各个时钟域只读寄存器输出给AXI总线
+//  --------------------------------------------------------------------------------------
+	always @ (posedge clk_axi)
+		begin
+			if(reset_axi)
+				begin
+					ov_rd_data <= 32'h0;
+				end
+			else if(i_rd_en)
+				begin
+					case(iv_addr)
+						8'h02	:	ov_rd_data 						<=	fpga_version				;
+						8'h1a	:	ov_rd_data[1:0] 				<= wv_acquist_stop_done			;
+						8'h2e	:	ov_rd_data[0] 					<= gvcp_ack_txen_gtx_axi_sync2	;
+						8'h45	:	ov_rd_data[`IRQ_STATUS_WD-1:0]	<= iv_irq_status_reg 			;
+						8'h48	:	ov_rd_data 						<= exposure_timestamp[63:32]	;
+						8'h49	:	ov_rd_data 						<= exposure_timestamp[31:0]		;
+						8'h4a	:	ov_rd_data 						<= trig_mask_timestamp[63:32]	;
+						8'h4b	:	ov_rd_data 						<= trig_mask_timestamp[31:0]	;
+						8'h4c	:	ov_rd_data 						<= latch_timestamp_cnt[63:32]	;
+						8'h4d	:	ov_rd_data 						<= latch_timestamp_cnt[31:0]	;
+						8'h4e	:	ov_rd_data 						<= {16'h0,wv_block_id}			;
+						8'h50	:	ov_rd_data						<= wv_ddr_status_err			;
+						8'h51	:	begin
+									ov_rd_data[0]					<= timestamp_cnt_reset			;
+									ov_rd_data[1]					<= timestamp_cnt_latch			;
+									end
+						8'h64	:	ov_rd_data 						<= {27'h0,wv_line_status}		;
+						8'h83	:	ov_rd_data 						<= wv_wb_statis_r				;
+						8'h84	:	ov_rd_data 						<= wv_wb_statis_g				;
+						8'h85	:	ov_rd_data 						<= wv_wb_statis_b				;
+						8'h8e	:	ov_rd_data 						<= wv_gray_statis_total[31:0]	;
+						8'he4	:	ov_rd_data 						<= wv_gray_statis_total[63:32]	;
+						8'ha0	:	ov_rd_data 						<= {7'h0,wv_dna[56:32]}			;
+						8'ha1	:	ov_rd_data 						<= 	wv_dna[31:0]				;
+						8'haa	:	ov_rd_data 						<= 	iv_microb_testtime_cnt_axi	;
+						8'had	:	ov_rd_data[2:0] 				<= iv_link_speed				;
+						8'hae	:	ov_rd_data						<= {16'h0,iv_phy_rd_data}		;
+						8'hb8	:	ov_rd_data 						<= iv_rx_trigger_cnt			;
+						8'hb9	:	ov_rd_data 						<= iv_trigger_valid_cnt			;
+						8'hba	:	ov_rd_data 						<= iv_exp_end_irq_cnt			;
+						8'hbb	:	ov_rd_data 						<= iv_tx_frame_cnt				;
+						8'hbc	:	ov_rd_data 						<= iv_rx_resend_cmd_cnt			;
+						8'hbd	:	ov_rd_data						<= iv_tx_resend_pkt_cnt			;
+//						8'hc0	:	ov_rd_data						<= bitslip_cnt					;
+						8'hc1	:	ov_rd_data						<= check_payload_block_id_sync2	;
+						8'hc2	:	ov_rd_data[15:0]				<= heartbeat_irq_cnt			;
+						8'hd0	:	ov_rd_data						<= iv_gvcp_normal_clr_interv_max;
+						8'hd1	:	ov_rd_data						<= iv_heartbeat_timer_cur_irq	;
+						8'hd2	:	ov_rd_data[1:0]					<= iv_heartbeat_timeout_status	;
+						8'he2	:	ov_rd_data						<= wv_wb_num_r					;
+						8'he3	:	ov_rd_data						<= wv_wb_num_b					;
+						8'heb	:	ov_rd_data[0]					<= sensorspi_dly2				;
+//  --------------------------------------------------------------------------------------
+//	be sensor温度传感器数值
+//  --------------------------------------------------------------------------------------	
+						8'hf0	:	ov_rd_data[11:0]				<= iv_temperature_be			;
+						8'hf1	:	ov_rd_data[11:0]				<= iv_temperature_sensor		;	
+						default	:	ov_rd_data						<= wv_rw_rd_data				;												
+					endcase
+				end
+			else
+				begin
+					ov_rd_data  <= 32'h0;
+				end
+		end
+
+//  --------------------------------------------------------------------------------------
+//	主要功能：	针对Gige vision2.0协议检测时，block id和Timestamp不符合协议而进行的修改 2015.6.23
+//				1.流通道开启时，block id需要重新从1开始
+//				2.需要添加时间戳复位功能，在固件对时间戳复位时，Timestamp重新从1开始计数
+//				时间戳复位寄存器地址：0x77601544，（32bit，0x51），fpga自清0
+//  --------------------------------------------------------------------------------------
+	always @ (posedge clk_axi)
+		if(reset_axi)
+			udp_dst_port_axi 	<= 16'h0;
+		else if(i_wr_en && (iv_addr[7:0] == 8'h2b) )
+			udp_dst_port_axi	<= 	iv_wr_data[ 15 : 0]	;
+
+	always @ (posedge clk_axi)
+		if(reset_axi)
+			udp_dst_port_open 	<= 1'h0;
+		else if(udp_dst_port_axi == 16'h0)
+			udp_dst_port_open 	<= 1'h0;
+		else
+			udp_dst_port_open 	<= 1'h1;
+
+	always @ (posedge clk_axi)
+			udp_dst_port_open_dly1 	<= udp_dst_port_open;
+
+	always @ (posedge clk_axi)
+	    if(reset_axi)
+			timestamp_cnt_reset		<=	1'h0;
+		else if(i_wr_en && (iv_addr == 8'h51))
+			timestamp_cnt_reset	<=	iv_wr_data[0]	;
+		else
+			timestamp_cnt_reset		<= 	1'h0;
+	
+	always @ (posedge clk_axi)
+		if(reset_axi)
+			timestamp_cnt_latch		<=	1'h0;
+		else if(i_wr_en && (iv_addr == 8'h51))
+			timestamp_cnt_latch	<=	iv_wr_data[1]	;
+		else
+			timestamp_cnt_latch		<= 	1'h0;
+
+
+
+//  --------------------------------------------------------------------------------------
+//	主要功能：	将曝光标志和触发屏蔽标志同步到axi时钟域
+//				并作出曝光标志下降沿和触发屏蔽信号上升沿
+//  --------------------------------------------------------------------------------------
+
+	always @ (posedge clk_axi)
+		begin
+			exposure_flag_sync1		<=	i_exposure_flag;
+			exposure_flag_sync2		<=	exposure_flag_sync1;
+			exposure_flag_sync3		<=	exposure_flag_sync2;
+			trig_mask_flag_sync1	<=	i_trig_mask_flag;
+			trig_mask_flag_sync2	<=	trig_mask_flag_sync1;
+			trig_mask_flag_sync3	<=	trig_mask_flag_sync2;
+			mask_frame_axi_sync1	<=	i_mask_frame_mcb;
+			mask_frame_axi_sync2	<=	mask_frame_axi_sync1;
+		end
+
+//	assign exposure_flag_falling = exposure_flag_sync3 & !exposure_flag_sync2;
+	assign fval_flag_rising = !exposure_flag_sync3 & exposure_flag_sync2;			//针对Python相机，使用fval上升沿作为block ID产生条件
+	assign trig_mask_flag_rising = trig_mask_flag_sync2 & !trig_mask_flag_sync3;
+
+//  --------------------------------------------------------------------------------------
+//	主要功能：	时间戳递增，使用两个DSP48完成功能
+//  --------------------------------------------------------------------------------------
+
+adder32 timestamp_low32_inst (
+			.clk        	(clk_axi             				),
+			.ce             (1'b1                        		),
+			.sclr        	(reset_axi | timestamp_cnt_reset    ),
+			.a              (piblic_timestamp_cnt_low        	),
+			.s              (piblic_timestamp_cnt_low        	)
+);
+
+wire			timestamp_high32_en = (piblic_timestamp_cnt_low == 32'hffff_ffff);
+
+adder32 timestamp_high32_inst (
+			.clk        	(clk_axi             				),
+			.ce             (timestamp_high32_en           		),
+			.sclr        	(reset_axi | timestamp_cnt_reset    ),
+			.a              (piblic_timestamp_cnt_high        	),
+			.s              (piblic_timestamp_cnt_high        	)
+			);
+
+assign		piblic_timestamp_cnt = {piblic_timestamp_cnt_high,piblic_timestamp_cnt_low};
+
+always	@(posedge	clk_axi) begin
+	if(timestamp_cnt_latch==1'b1)  begin
+		latch_timestamp_cnt <= piblic_timestamp_cnt;
+	end
+end
+
+//  --------------------------------------------------------------------------------------
+//	主要功能：产曝光信号下降沿生曝光事件时间戳
+//  --------------------------------------------------------------------------------------
+	always @ (posedge clk_axi)
+		begin
+			if(reset_axi)
+				begin
+					exposure_timestamp	<=	64'd0;
+				end
+			else if(fval_flag_rising)
+				begin
+					exposure_timestamp	<=	piblic_timestamp_cnt;
+				end
+		end
+
+//  --------------------------------------------------------------------------------------
+//	主要功能：产生触发屏蔽事件时间戳
+//  --------------------------------------------------------------------------------------
+	always @ (posedge clk_axi)
+		begin
+			if(reset_axi)
+				begin
+					trig_mask_timestamp	<=	64'd0;
+				end
+			else if(trig_mask_flag_rising)
+				begin
+					trig_mask_timestamp	<=	piblic_timestamp_cnt;
+				end
+		end
+
+//  --------------------------------------------------------------------------------------
+//	主要功能：产生block_id
+//  --------------------------------------------------------------------------------------
+	always @ (posedge clk_axi)
+		begin
+			if(reset_axi)
+				begin
+					wv_block_id	<=	16'h0;
+				end
+			else if(udp_dst_port_open & ~udp_dst_port_open_dly1)	// rising edge, stream channel open
+				begin
+					wv_block_id	<=	16'h0;
+				end
+			else if(fval_flag_rising && !mask_frame_axi_sync2)  //在ddr_mcb的复位期间，图像数据不能写入，BID不能加一
+				begin
+					if(wv_block_id == 16'hffff)
+						begin
+							wv_block_id	<=	16'h1;
+						end
+					else
+						begin
+							wv_block_id	<=	wv_block_id + 16'h1;
+						end
+				end
+		end
+
+//  --------------------------------------------------------------------------------------
+//	主要功能：触发屏蔽事件时间戳和block_id的36M输出
+//  --------------------------------------------------------------------------------------
+	always @ (posedge clk_pix)
+		begin
+			if(reset_pix)
+				begin
+					shift_exposure	<=	16'h0;
+				end
+			else
+				begin
+					shift_exposure	<=	{shift_exposure[14:0] , i_exposure_flag};
+				end
+		end
+
+	always @ (posedge clk_pix)
+		begin
+			if(reset_pix)
+				begin
+					ov_exposure_timestamp_pix	<=	64'h0;
+					ov_block_id_pix				<=	16'h0;
+				end
+			else if(shift_exposure[8] && !shift_exposure[9])
+				begin
+					ov_exposure_timestamp_pix	<=	exposure_timestamp;
+					ov_block_id_pix				<=	wv_block_id;
+				end
+		end
+
+//  --------------------------------------------------------------------------------------
+//	主要功能：测试心跳中断产生的次数
+//  --------------------------------------------------------------------------------------
+
+	always @ (posedge clk_axi)
+		begin
+			heartbeat_irq_dly1	<=	i_heartbeat_irq;
+			heartbeat_irq_dly2	<=	heartbeat_irq_dly1;
+		end
+
+	always @ (posedge clk_axi)
+		begin
+			if(reset_axi)
+				begin
+					heartbeat_irq_cnt	<=	16'd0;
+				end
+			else if(heartbeat_irq_dly1 && !heartbeat_irq_dly2)
+				begin
+					heartbeat_irq_cnt	<=	heartbeat_irq_cnt + 1'b1;
+				end
+		end
+
+//  --------------------------------------------------------------------------------------
+//	主要功能：同步i_sensorspi_sdi到axi时钟域
+//  --------------------------------------------------------------------------------------
+	always @ (posedge clk_axi)
+		begin
+			sensorspi_dly1	<=	i_sensorspi_sdi;
+			sensorspi_dly2	<=	sensorspi_dly1;
+		end
+
+
+endmodule

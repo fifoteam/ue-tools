@@ -1,0 +1,393 @@
+
+//-------------------------------------------------------------------------------------------------
+//  -- 版权所有者   : 中国大恒（集团）有限公司北京图像视觉技术分公司, 2010 -2015.
+//  -- 保密级别     ：绝密.
+//  -- 部门         : 硬件部，FPGA工作组
+//  -- 模块名       : ge_mac.v
+//  -- 设计者       : 陈小平
+//-------------------------------------------------------------------------------------------------
+//
+//  --修改记录  :
+//
+//  -- 作者         :| 修改日期     :|  修改说明
+//---------------------------------------------------------------------------------------
+//  -- 陈小平       :| 07/15/2012   :|  初始版本
+//  -- 陈小平       :| 05/29/2014   :|  添加注释，信号规范化
+//  -- 陈小平       :| 01/29/2015   :|  根据mer-200-14gx项目，补充了百兆自复位功能，和对phy的配置功能
+//  --              :|              :|
+//---------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
+//
+//  -- ge_mac模块功能描述     :
+//
+//              完成tri_mac_block模块的接口设计；
+//
+//              mac_host_cfg例化，用来配置mac寄存器，读写操作ar8035寄存器通道；
+//
+//              补充了百兆自复位功能；
+//
+//
+//-------------------------------------------------------------------------------------------------
+//仿真单位/精度
+`timescale      1ns/100ps
+//-------------------------------------------------------------------------------------------------
+
+module ge_mac
+	(
+	// asynchronous reset
+	output				o_rise_linkup,
+	input				i_reset_10m_100m,
+	input         		reset_microb,
+
+	// Client Receiver Statistics Interface
+	//-------------------------------------
+	output        		rx_clk,
+    output        		rx_enable,
+	output      [27:0]  rx_statistics_vector,
+	output        		rx_statistics_valid,
+	output      [7:0] 	rx_data,
+	output            	rx_data_valid,
+	output            	rx_good_frame,
+	output            	rx_bad_frame,
+
+	// Client Transmitter Statistics Interface
+	//----------------------------------------
+	output    			tx_clk,
+    output        		tx_enable,
+	input  [7:0]  		tx_ifg_delay,
+	output  [31:0] 		tx_statistics_vector,
+	output        		tx_statistics_valid,
+
+	input  [7:0] 		tx_data,
+	input        		tx_data_valid,
+	output       		tx_ack,
+	input       		tx_underrun,
+
+	// MAC Control Interface
+	//----------------------
+	input         		pause_req,
+	input [15:0]    	pause_val,
+
+
+	// RGMII Interface
+	//----------------
+	input                gtx_clk,
+	output      [3:0]    rgmii_txd,
+	output               rgmii_tx_ctl,
+	output               rgmii_txc,
+	input       [3:0]    rgmii_rxd,
+	input                rgmii_rx_ctl,
+	input                rgmii_rxc,
+	output               inband_link_status,
+	output      [1:0]    inband_clock_speed,
+	output               inband_duplex_status,
+
+	// MDIO Interface
+	//---------------
+	inout         		mdio,
+	output        		mdc,
+
+	// Host Interface
+	//---------------
+	input         		clk_axi					,
+	input         		i_ar8035_interrupt		,
+	output [2:0]  		ov_link_speed			,
+
+	input  [31:0] 		iv_phy_operation		,
+	output [15:0] 		ov_phy_rd_data			,
+	output				o_speed_config			,
+
+	// reset signal to the client logic
+	output        		o_tx_reset				,
+	output        		o_rx_reset          	,
+
+	output				o_10m_100m_flag			,
+    output  [  15 : 0]  ov_phy_cfg_speed_cnt	,
+    output              o_cfg_mac_end         	,
+    input               i_heartbeat_irq_reset
+
+	);
+
+    wire    [1:0]       host_opcode_reg         ;
+    wire    [9:0]       host_addr_reg           ;
+    wire    [31:0]      host_wr_data_reg        ;
+    wire                host_req_reg            ;
+    wire                host_miim_sel_reg       ;
+    wire    [31:0]      wv_host_rd_data         ;
+    reg     [15:0]      mac_cfg_cnt             ;
+    reg                 mac_cfg_reset           ;
+    reg                 ar8035_interrupt_dly1   ;
+    reg                 ar8035_interrupt_dly2   ;
+    wire                w_10m_flag              ;
+    wire                w_100m_flag             ;
+    reg                 flag_100m_dly1          ;
+    reg                 flag_100m_dly2          ;
+    wire                flag_100m_rising        ;
+    reg     [1:0]       cnt_100m                ;
+    reg                 reset_100m              ;
+    wire                netw_spd_change_reset   ;
+    wire                w_link_up_rise_dly2		;
+
+    assign              netw_spd_change_reset = reset_microb || i_reset_10m_100m;
+
+	// want to infer an IOBUF on the mdio port
+	reg         	mdio_i;
+	wire       	 	mdio_o;
+	wire        	mdio_t;
+
+	assign mdio = mdio_t ? 1'bz : mdio_o;
+
+	always @(mdio)
+	begin
+		mdio_i = mdio;
+	end
+	//----------------------------------------------------------------------------
+	// Internal signals used in this locallink level wrapper. refer to the locallink module
+	//----------------------------------------------------------------------------
+
+	// Note: KEEP attributes preserve signal names so they can be displayed in
+	//            simulator wave windows
+
+	wire       rx_clk_int;    // MAC Rx clock
+	wire       rx_reset_int;
+	reg        rx_pre_reset;
+	reg        rx_reset;      // MAC Rx reset
+	wire       tx_reset_int	;
+	reg        tx_pre_reset	;
+	reg        tx_reset		;      // MAC Tx reset
+
+	//----------------------------------------------------------------------------
+	// Connect the output clock signals
+	//----------------------------------------------------------------------------
+
+	assign rx_clk          = rx_clk_int;
+
+	//---------------------------------------------------------------------------
+	// Instantiate reset synchronisers
+	//---------------------------------------------------------------------------
+
+	// Generate a synchronous reset signal in the Tx clock domain
+	reset_sync tx_reset_gen (
+	.clk              (gtx_clk),
+	.enable           (1'b1),
+	.reset_in         (reset_microb),
+	.reset_out        (tx_reset_int)
+	);
+
+	// Create fully synchronous reset in the Tx clock domain.
+	always @(posedge gtx_clk)
+		begin
+			if (tx_reset_int) begin
+				tx_pre_reset      <= 1;
+				tx_reset          <= 1;
+			end
+			else begin
+				tx_pre_reset      <= 0;
+				tx_reset          <= tx_pre_reset;
+			end
+		end
+
+	// Generate a synchronous reset signal in the Rx clock domain
+	reset_sync rx_reset_gen (
+	.clk              (rx_clk_int),
+	.enable           (1'b1),
+	.reset_in         (reset_microb),
+	.reset_out        (rx_reset_int)
+	);
+
+	// Create fully synchronous reset in the Rx clock domain.
+	always @(posedge rx_clk_int)
+		begin
+			if (rx_reset_int) begin
+				rx_pre_reset      <= 1;
+				rx_reset          <= 1;
+			end
+			else begin
+				rx_pre_reset      <= 0;
+				rx_reset          <= rx_pre_reset;
+			end
+		end
+
+    assign          o_rx_reset =rx_reset ;
+    assign          o_tx_reset =tx_reset ;
+    //----------------------------------------------------------------------------
+    // Instantiate the Tri-Mode EMAC Block wrapper
+    //----------------------------------------------------------------------------
+    tri_mac_block trimac_block_inst
+    (
+    // asynchronous reset
+    .reset                  (reset_microb | i_heartbeat_irq_reset          ),
+
+	// Client Receiver Interface
+	.rx_clk               	(rx_clk_int				),
+    .rx_enable            	(rx_enable				),
+	.rx_statistics_vector 	(rx_statistics_vector	),
+	.rx_statistics_valid  	(rx_statistics_valid	),
+	.rx_data              	(rx_data				),
+	.rx_data_valid        	(rx_data_valid			),
+	.rx_good_frame        	(rx_good_frame			),
+	.rx_bad_frame         	(rx_bad_frame			),
+
+	// Client Transmitter Interface
+    .tx_clk               	(tx_clk					),//tx_clk_int
+    .tx_enable            	(tx_enable				),
+	.tx_ifg_delay         	(tx_ifg_delay			),
+	.tx_statistics_vector 	(tx_statistics_vector	),
+	.tx_statistics_valid  	(tx_statistics_valid	),
+	.tx_data              	(tx_data				),
+	.tx_data_valid        	(tx_data_valid			),
+	.tx_ack               	(tx_ack					),
+	.tx_underrun          	(tx_underrun			),
+
+	// Flow Control
+	.pause_req            	(pause_req				),
+	.pause_val            	(pause_val				),
+
+	// RGMII Interface
+	.gtx_clk				(gtx_clk				),
+	.rgmii_txd				(rgmii_txd				),
+	.rgmii_tx_ctl			(rgmii_tx_ctl			),
+	.rgmii_txc				(rgmii_txc				),
+	.rgmii_rxd				(rgmii_rxd				),
+	.rgmii_rx_ctl			(rgmii_rx_ctl			),
+	.rgmii_rxc				(rgmii_rxc				),
+	.inband_link_status		(inband_link_status		),
+	.inband_clock_speed		(inband_clock_speed		),
+	.inband_duplex_status	(inband_duplex_status	),
+
+
+	// MDIO Interface
+	.mdc                  	(mdc					),
+	.mdio_i               	(mdio_i					),
+	.mdio_o               	(mdio_o					),
+	.mdio_t               	(mdio_t					),
+
+	// Host Interface
+	.host_clk             	(clk_axi				),
+	.host_opcode          	(host_opcode_reg		),
+	.host_addr            	(host_addr_reg			),
+	.host_wr_data         	(host_wr_data_reg		),
+	.host_miim_sel        	(host_miim_sel_reg		),
+	.host_req             	(host_req_reg			),
+	.host_rd_data         	(wv_host_rd_data		),
+	.host_miim_rdy        	(host_miim_rdy			)
+	);
+
+
+    //----------------------------------------------------------------------------
+    //当MAC正常复位信号结束后，需要继续维持一小段时间之后再进行mac_host_cfg内的寄存器实现
+    //----------------------------------------------------------------------------
+
+	always @ (posedge clk_axi)
+		if (netw_spd_change_reset)
+			mac_cfg_cnt      <= 16'h0;
+		else if(mac_cfg_cnt == 16'hfff0)		//16'hfff0	//32'hffffff0
+			mac_cfg_cnt		 <= 16'hfff0;
+		else
+			mac_cfg_cnt      <= mac_cfg_cnt + 'd1;
+
+	always @(posedge clk_axi)
+		if (netw_spd_change_reset)
+			mac_cfg_reset      <= 'd1;
+		else if(mac_cfg_cnt < 16'hfff0)
+			mac_cfg_reset      <= 'd1;
+		else
+			mac_cfg_reset      <= 'd0;
+
+
+	always @ (posedge clk_axi)
+		if (reset_microb)
+			begin
+				ar8035_interrupt_dly1 <= 1'b0;
+				ar8035_interrupt_dly2 <= 1'b0;
+			end
+		else
+			begin
+				ar8035_interrupt_dly1 <= i_ar8035_interrupt;
+				ar8035_interrupt_dly2 <= ar8035_interrupt_dly1;
+			end
+	//----------------------------------------------------------------------------
+    //mac_host_cfg例化，用来控制mac寄存器
+    //----------------------------------------------------------------------------
+    mac_host_cfg mac_host_cfg_inst
+            (
+			.o_rise_linkup					(o_rise_linkup			),
+            .clk_host                       (clk_axi                ),
+            .reset                          (mac_cfg_reset | i_heartbeat_irq_reset   ),
+            .i_interrupt_pin                (ar8035_interrupt_dly2  ),
+            .i_host_miim_rdy                (host_miim_rdy          ),
+            .iv_host_rd_data                (wv_host_rd_data        ),
+            .o_host_miim_sel                (host_miim_sel_reg      ),
+            .o_host_req                     (host_req_reg           ),
+            .ov_host_addr_reg               (host_addr_reg          ),
+            .ov_host_opcode_reg             (host_opcode_reg        ),
+            .ov_host_wr_data                (host_wr_data_reg       ),
+            .ov_link_speed                  (ov_link_speed          ),
+
+            .iv_phy_operation               (iv_phy_operation[31:0] ),
+            .ov_phy_rd_data                 (ov_phy_rd_data         ),
+            .o_speed_config                 (o_speed_config         ),
+			.rd_speed_cnt					(						),	//
+			.o_10m_flag						(w_10m_flag				),
+            .o_100m_flag                    (w_100m_flag            ),
+            .o_cfg_mac_end                  (o_cfg_mac_end          ),
+            .o_link_up_rise_dly2            (w_link_up_rise_dly2    )
+			);
+
+	//----------------------------------------------------------------------------
+    //取100m标志上升沿
+	//----------------------------------------------------------------------------
+	always @ (posedge clk_axi)
+		begin
+			flag_100m_dly1	<=	w_100m_flag && ov_link_speed[2];  //在断开连接时，不再是100m标志
+			flag_100m_dly2	<=	flag_100m_dly1;
+		end
+
+    assign  flag_100m_rising = flag_100m_dly1 && !flag_100m_dly2;
+
+    //----------------------------------------------------------------------------
+    //进行百兆复位次数计数
+    //如果是百兆网络，则计数器为0,1,2时复位，为3时不复位，计数器循环计数；
+    //如果是千兆网络，则计数器复位为0，等待为百兆时下一次复位开始；
+    //----------------------------------------------------------------------------
+    always @ (posedge clk_axi)
+        begin
+            if(reset_microb)
+                begin
+                    cnt_100m <= 2'h0;
+                end
+            else if(w_link_up_rise_dly2 && (ov_link_speed[1:0] == 2'b10))		// w_link_up_rise_dly2和ov_link_speed信号时序对齐
+                begin
+                    cnt_100m <= 2'h0;
+                end
+            else if(flag_100m_rising)
+                begin
+                    cnt_100m <= cnt_100m + 2'h1;
+                end
+        end
+
+	//----------------------------------------------------------------------------
+    //前三次百兆会产生复位信号
+    //----------------------------------------------------------------------------
+    always @ (posedge clk_axi)
+        begin
+            if(reset_microb)
+                begin
+                    reset_100m <= 1'h0;
+                end
+            else if((cnt_100m <= 2'h2) && flag_100m_rising)
+                begin
+                    reset_100m <= 1'h1;
+                end
+            else
+                begin
+                    reset_100m <= 1'h0;
+                end
+        end
+
+	//----------------------------------------------------------------------------
+    //将百兆十兆合并送入复位模块产生复位信号
+	//----------------------------------------------------------------------------
+	assign o_10m_100m_flag = reset_100m || w_10m_flag;
+
+endmodule

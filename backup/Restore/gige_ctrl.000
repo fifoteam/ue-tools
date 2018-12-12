@@ -1,0 +1,546 @@
+
+//-------------------------------------------------------------------------------------------------
+//  -- 版权所有者   : 中国大恒（集团）有限公司北京图像视觉技术分公司, 2010 -2015.
+//  -- 保密级别     ：绝密.
+//  -- 部门         : 硬件部，FPGA工作组
+//  -- 模块名       : gige_ctrl.v
+//  -- 设计者       : 陈小平
+//-------------------------------------------------------------------------------------------------
+//
+//  --修改记录  :
+//
+//  -- 作者         :| 修改日期     :|  修改说明
+//---------------------------------------------------------------------------------------
+//  -- 陈小平       :| 07/15/2012   :|  初始版本
+//  -- 陈小平       :| 03/28/2013   :|  添加注释，信号规范化
+//  -- 陈小平       :| 08/05/2015   :|  根据mer-125-30gx项目，添加注释和规范化
+//  -- 		        :| 			    :|
+//---------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
+//
+//  -- gige_ctrl模块描述     :
+//         		该模块由数据发送模块和接收模块组成，设计时都使用了Tri-mac core
+//
+//				1. GE_Transmit sub-module ；
+//					-- transmit all the data packets by Gigabit tri-mac	  (gvsp & gvcp)
+//
+//				2. GE_MAC sub-module
+//					--data process and transmit by the Gigabit tri-mac IP CORE.
+//
+//				3. resend_fifo_block子模块
+//					--对重传命令写入重传命令fifo时的处理模块
+//
+//				4. tx_self_adaption子模块
+//					--完成千兆百兆网的自适应功能模块
+//
+//-------------------------------------------------------------------------------------------------
+//仿真单位/精度
+`timescale      1ns/100ps
+//-------------------------------------------------------------------------------------------------
+
+
+`include "MER_PYTHON_GX_DEF.v"
+
+module gige_ctrl
+						(
+									o_rise_linkup					,//连接中断
+									clk_mcb							,//用户操作ddr3时钟，当前取值像素36 Mhz
+									reset_mcb						,//mcb复位信号，高复位
+									clk_axi							,//用户操作microblaze时钟，当前取值为50 Mhz
+									i_reset_10m_100m				,
+									reset_microb					,//MB复位信号，高复位
+
+									i_start_acquisit		    	,//图像采集信号，高有效
+									i_transfer_start				,//启动传输信号，高有效。固件设置有效，mac发送完一帧，清0
+									i_frame_info_en					,//帧信息使能信号，高有效
+
+									clk_grx							,//Tri-mac core 提供给FPGA端信号，mac从千兆网上接收数据随路时钟，125Mhz
+									clk_grx_enable					,//
+									rx_statistics_vector			,//Tri-mac core 提供给FPGA端信号，描述千兆网链路层的状态信息，28bit，具体位信息参考文档ug138
+									rx_statistics_valid				,//Tri-mac core 提供给FPGA端信号，和rx_statistics_vector配合，高有效时，rx_statistics_vector信号有效，
+									rx_data							,//Tri-mac core 提供给FPGA端信号，接收端数据总线
+									rx_data_valid					,//Tri-mac core 提供给FPGA端信号， 接收端数据总线有效信号
+									rx_good_frame					,//Tri-mac core 提供给FPGA端信号，接收端帧正确
+									rx_bad_frame					,//Tri-mac core 提供给FPGA端信号，接收端帧错误
+
+									//rgmii
+									clk_gtx							,
+									rgmii_txd						,
+									rgmii_tx_ctl					,
+									rgmii_txc						,
+									rgmii_rxd						,
+									rgmii_rx_ctl					,
+									rgmii_rxc						,
+									inband_link_status				,
+									inband_clock_speed				,
+									inband_duplex_status			,
+
+									mdio							,//Tri-mac core 和千兆网PHY的接口信号，配置管理接口
+									mdc								,//Tri-mac core 和千兆网PHY的接口信号，双绞线时钟接口
+									o_tx_data_valid					,		//FPGA发送数据包时，提供给Tri-mac core的数据有效信号
+    								iv_cur_pic_pkt_cnt_grx			,       //一帧图像的正常帧的个数
+    								iv_remain_pkt_length_grx		,       //一帧图像是否有残帧
+
+									i_ddr3_rd_frame_end				,//来自于ddr3逻辑模块，几个周期时间，高有效，表明当前ddr3已经完成了一帧图像数据读取操作。
+									i_read_ddr3_data_vld			,//来自于ddr3逻辑模块，读数据有效信号，高有效
+									iv_read_ddr3_data				,//来自于ddr3逻辑模块，ddr3输出数据总线，32bit
+									iv_mac_sa						,//mac在发送数据包的源mac地址
+									iv_mac_da						,//mac在发送数据包的目的mac地址
+									iv_ip_sa						,//mac在发送数据包的源IP地址
+									iv_ip_da						,//mac在发送数据包的目的IP地址
+									iv_udp_sp						,//mac在发送UDP数据包的源端口
+									iv_udp_dp						,//mac在发送UDP数据包的目的端口
+									o_gvsp_port_stop				,//流端口关闭时，该信号有效
+									iv_gvcp_ack_dst_mac				,//发送GVCP包的目的mac地址，来自于TXRAM数据端口，32bit
+									iv_packet_inter_reg				,//mac发送数据包的间隔寄存器，32bit
+            						iv_frame_payload_size       	,//传输的图像payload数据包含的字节个数，24bit，(使能帧信息时，多包括了32byte)
+									ov_pkt_head_cnt		    		,// mac发送gvcp应答包数据头的计数器，
+
+									o_gvcp_ack_sel	    			,//mac发送gvcp应答包结束信号
+									i_gvcp_ack_txen		    		,//gvcp应答包的发送使能，来自于Microblaze
+									iv_gvcp_length		    		,//当前传输gvcp包长度，来自于Microblaze，<=576
+									iv_gvcp_ack_data	    		,//mac发送gvcp应答包数据，来自于TXRAM
+									iv_remain_pkt_length			,//当前图像mac发送最后一个数据包大小，即残包大小
+									iv_cur_pkt_length				,//当前图像mac发送正常数据包大小。 支持巨帧
+									iv_cur_pic_pkt_cnt    			,//当前图像包含的正常数据包个数（不包括残包）
+									o_reset_grx    					,//Tri-mac core提供给FPGA使用的复位时钟，rx part
+									o_reset_gtx    					,//Tri-mac core提供给FPGA使用的复位时钟，tx part
+
+									iv_resend_pkt_para				,//重传命令数据总线，写入重传fifo，47~32：重传block id，31~16：重传起始packet id， 15~0：重传结束packet id
+									i_resend_pkt_wren				,//重传命令写入fifo的写使能
+									i_ddr3_resend_cmdfifo_rd		,//重传命令fifo的读信号
+									ov_ddr3_cmdfifo_dout			,//重传命令fifo的数据输出，48bit
+									o_ddr3_cmdfifo_empty			,//重传命令fifo的空标识
+									i_ddr3_resd_flag_mcb			,//ddr3正在处理重传数据块标识信号，ddr3的时钟域
+									o_mac_tx_pic_end				,//mac 完成一幅图像的数据包发送结束标志
+									o_txfifo_full_resend			,//重传fifo的可编程满标志，表示当前fifo不可以接收一次ddr3的读操作
+									o_txfifo_full_normal			,//正常数据流fifo的可编程满标志，表示当前fifo不可以接收一次ddr3的读操作
+									o_resending_pkt_flag			,//mac正在进行重传数据包发送，高有效
+									iv_cur_pic_width_gtx			,//当前发送图像宽度，125Mhz时钟域
+									iv_cur_pic_height_gtx			,//当前发送图像高度，125Mhz时钟域
+									iv_pixel_format_gtx				,//当前发送图像的处理格式，125Mhz时钟域
+									iv_offset_x_gtx 				,//x坐标偏移，当使用图像的ROI功能时使用，否则为0，
+									iv_offset_y_gtx					,//y坐标偏移，当使用图像的ROI功能时使用，否则为0，
+									i_block_id_unavail				,//当前要求的重传帧，block id不可见信号
+									i_remain_pkt_null				,//当前传输数据帧总字节能够被包长整除，最后一个残包大小为0
+									o_mac2ddr_reset					,//MAC完成停采后，传递到ddr，停采复位
+									i_first_ddr_addr_flag			,//ddr3读取第一个256byte块信号
+									o_block_id_latch_mcb			,//因为第一个256byte块，锁存block id信号，一个周期,mcb 时钟域
+									ov_block_id_mcb					,//从第一个256byte块，锁存的block id值
+   									i_ddr3_fifo_empty_mcb			,		//ddr3空标志信号，表明没有可以读取的数据块
+
+									i_ar8035_interrupt				,
+									ov_link_speed					,
+									iv_phy_operation				,
+									ov_phy_rd_data					,
+									o_speed_config					,
+									o_leader_flag_norm				,
+
+									//gvsp测试包功能信号
+									o_gvsp_testpkt_txen_clr			,	//gvsp测试包发送使能清零信号，为相机的支持libView功能
+									i_gvsp_testpkt_txen_gtx			,	//gvsp测试包发送使能，为相机的支持libView功能
+									i_gvsp_testpkt_fragment_gtx		,
+									i_heartbeat_irq					,
+									ov_test_nc						,
+									ov_cur_block_id_err_nc			,
+									o_10m_100m_flag					,
+									ov_phy_cfg_speed_cnt
+									);
+
+
+	output							o_rise_linkup					;
+	input          					clk_mcb							;
+	input          					reset_mcb						;
+	input          					clk_axi							;
+	input							i_reset_10m_100m				;
+	input          					reset_microb					;
+
+	// Client Receiver S			tatistics Interface
+	//------------------			-------------------
+	output        					clk_grx							;
+	output        					clk_grx_enable					;
+	output  [27:0]      			rx_statistics_vector			;
+	output        					rx_statistics_valid				;
+	output 	[7:0]    				rx_data							;
+	output            				rx_data_valid					;
+	output            				rx_good_frame					;
+	output            				rx_bad_frame					;
+
+
+	input  							i_start_acquisit				;
+	input 		   					i_frame_info_en					;
+	input 		   					i_transfer_start				;
+	// RGMII Interface
+	input               			 clk_gtx						;
+	output      [3:0]   			 rgmii_txd              		;
+	output              			 rgmii_tx_ctl           		;
+	output              			 rgmii_txc              		;
+	input       [3:0]   			 rgmii_rxd              		;
+	input               			 rgmii_rx_ctl           		;
+	input               			 rgmii_rxc              		;
+	output              			 inband_link_status     		;
+	output      [1:0]   			 inband_clock_speed     		;
+	output              			 inband_duplex_status   		;
+
+	// MDIO Interface
+	//---------------
+	inout         					mdio							;
+	output        					mdc								;
+	output 							o_tx_data_valid					;		//FPGA发送数据包时，提供给Tri-mac core的数据有效信号
+	input   [15:0]  				iv_cur_pic_pkt_cnt_grx			;       //一帧图像的正常帧的个数
+	input   [12:0]  				iv_remain_pkt_length_grx		;       //一帧图像是否有残帧
+
+	input          					i_ddr3_rd_frame_end				;
+	input          					i_read_ddr3_data_vld			;
+	input  [31:0]  					iv_read_ddr3_data				;
+	input  	[47:0]  				iv_mac_sa						;
+	input  	[47:0]  				iv_mac_da						;
+	input  	[31:0]  				iv_ip_sa						;
+	input  	[31:0]  				iv_ip_da						;
+	input  	[15:0]  				iv_udp_sp						;
+	input  	[15:0]  				iv_udp_dp						;
+	output 		   					o_gvsp_port_stop				;
+	input  [15:0]  					iv_gvcp_ack_dst_mac				;
+	input  [17:0]  					iv_packet_inter_reg				;
+    input  [23 : 0]					iv_frame_payload_size   		;	//传输的图像payload数据包含的字节个数，24bit，(使能帧信息时，多包括了32byte)
+
+	output 	[9:0]					ov_pkt_head_cnt		    		;
+	output 		   					o_gvcp_ack_sel					;
+	input  							i_gvcp_ack_txen					;
+	input  	[9:0]   				iv_gvcp_length					;
+	input  	[7:0]   				iv_gvcp_ack_data				;
+	input  	[12:0]  				iv_cur_pkt_length 				;
+	input  	[15:0]  				iv_cur_pic_pkt_cnt    			;
+	input  	[12:0]  				iv_remain_pkt_length  			;
+	output 		   					o_reset_grx						;
+	output 		   					o_reset_gtx						;
+
+	input  	[47:0]  				iv_resend_pkt_para      		;
+	input 		   					i_resend_pkt_wren				;
+	input 		   					i_ddr3_resend_cmdfifo_rd		;
+	output 		   					o_ddr3_cmdfifo_empty			;
+	output  [47:0]  				ov_ddr3_cmdfifo_dout    		;
+	input 		   					i_ddr3_resd_flag_mcb			;
+	output 		   					o_mac_tx_pic_end				;
+	output 		   					o_txfifo_full_resend			;
+	output 		   					o_txfifo_full_normal			;
+	output 		   					o_resending_pkt_flag			;
+	input  [11:0] 					iv_cur_pic_width_gtx			;
+	input  [11:0] 					iv_cur_pic_height_gtx			;
+	input  [31:0] 					iv_pixel_format_gtx	;
+	input  [11:0] 					iv_offset_x_gtx 				;
+	input  [11:0] 					iv_offset_y_gtx					;
+	input 		   					i_block_id_unavail				;
+	input 		   					i_remain_pkt_null				;
+	output 		   					o_mac2ddr_reset					;
+	input 		   					i_first_ddr_addr_flag			;
+	output 		   					o_block_id_latch_mcb			;
+	output	[15:0]					ov_block_id_mcb					;
+	input 		   					i_ddr3_fifo_empty_mcb			;
+
+	input 		   					i_ar8035_interrupt				;
+	output  [2:0]  					ov_link_speed					;
+	input 	[31:0]	   				iv_phy_operation				;
+	output	[15:0]					ov_phy_rd_data					;
+	output							o_speed_config					;
+	output							o_leader_flag_norm				;
+	//gvsp测试包功能信号
+	output							o_gvsp_testpkt_txen_clr			;	//gvsp测试包发送使能清零信号，为相机的支持libView功能
+	input							i_gvsp_testpkt_txen_gtx			;	//gvsp测试包发送使能，为相机的支持libView功能
+	input							i_gvsp_testpkt_fragment_gtx		;	//gvsp测试包是否支持分片功能，只在测试包时使用，别的gvsp包不使用
+	input 		   					i_heartbeat_irq					;
+	output	[ `TEST_NC_WD -1 : 0]	ov_test_nc						;
+	output	[	 16 : 0			]	ov_cur_block_id_err_nc			;
+
+	output							o_10m_100m_flag					;
+	output	[	 15 : 0			]	ov_phy_cfg_speed_cnt			;	//
+
+	//  ===============================================================================================
+	//  模块设计中，需要使用的线网和寄存器描述
+	//  ===============================================================================================
+	//  -------------------------------------------------------------------------------------
+	//  Client Transmitter Statistics Interface，数据部分参考的参考设计
+	//  -------------------------------------------------------------------------------------
+	wire   	[31:0]  				tx_statistics_vector			;
+	wire         					tx_statistics_valid				;
+
+	wire 	[7:0] 					mac_tx_data						;
+	wire        					mac_tx_ack						;
+	wire        					mac_tx_enable					;
+	wire        					tx_data_valid_self				;
+	wire 	[7:0] 					tx_data_self					;
+	wire        					tx_ack_self						;
+	reg								gvsp_port_stop_grx_sync1		;
+	reg								gvsp_port_stop_grx_sync2		;
+	reg								resend_cmd_fifo_reset			;
+
+	(* KEEP = "TRUE" *)
+	wire [7:0]  					tx_ifg_delay					;
+	assign 							tx_ifg_delay = 8'd30			;
+
+	// MAC Control Interface
+	wire         					pause_req = 1'b0				;
+	wire  [15:0]   					pause_val = 16'h0				;
+	wire         					tx_underrun = 1'b0				;
+
+	wire    [47:0]  				mac_cmdfifo_dout    			;
+	wire		   					mac_resend_cmdfifo_rd			;
+
+	reg								heartbeat_irq_dly1 				;
+	reg								heartbeat_irq_dly2 				;
+	reg								heartbeat_irq_dly3 				;
+	reg								heartbeat_irq_reset 			;
+	wire		   					w_cfg_mac_end					;
+
+	//  -------------------------------------------------------------------------------------
+	//  心跳超时中断相关信号处理
+	//  因为mac_host_cfg模块是clk_axi时钟域，tri_mac_block模块的复位信号是异步复位，因此此处使用clk_axi时钟域
+	//  心跳中断时，对mac进行复位，复位时间2个clk_axi时钟周期；
+	//  -------------------------------------------------------------------------------------
+	always @ (posedge clk_axi)
+		if(reset_microb)
+			begin
+				heartbeat_irq_dly1 		<= 1'b0;
+				heartbeat_irq_dly2 		<= 1'b0;
+				heartbeat_irq_dly3 		<= 1'b0;
+				heartbeat_irq_reset 	<= 1'b0;
+			end
+		else
+			begin
+				heartbeat_irq_dly1 		<= i_heartbeat_irq;
+				heartbeat_irq_dly2 		<= heartbeat_irq_dly1;
+				heartbeat_irq_dly3 		<= heartbeat_irq_dly2;
+				heartbeat_irq_reset 	<= heartbeat_irq_dly1 & !heartbeat_irq_dly3;
+			end
+
+	//  -------------------------------------------------------------------------------------
+	//  重传命令fifo的相关信号
+	//  -------------------------------------------------------------------------------------
+    always @ (posedge clk_grx)
+    	begin
+    		gvsp_port_stop_grx_sync1	<= o_gvsp_port_stop;
+    		gvsp_port_stop_grx_sync2	<= gvsp_port_stop_grx_sync1;
+    	end
+
+    always @ (posedge clk_grx)
+    	if(o_reset_grx)
+	    	begin
+	    		resend_cmd_fifo_reset		<= 1'b1;
+	    	end
+	    else
+	    	begin
+	    		resend_cmd_fifo_reset		<= gvsp_port_stop_grx_sync2;
+	    	end
+
+	//  ********************** Gigabit TX CONTROL MODULE INSTANTIATION START **************************
+
+	//  -----------------------------------------------------------------------------------------------
+	//  ------------------------- instantiate GE_Transmit Module
+	//	Main Function：
+	//				1. GigeVision protocol packet transmit top module ;
+	//
+	//				2. 数据包的包头一些内容来自于Microblaze的设置部分 ;
+	//
+	//				3. Transmitter Clock logic 使用 clk_gtx ;
+	//
+	//  -----------------------------------------------------------------------------------------------
+	ge_transmit  ge_transmit_inst
+	(
+	.reset_gtx           		(o_reset_gtx 				),
+	.reset_mcb            		(reset_mcb					),
+	.clk_mcb        			(clk_mcb        			),
+	.clk_gtx              		(clk_gtx			 		),
+
+	.i_start_acquisit   		(i_start_acquisit			),
+//	.i_link_state				(ov_link_speed[2]			),
+	.i_transfer_start  			(i_transfer_start			),
+	.i_frame_info_en  			(i_frame_info_en			),
+	.i_read_ddr3_data_vld  		(i_read_ddr3_data_vld 		),
+	.i_first_ddr_addr_flag 		(i_first_ddr_addr_flag		),
+	.iv_txfifo_wr_data 			(iv_read_ddr3_data			),
+//	.i_ddr3_rd_frame_end   		(i_ddr3_rd_frame_end   		),
+	.i_ddr3_resd_flag_mcb		(i_ddr3_resd_flag_mcb 		),
+	.i_block_id_unavail			(i_block_id_unavail			),
+	.o_block_id_latch_mcb		(o_block_id_latch_mcb		),
+	.ov_block_id_mcb			(ov_block_id_mcb			),
+	.o_txfifo_full_normal		(o_txfifo_full_normal		),
+	.o_txfifo_full_resend		(o_txfifo_full_resend		),
+
+	.i_tx_ack			        (tx_ack_self	      		),//来自于tx_self_adaption模块	tx_ack_self				mac_tx_ack
+	.ov_tx_data			        (tx_data_self		      	),//给tx_self_adaption模块		tx_data_self			mac_tx_data
+	.o_tx_data_valid	        (tx_data_valid_self      	),//给tx_self_adaption模块		tx_data_valid_self		o_tx_data_valid
+
+//	.i_tx_ack			        (mac_tx_ack	      			),//来自于tx_self_adaption模块	tx_ack_self
+//	.ov_tx_data			        (mac_tx_data		      	),//给tx_self_adaption模块	tx_data_self
+//	.o_tx_data_valid	        (o_tx_data_valid      		),//给tx_self_adaption模块	tx_data_valid_self
+
+	.o_leader_flag_norm	        (o_leader_flag_norm         ),
+
+	.iv_mac_sa               	(iv_mac_sa[47:0]      		),
+	.iv_mac_da               	(iv_mac_da[47:0]        	),
+	.iv_ip_sa                	(iv_ip_sa[31:0]         	),
+	.iv_ip_da                	(iv_ip_da[31:0]         	),
+	.iv_udp_sp               	(iv_udp_sp[15:0]        	),
+	.iv_udp_dp               	(iv_udp_dp[15:0]        	),
+	.o_gvsp_port_stop	   		(o_gvsp_port_stop			),
+	.iv_gvcp_ack_dst_mac   		(iv_gvcp_ack_dst_mac		),
+	.iv_gvcp_ack_data			(iv_gvcp_ack_data			),
+	.i_gvcp_ack_txen			(i_gvcp_ack_txen			),
+	.iv_gvcp_length      		(iv_gvcp_length				),
+	.ov_pkt_head_cnt			(ov_pkt_head_cnt 			),
+	.o_gvcp_ack_sel				(o_gvcp_ack_sel				),
+
+	.iv_pixel_format	    	(iv_pixel_format_gtx		),
+	.iv_cur_pic_width	    	(iv_cur_pic_width_gtx		),
+	.iv_cur_pic_height			(iv_cur_pic_height_gtx		),
+	.iv_offset_x		   	 	(iv_offset_x_gtx 			),
+	.iv_offset_y			    (iv_offset_y_gtx			),
+	.iv_cur_pkt_length    		(iv_cur_pkt_length    		),
+	.iv_cur_pic_pkt_cnt 		(iv_cur_pic_pkt_cnt 		),
+	.iv_remain_pkt_length    	(iv_remain_pkt_length     	),
+	.i_remain_pkt_null			(i_remain_pkt_null			),
+	.iv_packet_inter_reg   		(iv_packet_inter_reg		),
+	.iv_frame_payload_size 		(iv_frame_payload_size		),
+
+
+	.iv_mac_cmdfifo_dout		(mac_cmdfifo_dout 			),
+	.o_mac_resend_cmdfifo_rd   	(mac_resend_cmdfifo_rd		),
+	.o_resending_pkt_flag_gtx	(o_resending_pkt_flag		),
+	.i_ddr3_fifo_empty_mcb		(i_ddr3_fifo_empty_mcb		),
+
+	.o_mac2ddr_reset			(o_mac2ddr_reset			),
+	.o_mac_tx_pic_end			(o_mac_tx_pic_end 			),
+
+	//gvsp测试包功能信号
+	.o_gvsp_testpkt_txen_clr	(o_gvsp_testpkt_txen_clr	),
+	.i_gvsp_testpkt_txen_gtx	(i_gvsp_testpkt_txen_gtx	),
+	.i_gvsp_testpkt_fragment_gtx(i_gvsp_testpkt_fragment_gtx),
+
+	.ov_cur_block_id_err_nc		(ov_cur_block_id_err_nc		),
+	.i_cfg_mac_end				(w_cfg_mac_end				),
+	.ov_test_nc					(ov_test_nc					)
+	);
+
+	//  -----------------------------------------------------------------------------------------------
+	//  ------------------------- instantiate GE_MAC Module
+	//	Main Function：
+	//				1. Tri-MAC IP CORE module ;
+	//
+	//				2. Tri-MAC IP CORE 的配置使用mac_host_cfg 模块来进行设置;
+	//
+	//  -----------------------------------------------------------------------------------------------
+	ge_mac ge_mac_inst
+	(
+	// asynchronous reset
+	.o_rise_linkup				(o_rise_linkup			),
+	.i_reset_10m_100m			(i_reset_10m_100m		),
+	.reset_microb          		(reset_microb			),
+
+	// Client Receiver Interface
+	.rx_clk               		(clk_grx				),
+	.rx_enable             		(clk_grx_enable			),
+	.rx_statistics_vector 		(rx_statistics_vector	),
+	.rx_statistics_valid  		(rx_statistics_valid	),
+	.rx_data              		(rx_data				),
+	.rx_data_valid        		(rx_data_valid			),
+	.rx_good_frame        		(rx_good_frame			),
+	.rx_bad_frame         		(rx_bad_frame			),
+
+	// Client Transmitter Interface
+	.tx_clk         			(						),//????????????
+	.tx_enable		       		(mac_tx_enable			),
+	.tx_ifg_delay         		(tx_ifg_delay			),
+	.tx_statistics_vector 		(tx_statistics_vector	),
+	.tx_statistics_valid  		(tx_statistics_valid	),
+	.tx_data              		(mac_tx_data			),
+	.tx_data_valid        		(o_tx_data_valid		),
+	.tx_ack               		(mac_tx_ack				),
+	.tx_underrun          		(tx_underrun			),
+
+	// Flow Control
+	.pause_req            		(pause_req				),
+	.pause_val            		(16'h0					),
+
+	// RGMII Interface
+	.gtx_clk					(clk_gtx				),
+	.rgmii_txd					(rgmii_txd				),
+	.rgmii_tx_ctl				(rgmii_tx_ctl			),
+	.rgmii_txc					(rgmii_txc				),
+	.rgmii_rxd					(rgmii_rxd				),
+	.rgmii_rx_ctl				(rgmii_rx_ctl			),
+	.rgmii_rxc					(rgmii_rxc				),
+	.inband_link_status			(inband_link_status		),
+	.inband_clock_speed			(inband_clock_speed		),
+	.inband_duplex_status		(inband_duplex_status	),
+
+	// MDIO Interface
+	.mdc                  		(mdc					),
+	.mdio	               		(mdio					),
+	// Host Interface
+	.clk_axi             		(clk_axi				),
+	.i_ar8035_interrupt         (i_ar8035_interrupt		),
+	.ov_link_speed            	(ov_link_speed			),
+	.iv_phy_operation         	(iv_phy_operation		),
+	.ov_phy_rd_data        		(ov_phy_rd_data			),
+	.o_speed_config				(o_speed_config			),
+
+	// MAC reset signal for client logic part
+	.o_rx_reset             	(o_reset_grx			),
+	.o_tx_reset             	(o_reset_gtx			),
+
+	.o_10m_100m_flag			(o_10m_100m_flag		),
+	.ov_phy_cfg_speed_cnt		(ov_phy_cfg_speed_cnt	),
+	.o_cfg_mac_end				(w_cfg_mac_end			),
+	.i_heartbeat_irq_reset		(heartbeat_irq_reset	)
+	);
+
+	//  -----------------------------------------------------------------------------------------------
+	//  ------------------------- instantiate resend_fifo_block Module
+	//	Main Function：
+	//				1. Read out the resend command by the DDR3 Module and mac Module,
+	//
+	//				2. Consists of two resend_cmd_fifos,width is 48 bit, depth is 16 units, can save 16 resend command.
+	//  -----------------------------------------------------------------------------------------------
+	resend_fifo_block  resend_fifo_block_inst
+	(
+	.clk_grx              		(clk_grx	           		),
+	.clk_gtx              		(clk_gtx		       		),
+	.clk_mcb        			(clk_mcb        			),
+	.reset_grx             		(resend_cmd_fifo_reset		),
+
+	.iv_cur_pic_pkt_cnt			(iv_cur_pic_pkt_cnt_grx		),
+	.iv_remain_pkt_length		(iv_remain_pkt_length_grx	),
+	.iv_resend_pkt_para	    	(iv_resend_pkt_para	 		),
+	.i_resend_pkt_wren     		(i_resend_pkt_wren			),//
+	.i_ddr3_resend_cmdfifo_rd  	(i_ddr3_resend_cmdfifo_rd	),
+	.i_mac_resend_cmdfifo_rd   	(mac_resend_cmdfifo_rd		),
+
+	.ov_mac_cmdfifo_dout		(mac_cmdfifo_dout 			),
+	.ov_ddr3_cmdfifo_dout		(ov_ddr3_cmdfifo_dout 		),
+	.o_ddr3_cmdfifo_empty		(o_ddr3_cmdfifo_empty 		)
+	);
+
+	//  -----------------------------------------------------------------------------------------------
+	//  ------------------------- instantiate tx_self_adaption Module
+	//	Main Function：
+	//				1. 完成千兆百兆网的自适应功能
+	//  -----------------------------------------------------------------------------------------------
+	tx_self_adaption  tx_self_adaption_inst
+	(
+	.clk_gtx              		(clk_gtx		       		),
+	.reset_gtx             		(o_reset_gtx 				),
+
+	.iv_speed_mode				(ov_link_speed[1:0]			),
+	.i_link_state	    		(ov_link_speed[2]			),
+	.i_tx_data_valid			(tx_data_valid_self	 		),	//来自于transmit模块
+	.iv_tx_data		    		(tx_data_self				),	//来自于transmit模块
+	.i_tx_enable				(mac_tx_enable				),	//来自于mac核
+	.i_tx_ack		    		(mac_tx_ack					),	//来自于mac核
+
+	.o_tx_data_valid			(o_tx_data_valid 			),	//进入了mac核
+	.ov_tx_data		    		(mac_tx_data		 		),	//进入了mac核
+	.o_tx_ack		    		(tx_ack_self		 		),	//给transmit模块
+	.i_cfg_mac_end				(w_cfg_mac_end		)
+	);
+
+endmodule
