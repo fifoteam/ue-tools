@@ -1,0 +1,652 @@
+//-------------------------------------------------------------------------------------------------
+//  -- 版权所有者   : 中国大恒（集团）有限公司北京图像视觉技术分公司, 2010 -2015.
+//  -- 保密级别     ：绝密.
+//  -- 部门         : 硬件部，FPGA工作组
+//  -- 模块名       : microblaze_test_top
+//  -- 设计者       : 张强
+//-------------------------------------------------------------------------------------------------
+//
+//  -- 版本记录 :
+//
+//  -- 作者         :| 版本号	:| 修改日期				:|  修改说明
+//-------------------------------------------------------------------------------------------------
+//  -- 张强         :| V1.0		:| 2018/12/01 17:34:40	:|  初始版本
+//-------------------------------------------------------------------------------------------------
+//
+//  -- 模块描述     : 
+//              1)  : 
+//
+//              2)  : 
+//
+//              3)  : 
+//
+//-------------------------------------------------------------------------------------------------
+//`include			"microblaze_test_top_def.v"
+//仿真单位/精度
+`timescale 1ns/1ps
+//-------------------------------------------------------------------------------------------------
+
+module microblaze_test_top 
+	(
+	//输入信号
+	input					clk_ext				,	//输入时钟
+	input					reset				,	//复位信号
+	input  	            	refclk_p			,   // Refclk P - to differential GT clock buffer
+	input  	            	refclk_n			,   // Refclk N - to differential GT clock buffer	
+	output 	            	rxaui_tx_l0_p		,   // GT0 TXP
+	output 	            	rxaui_tx_l0_n		,   // GT0 TXN
+	output 	            	rxaui_tx_l1_p		,   // GT1 TXP
+	output 	            	rxaui_tx_l1_n		,   // GT1 TXN
+	input  	            	rxaui_rx_l0_p		,   // GT0 RXP
+	input  	            	rxaui_rx_l0_n		,   // GT0 RXN
+	input  	            	rxaui_rx_l1_p		,   // GT1 RXP
+	input  	            	rxaui_rx_l1_n		,   // GT1 RXN
+	output					mdc					,
+	inout					mdio				,
+	input					i_test0				,
+	inout 					iic_scl_io			,
+  	inout 					iic_sda_io			,
+	inout 					spi_io0_io			,	
+	inout 					spi_io1_io			,	
+	inout 					spi_ss_io			,
+	inout			[3:0]	io_gpio				,
+	output					o_reset_sensor		,	
+	output					o_reset_phyn		,	
+	output					clk_sensor_p		,
+	output					clk_sensor_n
+	);
+	//	ref paramters
+	parameter							SHORT_REG_WD		= 16	;	//短寄存器位宽
+	parameter							REG_WD				= 32	;	//寄存器位宽
+	parameter							LONG_REG_WD			= 64	;	//长寄存器位宽
+	parameter							AXI_WD				= 32	;	//AXI寄存器位宽 
+	parameter							CTRL_CH_ADDR_WD		= 16    ;   //AXI控制通路地址位宽 
+
+	parameter							RX_DATA_WD			= 64	;	//表示输入数据位宽的宏，本模块仅支持32和64
+	parameter							RX_ADDR_WD			= 7		;	//gvcp包的写地址位宽，每个gvcp包可以写入1k字节的数据：当RX_DATA_WD为64时，RX_ADDR_WD为7;当RX_DATA_WD为32时，RX_ADDR_WD为8
+	parameter							AXI_DATA_WD			= 32	;	//AXI总线数据位宽
+	parameter							AXI_ADDR_WD			= 32	;	//AXI总线地址位宽
+
+	parameter							GEV_BE_WD			= 8		;	//本模块输入字节使能标志位位宽
+	parameter							GEV_DATA_WD			= 64	;	//本模块输入数据位宽，支持8/16/32/64/128
+
+	//  ===============================================================================================
+	//	ref ***create edge***
+	//  ===============================================================================================
+	//  -------------------------------------------------------------------------------------
+	//	fval edge
+	//  -------------------------------------------------------------------------------------
+	wire	[31:0]		m_axi_if_araddr				;
+	wire	[2:0]		m_axi_if_arprot            	;
+	wire	[0:0]		m_axi_if_arready           	;
+	wire	[0:0]		m_axi_if_arvalid           	;
+	wire	[31:0]		m_axi_if_awaddr            	;
+	wire	[2:0]		m_axi_if_awprot            	;
+	wire	[0:0]		m_axi_if_awready           	;
+	wire	[0:0]		m_axi_if_awvalid           	;
+	wire	[0:0]		m_axi_if_bready            	;
+	wire	[1:0]		m_axi_if_bresp             	;
+	wire	[0:0]		m_axi_if_bvalid            	;
+	wire	[31:0]		m_axi_if_rdata             	;
+	wire	[0:0]		m_axi_if_rready            	;
+	wire	[1:0]		m_axi_if_rresp             	;
+	wire	[0:0]		m_axi_if_rvalid            	;
+	wire	[31:0]		m_axi_if_wdata             	;
+	wire	[0:0]		m_axi_if_wready            	;
+	wire	[3:0]		m_axi_if_wstrb             	;
+	wire	[0:0]		m_axi_if_wvalid            	;
+
+	wire				axi_lite_clk				;	//axi_lite_clk
+
+
+	wire 	[15:0]		wv_logic_raddr_0				;
+	wire 	[15:0]		wv_logic_raddr_1				;
+	wire 	[15:0]		wv_logic_raddr_2				;
+	wire 	[15:0]		wv_logic_raddr_3				;
+	wire 	[15:0]		wv_logic_raddr_4				;
+	wire 	[31:0]		wv_logic_rdata_0				;
+	wire 	[31:0]		wv_logic_rdata_1				;
+	wire 	[31:0]		wv_logic_rdata_2				;
+	wire 	[31:0]		wv_logic_rdata_3				;
+	wire 	[31:0]		wv_logic_rdata_4				;
+	wire 	[15:0]		wv_logic_waddr_0				;
+	wire 	[15:0]		wv_logic_waddr_1				;
+	wire 	[15:0]		wv_logic_waddr_2				;
+	wire 	[15:0]		wv_logic_waddr_3				;
+	wire 	[15:0]		wv_logic_waddr_4				;
+	wire 	[31:0]		wv_logic_wdata_0				;
+	wire 	[31:0]		wv_logic_wdata_1				;
+	wire 	[31:0]		wv_logic_wdata_2				;
+	wire 	[31:0]		wv_logic_wdata_3				;
+	wire 	[31:0]		wv_logic_wdata_4				;
+	wire 				w_rd_en_0						;
+	wire 				w_rd_en_1						;
+	wire 				w_rd_en_2						;
+	wire 				w_rd_en_3						;
+	wire 				w_rd_en_4						;
+	wire 				w_rd_valid_0					;
+	wire 				w_rd_valid_1					;
+	wire 				w_rd_valid_2					;
+	wire 				w_rd_valid_3					;
+	wire 				w_rd_valid_4					;
+	wire 				s00_axi_aclk_1				;
+	wire 				s00_axi_aclk_2				;
+	wire 				s00_axi_aclk_3				;
+	wire 				s00_axi_aclk_4				;
+	wire 				s00_axi_aresetn_1			;
+	wire 				s00_axi_aresetn_2			;
+	wire 				s00_axi_aresetn_3			;
+	wire 				s00_axi_aresetn_4			;
+	wire 				w_wr_en_0						;
+	wire 				w_wr_en_1						;
+	wire 				w_wr_en_2						;
+	wire 				w_wr_en_3						;
+	wire 				w_wr_en_4						;
+	wire 				w_wr_valid_0					;
+	wire 				w_wr_valid_1					;
+	wire 				w_wr_valid_2					;
+	wire 				w_wr_valid_3					;
+	wire 				w_wr_valid_4					;
+	
+	wire				clk_100m						;
+	wire				clk_37_5m						;	
+
+	wire				clk_180m					;
+	wire				clk_72m						;
+	
+	wire				clk_wiz_0_locked			;
+	wire				clk_wiz_1_locked			;
+		
+
+	wire                mdio_in						;
+	wire                mdio_out					;
+	wire                mdio_tri					;
+	wire				clk_ext_bufg				;
+
+		 
+	wire            	clk156_out                  ;
+	wire            	clk156_lock                 ;
+	wire            	pll0outclk_out              ;
+	wire            	pll0lock_out                ;
+	wire            	pll0outrefclk_out           ;
+	wire            	pll1outclk_out              ;
+	wire            	pll1outrefclk_out           ;
+	wire            	common_pll_reset_out        ;
+	wire [63:0]     	xgmii_txd                   ;
+	wire [7:0]      	xgmii_txc                   ;
+	wire [63:0]     	xgmii_rxd                   ;
+	wire [7:0]      	xgmii_rxc                   ;
+	wire [1:0]      	signal_detect               ;
+	wire [5:0]      	debug                       ;
+	wire [6:0]      	configuration_vector 	    ;
+	wire [7:0]      	status_vector	            ;
+	wire				clk_360m					;
+	
+	reg [25:0]			count						;
+	
+//  ===============================================================================================
+//	MDIO
+//  ===============================================================================================
+	
+//	assign      mdio= mdio_tri ? 1'bz :	mdio_out;
+//	assign		mdio_in = mdio;
+	assign		o_reset_sensor = 1'b1;
+	assign		o_reset_phyn   = 1'b1;
+
+//  ===============================================================================================
+//	iobuf io与模块的io方向相反
+//  ===============================================================================================
+   IOBUF #(
+      .DRIVE(12), // Specify the output drive strength
+      .IBUF_LOW_PWR("TRUE"),  // Low Power - "TRUE", High Performance = "FALSE" 
+      .IOSTANDARD("DEFAULT"), // Specify the I/O standard
+      .SLEW("SLOW") // Specify the output slew rate
+   ) IOBUF_inst (
+      .O(mdio_in),     	// Buffer output
+      .IO(mdio),   		// Buffer inout port (connect directly to top-level port)
+      .I(mdio_out),     // Buffer input
+      .T(mdio_tri)      // 3-state enable input, high=input, low=output
+   );	
+	
+//  ===============================================================================================
+//	例化时钟
+//  ===============================================================================================
+
+   IBUF  IBUF_inst (
+      .O(clk_ext_bufg),     // Buffer output
+      .I(clk_ext)      		// Buffer input (connect directly to top-level port)
+   );
+
+
+   OBUFDS #(
+      .IOSTANDARD("DEFAULT"), // Specify the output I/O standard
+      .SLEW("SLOW")           // Specify the output slew rate
+   ) OBUFDS_inst (
+      .O(clk_sensor_p),     // Diff_p output (connect directly to top-level port)
+      .OB(clk_sensor_n),   // Diff_n output (connect directly to top-level port)
+      .I(clk_360m)      // Buffer input
+   );
+
+
+	always @ (posedge clk_100m) begin
+		count <= count + 1;
+	end
+	
+
+
+	clk_wiz_0 clk_wiz_0_inst
+	(
+	.reset					(reset					),
+	.locked					(clk_wiz_0_locked		),
+	.clk_in1        		(clk_ext_bufg    		),
+	.clk_out1				(clk_100m				),
+	.clk_out2				(clk_37_5m				)	
+	);
+
+	clk_wiz_1 clk_wiz_1_inst
+	(
+	.reset					(reset					),
+	.locked					(clk_wiz_1_locked		),
+	.clk_in1        		(clk_ext_bufg  			),
+	.clk_out1				(clk_180m				),
+	.clk_out2				(clk_72m				),
+	.clk_out3				(clk_360m				)		
+	);
+
+	microblaze_wrapper microblaze_wrapper_inst
+	(
+	.GPIO_0_tri_io			(io_gpio				),
+   	.clk_mb					(clk_100m				),	    	                         			
+    .i_int_mb               (i_test0 ||count[25]   	),            
+    .m_axi_if_araddr   		(m_axi_if_araddr   		),	
+    .m_axi_if_arprot       	(m_axi_if_arprot       	),
+    .m_axi_if_arready      	(m_axi_if_arready      	),
+    .m_axi_if_arvalid      	(m_axi_if_arvalid      	),
+    .m_axi_if_awaddr       	(m_axi_if_awaddr       	),
+    .m_axi_if_awprot       	(m_axi_if_awprot       	),
+    .m_axi_if_awready      	(m_axi_if_awready      	),
+    .m_axi_if_awvalid      	(m_axi_if_awvalid      	),
+    .m_axi_if_bready       	(m_axi_if_bready       	),
+    .m_axi_if_bresp        	(m_axi_if_bresp        	),
+    .m_axi_if_bvalid       	(m_axi_if_bvalid       	),
+    .m_axi_if_rdata        	(m_axi_if_rdata        	),
+    .m_axi_if_rready       	(m_axi_if_rready       	),
+    .m_axi_if_rresp        	(m_axi_if_rresp        	),
+    .m_axi_if_rvalid       	(m_axi_if_rvalid       	),
+    .m_axi_if_wdata        	(m_axi_if_wdata        	),
+    .m_axi_if_wready       	(m_axi_if_wready       	),
+    .m_axi_if_wstrb        	(m_axi_if_wstrb        	),
+    .m_axi_if_wvalid       	(m_axi_if_wvalid       	),         
+	.axi_lite_clk			(axi_lite_clk			),               
+    .i_clk_mb_locked		(clk_wiz_0_locked		),               
+    .i_reset_mb				(~clk_wiz_0_locked     	),               
+    .iic_scl_io    			(iic_scl_io    			),               
+    .iic_sda_io    			(iic_sda_io    			),               
+    .ov_logic_raddr_0       (wv_logic_raddr_0       ),               
+    .ov_logic_raddr_1       (wv_logic_raddr_1       ),               
+    .ov_logic_raddr_2       (wv_logic_raddr_2       ),               
+    .ov_logic_raddr_3       (wv_logic_raddr_3       ),               
+    .ov_logic_raddr_4       (wv_logic_raddr_4       ),                             
+    .iv_logic_rdata_0       (wv_logic_rdata_0       ),               
+    .iv_logic_rdata_1       (wv_logic_rdata_1       ),               
+    .iv_logic_rdata_2       (wv_logic_rdata_2       ),               
+    .iv_logic_rdata_3       (wv_logic_rdata_3       ),               
+    .iv_logic_rdata_4       (wv_logic_rdata_4       ),                                           
+    .ov_logic_waddr_0       (wv_logic_waddr_0       ),         
+    .ov_logic_waddr_1       (wv_logic_waddr_1       ),         
+    .ov_logic_waddr_2       (wv_logic_waddr_2       ),         
+    .ov_logic_waddr_3       (wv_logic_waddr_3       ),         
+    .ov_logic_waddr_4       (wv_logic_waddr_4       ),                
+    .ov_logic_wdata_0       (wv_logic_wdata_0       ),         
+    .ov_logic_wdata_1       (wv_logic_wdata_1       ),         
+    .ov_logic_wdata_2       (wv_logic_wdata_2       ),         
+    .ov_logic_wdata_3       (wv_logic_wdata_3       ),         
+    .ov_logic_wdata_4       (wv_logic_wdata_4       ),                        
+    .o_rd_en_0             	(w_rd_en_0             	),                        
+    .o_rd_en_1             	(w_rd_en_1             	),                        
+    .o_rd_en_2             	(w_rd_en_2             	),         
+    .o_rd_en_3             	(w_rd_en_3             	),         
+    .o_rd_en_4             	(w_rd_en_4             	),                 
+    .o_rd_valid_0          	(w_rd_valid_0          	),         
+    .o_rd_valid_1          	(w_rd_valid_1          	),         
+    .o_rd_valid_2          	(w_rd_valid_2          	),         
+    .o_rd_valid_3          	(w_rd_valid_3          	),         
+    .o_rd_valid_4          	(w_rd_valid_4          	),                  
+    .s00_axi_aclk_1      	(clk_180m      			),         
+    .s00_axi_aclk_2      	(clk_72m      			),         
+    .s00_axi_aclk_3      	(clk_37_5m      		),         
+    .s00_axi_aclk_4      	(     				 	),                                     
+    .s00_axi_aresetn_1   	(clk_wiz_1_locked   	),                                     
+    .s00_axi_aresetn_2   	(clk_wiz_1_locked   	),                                          
+    .s00_axi_aresetn_3   	(clk_wiz_0_locked   	),                                          
+    .s00_axi_aresetn_4   	(1'b1				   	),                                          
+    .spi_io0_io				(spi_io0_io				),
+    .spi_io1_io				(spi_io1_io				),
+    .spi_ss_io				(spi_ss_io				),             
+    .o_wr_en_0             	(w_wr_en_0             	),                     
+    .o_wr_en_1             	(w_wr_en_1             	),                     
+    .o_wr_en_2             	(w_wr_en_2             	),                     
+    .o_wr_en_3             	(w_wr_en_3             	),                     
+    .o_wr_en_4             	(w_wr_en_4             	),                 
+    .o_wr_valid_0          	(w_wr_valid_0          	),         
+    .o_wr_valid_1          	(w_wr_valid_1          	),         
+    .o_wr_valid_2          	(w_wr_valid_2          	),         
+    .o_wr_valid_3          	(w_wr_valid_3          	),         
+    .o_wr_valid_4          	(w_wr_valid_4          	),
+    .wr_be_0				(						),
+    .wr_be_1				(						),
+    .wr_be_2				(						),
+    .wr_be_3				(						),
+    .wr_be_4				(						)                      
+    );   			                                                             
+                                                             
+                                                             
+	register # (                                             
+	.SHORT_REG_WD			(SHORT_REG_WD			),	//短寄存器位宽
+	.REG_WD					(REG_WD					),	//寄存器位宽
+	.LONG_REG_WD			(LONG_REG_WD			),	//长寄存器位宽
+	.AXI_WD					(AXI_WD					),	//AXI寄存器位宽 
+	.CTRL_CH_ADDR_WD		(CTRL_CH_ADDR_WD		)   //AXI控制通路地址位宽 
+	)
+	register_inst0(
+	.reset					(~clk_wiz_0_locked		),	//控制通道复位
+	.clk					(axi_lite_clk			),	//寄存器时钟		
+	.iv_raddr				(wv_logic_raddr_0		),	//clk时钟域，控制通道读地址总线
+	.iv_waddr				(wv_logic_waddr_0		),	//clk时钟域，控制通道写地址总线
+	.iv_wdata				(wv_logic_wdata_0		),	//clk时钟域，控制通道写地址总线
+	.i_rd_en				(w_rd_en_0				),	//clk时钟域，高有效，控制通道读使能
+	.i_rd_valid				(w_rd_valid_0			),	//clk时钟域，高有效，控制通道读有效
+	.i_wr_en				(w_wr_en_0				),  //clk时钟域，高有效，控制通道写使能  
+	.i_wr_valid				(w_wr_valid_0			),  //clk时钟域，高有效，控制通道写有效  
+	.ov_rdata				(wv_logic_rdata_0		),	//clk时钟域，控制通道读地址总线(*mark_debug = "true"*)	output	reg [AXI_WD-1			: 0]ov_rdata					,	//clk_axi时钟域，控制通道读地址总线
+	.regiter1				(						),	
+    .regiter2				(						),	
+    .regiter3				(						),	
+    .regiter4				(						),	
+    .regiter5				(						),	
+    .regiter6				(						),	
+    .regiter7				(						),	
+    .regiter8				(						),	
+    .regiter9				(						),	
+    .regiter10				(						)
+	);
+
+	register # (
+	.SHORT_REG_WD			(SHORT_REG_WD			),	//短寄存器位宽
+	.REG_WD					(REG_WD					),	//寄存器位宽
+	.LONG_REG_WD			(LONG_REG_WD			),	//长寄存器位宽
+	.AXI_WD					(AXI_WD					),	//AXI寄存器位宽 
+	.CTRL_CH_ADDR_WD		(CTRL_CH_ADDR_WD		)   //AXI控制通路地址位宽 
+	)
+	register_inst1(
+	.reset					(~clk_wiz_1_locked		),		//控制通道复位
+	.clk					(clk_180m				),		//寄存器时钟		
+	.iv_raddr				(wv_logic_raddr_1	    ),		//clk时钟域，控制通道读地址总线
+	.iv_waddr				(wv_logic_waddr_1	    ),		//clk时钟域，控制通道写地址总线
+	.iv_wdata				(wv_logic_wdata_1	    ),		//clk时钟域，控制通道写地址总线
+	.i_rd_en				(w_rd_en_1		    	),		//clk时钟域，高有效，控制通道读使能
+	.i_rd_valid				(w_rd_valid_1		    ),		//clk时钟域，高有效，控制通道读有效
+	.i_wr_en				(w_wr_en_1		    	),   	//clk时钟域，高有效，控制通道写使能  
+	.i_wr_valid				(w_wr_valid_1		   	),   	//clk时钟域，高有效，控制通道写有效  
+	.ov_rdata				(wv_logic_rdata_1	   	),		//clk时钟域，控制通道读地址总线(*mark_debug = "true"*)	output	reg [AXI_WD-1			: 0]ov_rdata					,	//clk_axi时钟域，控制通道读地址总线
+	.regiter1				(						),	
+    .regiter2				(						),	
+    .regiter3				(						),	
+    .regiter4				(						),	
+    .regiter5				(						),	
+    .regiter6				(						),	
+    .regiter7				(						),	
+    .regiter8				(						),	
+    .regiter9				(						),	
+    .regiter10				(						)
+	);
+
+	register # (
+	.SHORT_REG_WD			(SHORT_REG_WD			),	//短寄存器位宽
+	.REG_WD					(REG_WD					),	//寄存器位宽
+	.LONG_REG_WD			(LONG_REG_WD			),	//长寄存器位宽
+	.AXI_WD					(AXI_WD					),	//AXI寄存器位宽 
+	.CTRL_CH_ADDR_WD		(CTRL_CH_ADDR_WD		)   //AXI控制通路地址位宽 
+	)
+	register_inst2(
+	.reset					(~clk_wiz_1_locked		),	//控制通道复位
+	.clk					(clk_72m				),	//寄存器时钟		
+	.iv_raddr				(wv_logic_raddr_2		),	//clk时钟域，控制通道读地址总线
+	.iv_waddr				(wv_logic_waddr_2		),	//clk时钟域，控制通道写地址总线
+	.iv_wdata				(wv_logic_wdata_2		),	//clk时钟域，控制通道写地址总线
+	.i_rd_en				(w_rd_en_2				),	//clk时钟域，高有效，控制通道读使能
+	.i_rd_valid				(w_rd_valid_2			),	//clk时钟域，高有效，控制通道读有效
+	.i_wr_en				(w_wr_en_2				),   //clk时钟域，高有效，控制通道写使能  
+	.i_wr_valid				(w_wr_valid_2			),   //clk时钟域，高有效，控制通道写有效  
+	.ov_rdata				(wv_logic_rdata_2		),	//clk时钟域，控制通道读地址总线(*mark_debug = "true"*)	output	reg [AXI_WD-1			: 0]ov_rdata					,	//clk_axi时钟域，控制通道读地址总线
+	.regiter1				(						),	
+    .regiter2				(						),	
+    .regiter3				(						),	
+    .regiter4				(						),	
+    .regiter5				(						),	
+    .regiter6				(						),	
+    .regiter7				(						),	
+    .regiter8				(						),	
+    .regiter9				(						),	
+    .regiter10				(						)
+	);
+
+
+
+	register # (
+	.SHORT_REG_WD			(SHORT_REG_WD			),	//短寄存器位宽
+	.REG_WD					(REG_WD					),	//寄存器位宽
+	.LONG_REG_WD			(LONG_REG_WD			),	//长寄存器位宽
+	.AXI_WD					(AXI_WD					),	//AXI寄存器位宽 
+	.CTRL_CH_ADDR_WD		(CTRL_CH_ADDR_WD		)   //AXI控制通路地址位宽 
+	)
+	register_inst3(
+	.reset					(~clk_wiz_0_locked		),	//控制通道复位
+	.clk					(clk_37_5m				),	//寄存器时钟		
+	.iv_raddr				(wv_logic_raddr_3		),	//clk时钟域，控制通道读地址总线
+	.iv_waddr				(wv_logic_waddr_3		),	//clk时钟域，控制通道写地址总线
+	.iv_wdata				(wv_logic_wdata_3		),	//clk时钟域，控制通道写地址总线
+	.i_rd_en				(w_rd_en_3				),	//clk时钟域，高有效，控制通道读使能
+	.i_rd_valid				(w_rd_valid_3			),	//clk时钟域，高有效，控制通道读有效
+	.i_wr_en				(w_wr_en_3				),  //clk时钟域，高有效，控制通道写使能  
+	.i_wr_valid				(w_wr_valid_3			),  //clk时钟域，高有效，控制通道写有效  
+	.ov_rdata				(wv_logic_rdata_3		),	//clk时钟域，控制通道读地址总线(*mark_debug = "true"*)	output	reg [AXI_WD-1			: 0]ov_rdata					,	//clk_axi时钟域，控制通道读地址总线
+	.regiter1				(						),	
+    .regiter2				(						),	
+    .regiter3				(						),	
+    .regiter4				(						),	
+    .regiter5				(						),	
+    .regiter6				(						),	
+    .regiter7				(						),	
+    .regiter8				(						),	
+    .regiter9				(						),	
+    .regiter10				(						)
+	);
+	
+	gvcp_rx_ram # (
+	.RX_DATA_WD				(RX_DATA_WD				),	//表示输入数据位宽的宏，本模块仅支持32和64
+	.RX_ADDR_WD				(RX_ADDR_WD				),	//gvcp包的写地址位宽，每个gvcp包可以写入1k字节的数据：当RX_DATA_WD为64时，RX_ADDR_WD为7;当RX_DATA_WD为32时，RX_ADDR_WD为8
+	.AXI_DATA_WD			(AXI_DATA_WD			),	//AXI总线数据位宽
+	.AXI_ADDR_WD			(AXI_ADDR_WD			),	//AXI总线地址位宽
+	.REG_WD					(REG_WD					)	//
+	)
+	gvcp_rx_ram_inst(
+	//  -------------------------------------------------------------------------------------
+	//  ram 写入信号
+	//  -------------------------------------------------------------------------------------
+	.clk					(axi_lite_clk			),	//工作时钟
+	.reset					(~clk_wiz_0_locked		),	//工作时钟域的复位信号，高有效
+	.i_rx_ram_wr_en			(						),	//clk时钟域，rx_ram写信号，高有效
+	.iv_rx_ram_addr			(						),	//clk时钟域，rx_ram写地址
+	.iv_rx_ram_data			(						),	//clk时钟域，写入rx_ram的数据，统一合并为64bit
+	.iv_irq_status			(						),	//clk时钟域，中断状态寄存器，指示当前中断的状态类型.bit0位和bit1位分别指示gvcp_rx_ram中两片存储空间的状态，当为1时，不能被写入
+	.clk_axi				(						),	//axi工作时钟
+	.reset_axi				(						),	//axi工作时钟域的复位信号，高有效
+    .iv_axi_rd_addr			(						),	//clk_axi时钟域，axi 读地址
+    .ov_axi_rd_data			(						)	//clk_axi时钟域，axi 读数据
+	);
+	
+	gvcp_tx_ram # (
+	.AXI_DATA_WD			(AXI_DATA_WD			),	//AXI总线数据位宽
+	.AXI_ADDR_WD			(AXI_ADDR_WD			),	//AXI总线地址位宽
+	.GEV_BE_WD				(GEV_BE_WD				),	//本模块输入字节使能标志位位宽
+	.GEV_DATA_WD			(GEV_DATA_WD			),	//本模块输入数据位宽，支持8/16/32/64/128
+	.SHORT_REG_WD			(SHORT_REG_WD			)	//固定为16
+	)
+	gvcp_tx_ram_inst(
+	//  -------------------------------------------------------------------------------------
+	//  axi lite 信号
+	//  -------------------------------------------------------------------------------------
+	.clk_axi				(axi_lite_clk			),	//axi工作时钟
+	.reset_axi				(~clk_wiz_0_locked		),	//axi工作时钟域的复位信号，高有效
+	.i_axi_lite_wr_en		(w_wr_en_0&&w_wr_valid_0	),	//clk_axi时钟域，axi 写使能
+	.iv_axi_lite_be			({GEV_BE_WD{1'b1}}		),	//clk_axi时钟域，axi 字节使能
+    .iv_axi_lite_wr_addr	(wv_logic_waddr_0		),	//clk_axi时钟域，axi 写地址
+    .iv_axi_lite_wr_data	(wv_logic_wdata_0		),	//clk_axi时钟域，axi 写数据
+	.clk					(axi_lite_clk			),	//工作时钟
+	.reset					(~clk_wiz_0_locked		),	//工作时钟域的复位信号，高有效
+	.iv_gvcp_length			(						),	//clk时钟域，gvcp包长
+	.i_gvcp_tx_ram_rd		(						),	//clk时钟域，gvcp tx ram 读信号，高有效
+	.ov_gvcp_tx_ram_be		(						),	//clk时钟域，gvcp数据字节有效信号，高有效
+	.ov_gvcp_tx_ram_data	(						)	//clk时钟域，gvcp数据
+	);	
+
+
+   ten_gig_eth_mac_0_support xgmac_support_i (
+      .tx_clk0                (clk156_out),
+      .reset                  (1'b0),
+      .tx_axis_aresetn        (1'b1),
+      .tx_axis_tdata          (64'b0),
+      .tx_axis_tvalid         (1'b0),
+      .tx_axis_tlast          (1'b0),
+      .tx_axis_tuser          (1'b0),
+      .tx_ifg_delay           (1'b0),
+      .tx_axis_tkeep          (1'b0),
+      .tx_axis_tready         (1'b0),
+      .tx_statistics_vector   (),
+      .tx_statistics_valid    (),
+      
+      .pause_val              (0),
+      .pause_req              (0),
+      .rx_axis_aresetn        (1'b1),
+      .rx_axis_tdata          (),
+      .rx_axis_tkeep          (),
+      .rx_axis_tvalid         (),
+      .rx_axis_tuser          (),
+      .rx_axis_tlast          (),
+      .rx_statistics_vector   (),
+      .rx_statistics_valid    (),
+      
+      .s_axi_aclk             (axi_lite_clk			),
+      .s_axi_aresetn          (1'b1					),
+      .s_axi_awaddr           (m_axi_if_awaddr[10:0]),
+      .s_axi_awvalid          (m_axi_if_awvalid    	),
+      .s_axi_awready          (m_axi_if_awready    	),
+      .s_axi_wdata            (m_axi_if_wdata[31:0] ),
+      .s_axi_wvalid           (m_axi_if_wvalid     	),
+      .s_axi_wready           (m_axi_if_wready     	),
+      .s_axi_bresp            (m_axi_if_bresp[1:0]  ),
+      .s_axi_bvalid           (m_axi_if_bvalid     	),
+      .s_axi_bready           (m_axi_if_bready     	),
+      .s_axi_araddr           (m_axi_if_araddr[10:0]),
+      .s_axi_arvalid          (m_axi_if_arvalid    	),
+      .s_axi_arready          (m_axi_if_arready    	),
+      .s_axi_rdata            (m_axi_if_rdata      	),
+      .s_axi_rresp            (m_axi_if_rresp[1:0]  ),
+      .s_axi_rvalid           (m_axi_if_rvalid     	),
+      .s_axi_rready           (m_axi_if_rready     	),
+      .xgmacint               (						),
+      .mdc                    (mdc					),
+      .mdio_in                (mdio_in				),
+      .mdio_out               (mdio_out				),
+      .mdio_tri               (mdio_tri				),
+      .tx_dcm_locked          (clk156_lock			),
+      .xgmii_txd              (xgmii_txd			),
+      .xgmii_txc              (xgmii_txc			),
+      .rx_clk0                (clk156_lock			),
+      .rx_dcm_locked          (clk156_lock			),
+      .xgmii_rxd              (xgmii_rxd			),
+      .xgmii_rxc              (xgmii_rxc			)
+   );
+		
+//ten_gig_eth_mac_0_example_design  ten_gig_eth_mac_0_example_design_inst
+//	(
+//	.reset					(reset					),	
+//	.tx_axis_aresetn        (1'b1                   ),
+//	.rx_axis_aresetn        (1'b1                   ),
+//	.address_swap_disable   (1'b0                   ),
+//	.tx_statistics_vector   (                       ),
+//	.rx_statistics_vector   (                       ),
+//	.reset_error            (1'b0                   ),
+//	.insert_error           (1'b0                   ),
+//	.enable_pat_gen         (1'b1                   ),
+//	.enable_pat_check       (1'b1                   ),
+//	.gen_active_flash       (                       ),
+//	.check_active_flash     (                       ),
+//	.frame_error            (                       ),
+//	.pause_req              (1'b0                   ),
+//	.read_stats             (0                      ),
+//	.stats_fail             (                       ),
+//	.mdc                    (mdc		            ),
+//	.mdio_in                (mdio_in	            ),
+//	.mdio_out               (mdio_out	            ),
+//	.mdio_tri               (mdio_tri	            ),
+//	.tx_clk0                (clk156_out             ),
+//	.xgmii_tx_clk           (                       ),
+//	.xgmii_txd              (xgmii_txd              ),
+//	.xgmii_txc              (xgmii_txc              ),
+//	.xgmii_rx_clk           (clk156_out				),		
+//	.xgmii_rxd              (xgmii_rxd              ),
+//	.xgmii_rxc              (xgmii_rxc				),	 
+//	.s_axi_aclk             (axi_lite_clk			),                            
+//	.s_axi_resetn           (1'b1					),                           
+//	.s_axi_awaddr           (M10_AXI_0_awaddr[10:0] ),                      
+//	.s_axi_awvalid          (M10_AXI_0_awvalid    	),                        
+//	.s_axi_awready          (M10_AXI_0_awready    	),                        
+//	.s_axi_wdata            (M10_AXI_0_wdata[31:0] 	),                     
+//	.s_axi_wvalid           (M10_AXI_0_wvalid     	),                      
+//	.s_axi_wready           (M10_AXI_0_wready     	),                       
+//	.s_axi_bresp            (M10_AXI_0_bresp[1:0]   ),                       
+//	.s_axi_bvalid           (M10_AXI_0_bvalid     	),                       
+//	.s_axi_bready           (M10_AXI_0_bready     	),                        
+//	.s_axi_araddr           (M10_AXI_0_araddr[10:0] ),                       
+//	.s_axi_arvalid          (M10_AXI_0_arvalid    	),                         
+//	.s_axi_arready          (M10_AXI_0_arready    	),                        
+//	.s_axi_rdata            (M10_AXI_0_rdata      	),                       
+//	.s_axi_rresp            (M10_AXI_0_rresp[1:0]  	),                      
+//	.s_axi_rvalid           (M10_AXI_0_rvalid     	),                        
+//	.s_axi_rready           (M10_AXI_0_rready     	)                       
+//	);
+
+   rxaui_0  rxaui_i
+	(
+	.reset                    (1'b0				),
+	.dclk                     (clk_100m			),
+	.clk156_out               (clk156_out		), // Output clock than can be used for external logic
+	.clk156_lock              (clk156_lock		),
+	.pll0outclk_out           (					),
+	.pll0lock_out             (					),
+	.pll0outrefclk_out        (					),
+	.pll1outclk_out           (					),
+	.pll1outrefclk_out        (					),
+	.common_pll_reset_out     (					),
+	.refclk_p                 (refclk_p			),
+	.refclk_n                 (refclk_n			),
+	.xgmii_txd                (xgmii_txd		),
+	.xgmii_txc                (xgmii_txc		),
+	.xgmii_rxd                (xgmii_rxd		),
+	.xgmii_rxc                (xgmii_rxc		),
+	.rxaui_tx_l0_p            (rxaui_tx_l0_p	),
+	.rxaui_tx_l0_n            (rxaui_tx_l0_n	),
+	.rxaui_tx_l1_p            (rxaui_tx_l1_p	),
+	.rxaui_tx_l1_n            (rxaui_tx_l1_n	),
+	.rxaui_rx_l0_p            (rxaui_rx_l0_p	),
+	.rxaui_rx_l0_n            (rxaui_rx_l0_n	),
+	.rxaui_rx_l1_p            (rxaui_rx_l1_p	),
+	.rxaui_rx_l1_n            (rxaui_rx_l1_n	),
+	.signal_detect            (2'b11			),
+	.debug                    (					),
+	.configuration_vector     (7'h00			),
+	.status_vector            (					)
+        );
+endmodule

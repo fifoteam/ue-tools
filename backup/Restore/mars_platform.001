@@ -1,0 +1,248 @@
+##-------------------------------------------------------------------------------------------------
+##  -- 版权所有者   : 中国大恒（集团）有限公司北京图像视觉技术分公司, 2010 -2015.
+##  -- 保密级别     ：绝密.
+##  -- 部门         : 硬件部，FPGA工作组
+##  -- 模块名       : test
+##  -- 设计者       : 邢海涛
+##  -- 目标期间     : xc7a100t-2fgg484
+##-------------------------------------------------------------------------------------------------
+##
+##  -- 版本记录 :
+##
+##  -- 作者         :| 版本号	:| 修改日期				:|  修改说明
+##-------------------------------------------------------------------------------------------------
+##  -- 邢海涛       :| V1.0		:| 2018/12/12 17:09:29	:|  初始版本
+##-------------------------------------------------------------------------------------------------
+##
+##  -- 模块描述     :  mars_platform工程约束文件
+##              1)  : ... ...
+##
+##              2)  : ... ...
+##
+##              3)  : ... ...
+##
+##-------------------------------------------------------------------------------------------------
+
+##	===============================================================================================
+##	ref ***pin location***
+##	===============================================================================================
+##	-------------------------------------------------------------------------------------
+##	-- ref clk
+##	-------------------------------------------------------------------------------------
+set_property PACKAGE_PIN Y18 [get_ports clk_osc]
+set_property IOSTANDARD LVCMOS33 [get_ports clk_osc]
+
+##	-------------------------------------------------------------------------------------
+##	-- ref sensor
+##	-------------------------------------------------------------------------------------
+set_property IOSTANDARD LVDS_25 [get_ports {iv_data_n[0]}]
+set_property IOSTANDARD LVDS_25 [get_ports {iv_data_n[1]}]
+set_property IOSTANDARD LVDS_25 [get_ports {iv_data_n[2]}]
+set_property IOSTANDARD LVDS_25 [get_ports {iv_data_n[3]}]
+set_property IOSTANDARD LVDS_25 [get_ports {iv_data_n[4]}]
+set_property IOSTANDARD LVDS_25 [get_ports {iv_data_n[5]}]
+set_property IOSTANDARD LVDS_25 [get_ports {iv_data_n[6]}]
+set_property IOSTANDARD LVDS_25 [get_ports {iv_data_n[7]}]
+set_property IOSTANDARD LVDS_25 [get_ports {iv_data_n[8]}]
+set_property IOSTANDARD LVDS_25 [get_ports {iv_data_n[9]}]
+set_property IOSTANDARD LVDS_25 [get_ports {iv_data_n[10]}]
+set_property IOSTANDARD LVDS_25 [get_ports {iv_data_n[11]}]
+set_property IOSTANDARD LVDS_25 [get_ports {iv_data_n[12]}]
+set_property IOSTANDARD LVDS_25 [get_ports {iv_data_n[13]}]
+set_property IOSTANDARD LVDS_25 [get_ports {iv_data_n[14]}]
+set_property IOSTANDARD LVDS_25 [get_ports {iv_data_n[15]}]
+
+set_property IOSTANDARD LVDS_25 [get_ports {iv_data_p[0]}]
+set_property IOSTANDARD LVDS_25 [get_ports {iv_data_p[1]}]
+set_property IOSTANDARD LVDS_25 [get_ports {iv_data_p[2]}]
+set_property IOSTANDARD LVDS_25 [get_ports {iv_data_p[3]}]
+set_property IOSTANDARD LVDS_25 [get_ports {iv_data_p[4]}]
+set_property IOSTANDARD LVDS_25 [get_ports {iv_data_p[5]}]
+set_property IOSTANDARD LVDS_25 [get_ports {iv_data_p[6]}]
+set_property IOSTANDARD LVDS_25 [get_ports {iv_data_p[7]}]
+set_property IOSTANDARD LVDS_25 [get_ports {iv_data_p[8]}]
+set_property IOSTANDARD LVDS_25 [get_ports {iv_data_p[9]}]
+set_property IOSTANDARD LVDS_25 [get_ports {iv_data_p[10]}]
+set_property IOSTANDARD LVDS_25 [get_ports {iv_data_p[11]}]
+set_property IOSTANDARD LVDS_25 [get_ports {iv_data_p[12]}]
+set_property IOSTANDARD LVDS_25 [get_ports {iv_data_p[13]}]
+set_property IOSTANDARD LVDS_25 [get_ports {iv_data_p[14]}]
+set_property IOSTANDARD LVDS_25 [get_ports {iv_data_p[15]}]
+
+set_property IOSTANDARD LVDS_25 [get_ports i_clk_p]
+set_property IOSTANDARD LVDS_25 [get_ports i_clk_n]
+set_property IOSTANDARD LVDS_25 [get_ports i_ctrl_p]
+set_property IOSTANDARD LVDS_25 [get_ports i_ctrl_n]
+set_property IOSTANDARD LVDS_25 [get_ports o_clk_sensor_diff_p]
+set_property IOSTANDARD LVDS_25 [get_ports o_clk_sensor_diff_n]
+
+set_property PACKAGE_PIN D20 [get_ports {iv_data_p[0]}]
+set_property PACKAGE_PIN B21 [get_ports {iv_data_p[1]}]
+set_property PACKAGE_PIN C22 [get_ports {iv_data_p[2]}]
+set_property PACKAGE_PIN E21 [get_ports {iv_data_p[3]}]
+set_property PACKAGE_PIN E22 [get_ports {iv_data_p[4]}]
+set_property PACKAGE_PIN F18 [get_ports {iv_data_p[5]}]
+set_property PACKAGE_PIN G21 [get_ports {iv_data_p[6]}]
+set_property PACKAGE_PIN F19 [get_ports {iv_data_p[7]}]
+set_property PACKAGE_PIN M21 [get_ports {iv_data_p[8]}]
+set_property PACKAGE_PIN H20 [get_ports {iv_data_p[9]}]
+set_property PACKAGE_PIN J22 [get_ports {iv_data_p[10]}]
+set_property PACKAGE_PIN N22 [get_ports {iv_data_p[11]}]
+set_property PACKAGE_PIN N20 [get_ports {iv_data_p[12]}]
+set_property PACKAGE_PIN K21 [get_ports {iv_data_p[13]}]
+set_property PACKAGE_PIN M18 [get_ports {iv_data_p[14]}]
+set_property PACKAGE_PIN N18 [get_ports {iv_data_p[15]}]
+
+set_property PACKAGE_PIN K18 [get_ports i_clk_p]
+set_property PACKAGE_PIN A18 [get_ports i_ctrl_p]
+set_property PACKAGE_PIN C18 [get_ports o_clk_sensor_diff_p]
+
+#io0  mosi
+set_property PACKAGE_PIN Y19 [get_ports io_sensor_spi[0]]
+set_property IOSTANDARD LVCMOS33 [get_ports io_sensor_spi[0]]
+#io1  miso
+set_property PACKAGE_PIN AA18 [get_ports io_sensor_spi[1]]
+set_property IOSTANDARD LVCMOS33 [get_ports io_sensor_spi[1]]
+#SCK
+set_property PACKAGE_PIN AA19 [get_ports io_sensor_spi[2]]
+set_property IOSTANDARD LVCMOS33 [get_ports io_sensor_spi[2]]
+#SS
+set_property PACKAGE_PIN AB18 [get_ports io_sensor_spi[3]]
+set_property IOSTANDARD LVCMOS33 [get_ports io_sensor_spi[3]]
+
+#o_reset_sensor
+set_property PACKAGE_PIN W21 [get_ports o_reset_sensor_n]
+set_property IOSTANDARD LVCMOS33 [get_ports o_reset_sensor_n]
+
+set_property PACKAGE_PIN W17 [get_ports o_trigger_sensor]
+set_property IOSTANDARD LVCMOS33 [get_ports o_trigger_sensor]
+
+set_property PACKAGE_PIN U21 [get_ports i_monitor]
+set_property IOSTANDARD LVCMOS33 [get_ports i_monitor]
+
+##	-------------------------------------------------------------------------------------
+##	-- ref 	io
+##	-------------------------------------------------------------------------------------
+set_property PACKAGE_PIN P19 [get_ports i_optocoupler]
+set_property IOSTANDARD LVCMOS33 [get_ports i_optocoupler]
+
+set_property PACKAGE_PIN T20 [get_ports o_optocoupler]
+set_property IOSTANDARD LVCMOS33 [get_ports o_optocoupler]
+
+set_property PACKAGE_PIN R19 [get_ports iv_gpio[0]]
+set_property IOSTANDARD LVCMOS33 [get_ports iv_gpio[0]]
+
+set_property PACKAGE_PIN U17 [get_ports iv_gpio[1]]
+set_property IOSTANDARD LVCMOS33 [get_ports iv_gpio[1]]
+
+set_property PACKAGE_PIN V17 [get_ports ov_gpio[0]]
+set_property IOSTANDARD LVCMOS33 [get_ports ov_gpio[0]]
+
+set_property PACKAGE_PIN AB20 [get_ports ov_gpio[1]]
+set_property IOSTANDARD LVCMOS33 [get_ports ov_gpio[1]]
+
+
+set_property PACKAGE_PIN AA21 [get_ports o_f_led_gre]
+set_property IOSTANDARD LVCMOS33 [get_ports o_f_led_gre]
+
+set_property PACKAGE_PIN T21 [get_ports o_f_led_red]
+set_property IOSTANDARD LVCMOS33 [get_ports o_f_led_red]
+
+
+#IIC信号
+
+set_property PACKAGE_PIN AB21 [get_ports iic_scl_io]
+set_property IOSTANDARD LVCMOS33 [get_ports iic_scl_io]
+
+set_property PACKAGE_PIN Y22 [get_ports iic_sda_io]
+set_property IOSTANDARD LVCMOS33 [get_ports iic_sda_io]
+
+##	-------------------------------------------------------------------------------------
+##	-- ref phy
+##	-------------------------------------------------------------------------------------
+
+#MDIO信号
+set_property PACKAGE_PIN V18 [get_ports mdc]
+set_property IOSTANDARD LVCMOS33 [get_ports mdc]
+
+set_property PACKAGE_PIN P17 [get_ports mdio]
+set_property IOSTANDARD LVCMOS33 [get_ports mdio]
+
+
+## PHY_PORT
+set_property PACKAGE_PIN	R18			[get_ports o_enet_rstn]
+set_property IOSTANDARD		LVCMOS33	[get_ports o_enet_rstn]
+
+#串行信号
+#lane0约束到MGTP0
+set_property PACKAGE_PIN B8 [get_ports rxaui_rx_l0_p]
+set_property PACKAGE_PIN B4 [get_ports rxaui_tx_l0_p]
+#lane1约束到MGTP3
+set_property PACKAGE_PIN D9 [get_ports rxaui_rx_l1_p]
+set_property PACKAGE_PIN D7 [get_ports rxaui_tx_l1_p]
+
+#参考时钟管脚
+set_property PACKAGE_PIN F6 [get_ports refclk_p]
+
+
+###	-------------------------------------------------------------------------------------
+###	-- ref spi flash
+###	-------------------------------------------------------------------------------------
+#io0  mosi
+set_property PACKAGE_PIN P22 [get_ports spi_io0_io]
+set_property IOSTANDARD LVCMOS33 [get_ports spi_io0_io]
+#io1  miso
+set_property PACKAGE_PIN R22 [get_ports spi_io1_io]
+set_property IOSTANDARD LVCMOS33 [get_ports spi_io1_io]
+
+set_property PACKAGE_PIN T19 [get_ports spi_ss_io]
+set_property IOSTANDARD LVCMOS33 [get_ports spi_ss_io]
+
+set_property PACKAGE_PIN P21 [get_ports o_flash_wp]
+set_property IOSTANDARD LVCMOS33 [get_ports o_flash_wp]
+
+
+##	===============================================================================================
+##	ref ***timing constraints***
+##	===============================================================================================
+##	-------------------------------------------------------------------------------------
+##	-- ref clk constraint
+##	-------------------------------------------------------------------------------------
+create_clock -period 25.000 [get_ports clk_osc]
+
+
+##	-------------------------------------------------------------------------------------
+##	-- ref input constraint
+##	-------------------------------------------------------------------------------------
+
+
+
+##	-------------------------------------------------------------------------------------
+##	-- ref MultiPath constraint
+##	-------------------------------------------------------------------------------------
+set_clock_groups -asynchronous -group [get_clocks -of_objects [get_pins clock_reset_inst/clock_generate_inst/mmcm_clock_pixel_inst/CLKOUT1]] -group [get_clocks clk_osc]
+set_clock_groups -asynchronous -group [get_clocks -of_objects [get_pins frame_buffer_inst/mig_7series_inst/u_mig_7series_mig/u_ddr3_infrastructure/gen_mmcm.mmcm_i/CLKFBOUT]] -group [get_clocks -of_objects [get_pins clock_reset_inst/clock_generate_inst/mmcm_clock_pixel_inst/CLKOUT2]]
+set_clock_groups -asynchronous -group [get_clocks -of_objects [get_pins clock_reset_inst/clock_generate_inst/mmcm_clock_pixel_inst/CLKOUT1]] -group [get_clocks -of_objects [get_pins clock_reset_inst/clock_generate_inst/mmcm_clock_interface_inst/CLKOUT2]]
+set_clock_groups -asynchronous -group [get_clocks -of_objects [get_pins frame_buffer_inst/mig_7series_inst/u_mig_7series_mig/u_ddr3_infrastructure/gen_mmcm.mmcm_i/CLKFBOUT]] -group [get_clocks -of_objects [get_pins clock_reset_inst/clock_generate_inst/mmcm_clock_interface_inst/CLKOUT2]]
+set_clock_groups -asynchronous -group [get_clocks -of_objects [get_pins rxaui_inst/inst/rxaui_block_i/rxaui_cl_clocking_i/mmcm_clk156/CLKOUT1]] -group [get_clocks -of_objects [get_pins clock_reset_inst/clock_generate_inst/mmcm_clock_interface_inst/CLKOUT2]]
+set_clock_groups -asynchronous -group [get_clocks -of_objects [get_pins clock_reset_inst/clock_generate_inst/mmcm_clock_pixel_inst/CLKOUT2]] -group [get_clocks -of_objects [get_pins clock_reset_inst/clock_generate_inst/mmcm_clock_pixel_inst/CLKOUT1]]
+set_clock_groups -asynchronous -group [get_clocks -of_objects [get_pins clock_reset_inst/clock_generate_inst/mmcm_clock_interface_inst/CLKOUT2]] -group [get_clocks -of_objects [get_pins clock_reset_inst/clock_generate_inst/mmcm_clock_pixel_inst/CLKOUT1]]
+set_clock_groups -asynchronous -group [get_clocks -of_objects [get_pins frame_buffer_inst/mig_7series_inst/u_mig_7series_mig/u_ddr3_infrastructure/gen_mmcm.mmcm_i/CLKFBOUT]] -group [get_clocks -of_objects [get_pins clock_reset_inst/clock_generate_inst/mmcm_clock_pixel_inst/CLKOUT1]]
+set_clock_groups -asynchronous -group [get_clocks -of_objects [get_pins rxaui_inst/inst/rxaui_block_i/rxaui_cl_clocking_i/mmcm_clk156/CLKOUT1]] -group [get_clocks -of_objects [get_pins clock_reset_inst/clock_generate_inst/mmcm_clock_pixel_inst/CLKOUT1]]
+set_clock_groups -asynchronous -group [get_clocks -of_objects [get_pins clock_reset_inst/clock_generate_inst/mmcm_clock_interface_inst/CLKOUT2]] -group [get_clocks -of_objects [get_pins frame_buffer_inst/mig_7series_inst/u_mig_7series_mig/u_ddr3_infrastructure/gen_mmcm.mmcm_i/CLKFBOUT]]
+set_clock_groups -asynchronous -group [get_clocks -of_objects [get_pins clock_reset_inst/clock_generate_inst/mmcm_clock_pixel_inst/CLKOUT1]] -group [get_clocks -of_objects [get_pins frame_buffer_inst/mig_7series_inst/u_mig_7series_mig/u_ddr3_infrastructure/gen_mmcm.mmcm_i/CLKFBOUT]]
+set_clock_groups -asynchronous -group [get_clocks -of_objects [get_pins clock_reset_inst/clock_generate_inst/mmcm_clock_pixel_inst/CLKOUT2]] -group [get_clocks -of_objects [get_pins rxaui_inst/inst/rxaui_block_i/rxaui_cl_clocking_i/mmcm_clk156/CLKOUT1]]
+set_clock_groups -asynchronous -group [get_clocks -of_objects [get_pins clock_reset_inst/clock_generate_inst/mmcm_clock_interface_inst/CLKOUT2]] -group [get_clocks -of_objects [get_pins rxaui_inst/inst/rxaui_block_i/rxaui_cl_clocking_i/mmcm_clk156/CLKOUT1]]
+
+set_clock_groups -asynchronous -group [get_clocks -of_objects [get_pins clock_reset_inst/clock_generate_inst/mmcm_clock_interface_inst/CLKOUT2]] -group [get_clocks -of_objects [get_pins clock_reset_inst/clock_generate_inst/mmcm_clock_pixel_inst/CLKOUT2]]
+set_clock_groups -asynchronous -group [get_clocks -of_objects [get_pins clock_reset_inst/clock_generate_inst/mmcm_clock_pixel_inst/CLKOUT2]] -group [get_clocks -of_objects [get_pins clock_reset_inst/clock_generate_inst/mmcm_clock_interface_inst/CLKOUT2]]
+
+set_clock_groups -asynchronous -group [get_clocks clk_osc] -group [get_clocks -of_objects [get_pins clock_reset_inst/clock_generate_inst/mmcm_clock_interface_inst/CLKOUT2]]
+
+
+##	-------------------------------------------------------------------------------------
+##	-- ref mig constraint
+##	-------------------------------------------------------------------------------------
+set_property CLKIN1_PERIOD 25 [get_cells frame_buffer_inst/mig_7series_inst/u_mig_7series_mig/u_ddr3_infrastructure/plle2_i]
+set_property CLKFBOUT_MULT 20 [get_cells frame_buffer_inst/mig_7series_inst/u_mig_7series_mig/u_ddr3_infrastructure/plle2_i]
+
