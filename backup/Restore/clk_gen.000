@@ -1,0 +1,129 @@
+//-------------------------------------------------------------------------------------------------
+//  -- 版权所有者   : 中国大恒（集团）有限公司北京图像视觉技术分公司, 2010 -2015.
+//  -- 保密级别     ：绝密.
+//  -- 部门         : 硬件部，FPGA工作组
+//  -- 模块名       : clk_gen
+//  -- 设计者       : 邢海涛
+//-------------------------------------------------------------------------------------------------
+//
+//  -- 版本记录 :
+//
+//  -- 作者         :| 修改日期				:|  修改说明
+//-------------------------------------------------------------------------------------------------
+//  -- 邢海涛       :| 2016/12/14 13:37:15	:|  初始版本
+//-------------------------------------------------------------------------------------------------
+//
+//  -- 模块描述     :
+//              1)  :
+//
+//              2)  :
+//
+//              3)  :
+//
+//-------------------------------------------------------------------------------------------------
+//`include			"clk_gen_def.v"
+//仿真单位/精度
+`timescale 1ns/1ps
+//-------------------------------------------------------------------------------------------------
+
+`define		TESTCASE	testcase_1
+
+module clk_gen ();
+
+
+	parameter	CLK_PERIOD_NS_0	= driver.param.CLK_PERIOD_NS_0	;
+	parameter	CLK_PERIOD_NS_1	= driver.param.CLK_PERIOD_NS_1	;
+	parameter	CLK_PERIOD_NS_2	= driver.param.CLK_PERIOD_NS_2	;
+	parameter	CLK_PERIOD_NS_3	= driver.param.CLK_PERIOD_NS_3	;
+	parameter	CLK_PERIOD_NS_4	= driver.param.CLK_PERIOD_NS_4	;
+	parameter	CLK_PERIOD_NS_5	= driver.param.CLK_PERIOD_NS_5	;
+	parameter	CLK_PERIOD_NS_6	= driver.param.CLK_PERIOD_NS_6	;
+	parameter	CLK_PERIOD_NS_7	= driver.param.CLK_PERIOD_NS_7	;
+
+	//	ref signals
+	reg					clk_0				= 1'b0;
+	reg					clk_1				= 1'b0;
+	reg					clk_2				= 1'b0;
+	reg					clk_3				= 1'b0;
+	reg					clk_4				= 1'b0;
+	reg					clk_5				= 1'b0;
+	reg					clk_6				= 1'b0;
+	reg					clk_7				= 1'b0;
+
+	reg					reset_0					= 1'b1;
+	reg					reset_1					= 1'b1;
+	reg					reset_2					= 1'b1;
+	reg					reset_3					= 1'b1;
+	reg					reset_4					= 1'b1;
+	reg					reset_5					= 1'b1;
+	reg					reset_6					= 1'b1;
+	reg					reset_7					= 1'b1;
+
+
+
+
+
+	//	ref ARCHITECTURE
+	always	#(CLK_PERIOD_NS_0/2.0)		clk_0			= !clk_0;
+	always	#(CLK_PERIOD_NS_1/2.0)		clk_1			= !clk_1;
+	always	#(CLK_PERIOD_NS_2/2.0)		clk_2			= !clk_2;
+	always	#(CLK_PERIOD_NS_3/2.0)		clk_3			= !clk_3;
+	always	#(CLK_PERIOD_NS_4/2.0)		clk_4			= !clk_4;
+	always	#(CLK_PERIOD_NS_5/2.0)		clk_5			= !clk_5;
+	always	#(CLK_PERIOD_NS_6/2.0)		clk_6			= !clk_6;
+	always	#(CLK_PERIOD_NS_7/2.0)		clk_7			= !clk_7;
+
+
+
+	initial begin
+		reset_0 = 1'b1;
+		repeat(20) @ (posedge clk_0);
+		reset_0 = 1'b0;
+	end
+
+	initial begin
+		reset_1 = 1'b1;
+		repeat(20) @ (posedge clk_1);
+		reset_1 = 1'b0;
+	end
+
+	initial begin
+		reset_2 = 1'b1;
+		repeat(20) @ (posedge clk_2);
+		reset_2 = 1'b0;
+	end
+
+	initial begin
+		reset_3 = 1'b1;
+		repeat(20) @ (posedge clk_3);
+		reset_3 = 1'b0;
+	end
+
+	initial begin
+		reset_4 = 1'b1;
+		repeat(20) @ (posedge clk_4);
+		reset_4 = 1'b0;
+	end
+
+	initial begin
+		reset_5 = 1'b1;
+		repeat(20) @ (posedge clk_5);
+		reset_5 = 1'b0;
+	end
+
+	initial begin
+		reset_6 = 1'b1;
+		repeat(20) @ (posedge clk_6);
+		reset_6 = 1'b0;
+	end
+
+	initial begin
+		reset_7 = 1'b1;
+		repeat(20) @ (posedge clk_7);
+		reset_7 = 1'b0;
+	end
+
+
+
+
+endmodule

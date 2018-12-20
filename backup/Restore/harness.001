@@ -1,0 +1,221 @@
+//-------------------------------------------------------------------------------------------------
+//  -- 版权所有者   : 中国大恒（集团）有限公司北京图像视觉技术分公司, 2010 -2015.
+//  -- 保密级别     ：绝密.
+//  -- 部门         : 硬件部，FPGA工作组
+//  -- 模块名       : harness
+//  -- 设计者       : 邢海涛
+//-------------------------------------------------------------------------------------------------
+//
+//  -- 版本记录 :
+//
+//  -- 作者         :| 修改日期				:|  修改说明
+//-------------------------------------------------------------------------------------------------
+//  -- 邢海涛       :| 2015/3/9 17:18:50	:|  初始版本
+//-------------------------------------------------------------------------------------------------
+//
+//  -- 模块描述     :
+//              1)  : ... ...
+//
+//              2)  : ... ...
+//
+//              3)  : ... ...
+//
+//-------------------------------------------------------------------------------------------------
+//仿真单位/精度
+`timescale 1ns/1ps
+//-------------------------------------------------------------------------------------------------
+`define		TESTCASE	testcase_1
+module harness ();
+
+	//	ref parameters
+
+	parameter	BID_WD						= driver.param.BID_WD	;
+	parameter	PID_WD						= driver.param.PID_WD	;
+	parameter	PTR_WD						= driver.param.PTR_WD	;
+	parameter	SHORT_REG_WD				= driver.param.SHORT_REG_WD	;
+	parameter	REG_WD						= driver.param.REG_WD	;
+	parameter	LONG_REG_WD					= driver.param.LONG_REG_WD	;
+	parameter	FRAME_BYTE_ADDR_WD			= driver.param.FRAME_BYTE_ADDR_WD	;
+	parameter	PKT_LENGTH_WD				= driver.param.PKT_LENGTH_WD	;
+	parameter	PKT_CNT_WD					= driver.param.PKT_CNT_WD	;
+
+
+
+
+	//	ref signals
+
+	//	===============================================================================================
+	//	--ref signal
+	//	===============================================================================================
+	//	-------------------------------------------------------------------------------------
+	//	输入
+	//	-------------------------------------------------------------------------------------
+	wire										clk_gev							;
+	wire										reset_gev						;
+	wire	[LONG_REG_WD-1:0]					iv_resend_block_id				;
+	wire	[REG_WD-1:0]						iv_resend_packet_id_first		;
+	wire	[REG_WD-1:0]						iv_resend_packet_id_last		;
+	wire										i_resend_en						;
+	wire										clk								;
+	wire										reset							;
+	wire										i_stream_enable					;
+	wire	[PTR_WD-1:0]						iv_frame_depth					;
+	wire	[PKT_CNT_WD-1:0]					iv_pic_pkt_cnt					;
+	wire	[PKT_LENGTH_WD-1:0]					iv_remain_pkt_length			;
+	wire	[4:0]								iv_mroi_num_en					;
+	wire										i_wr_ptr_changing				;
+	wire	[PTR_WD-1:0]						iv_wr_ptr						;
+	wire										i_resend_rdy					;
+	wire										i_addr_cmd_wr_done				;
+	wire	[PTR_WD-1:0]						iv_rd_ptr_now					;
+	wire	[LONG_REG_WD-1:0]					iv_block_id_now					;
+	wire	[PKT_LENGTH_WD-1:0]					iv_pkt_length					;
+	wire										i_fval_init						;
+	wire										i_fval_pdiv						;
+	wire										i_pval							;
+	wire										i_aval							;
+	wire										i_info_flag						;
+	wire										i_image_flag					;
+	wire										i_statis_flag					;
+	wire	[FRAME_BYTE_ADDR_WD-1:0]			iv_rd_addr						;
+	wire	[FRAME_BYTE_ADDR_WD-1:0]			iv_rd_length					;
+
+	//	-------------------------------------------------------------------------------------
+	//	互联
+	//	-------------------------------------------------------------------------------------
+	wire										w_resend_rdy_ctrl				;
+	wire										w_resend_valid_calc				;
+	wire										w_resend_unavail_calc			;
+	wire	[LONG_REG_WD-1:0]					wv_resend_block_id_calc			;
+	wire	[REG_WD-1:0]						wv_resend_packet_id_first_calc	;
+	wire	[REG_WD-1:0]						wv_resend_packet_id_last_calc	;
+
+
+	//	-------------------------------------------------------------------------------------
+	//	输出
+	//	-------------------------------------------------------------------------------------
+	wire	[REG_WD-1:0]						ov_mroi_num_resend				;
+	wire	[PTR_WD-1:0]						ov_rd_ptr_resend				;
+	wire										o_normal_read_repeat			;
+	wire										o_resend_valid					;
+	wire										o_resend_unavail				;
+	wire										o_interrupt						;
+	wire	[LONG_REG_WD-1:0]					ov_resend_block_id				;
+	wire	[REG_WD-1:0]						ov_resend_packet_id_first		;
+	wire	[REG_WD-1:0]						ov_resend_packet_id_last		;
+	wire										o_resend_need_info				;
+	wire	[FRAME_BYTE_ADDR_WD-1:0]			ov_resend_invalid_length		;
+	wire	[FRAME_BYTE_ADDR_WD-1:0]			ov_resend_require_length		;
+
+
+
+	//	ref ARCHITECTURE
+
+	//	-------------------------------------------------------------------------------------
+	//	引入输入信号
+	//	-------------------------------------------------------------------------------------
+	assign	clk_gev						= driver.clk_gev					;
+	assign	clk							= driver.clk						;
+	assign	reset_gev					= driver.reset_gev				;
+	assign	reset						= driver.reset					;
+
+
+
+	assign	iv_resend_block_id			= driver.gvcp.iv_resend_block_id		;
+	assign	iv_resend_packet_id_first	= driver.gvcp.iv_resend_packet_id_first		;
+	assign	iv_resend_packet_id_last	= driver.gvcp.iv_resend_packet_id_last		;
+	assign	i_resend_en					= driver.gvcp.i_resend_en		;
+
+
+	assign	i_stream_enable				= driver.register.i_stream_enable		;
+	assign	iv_frame_depth				= driver.register.iv_frame_depth		;
+	assign	iv_pic_pkt_cnt				= driver.register.iv_pic_pkt_cnt		;
+	assign	iv_remain_pkt_length		= driver.register.iv_remain_pkt_length	;
+	assign	iv_mroi_num_en				= driver.register.iv_mroi_num_en		;
+	assign	iv_pkt_length				= driver.register.iv_pkt_length		;
+
+	assign	i_wr_ptr_changing			= driver.driver_fb_read_init_pdiv.i_wr_ptr_changing		;
+	assign	iv_wr_ptr					= driver.driver_fb_read_init_pdiv.iv_wr_ptr		;
+	assign	i_fval_init					= driver.driver_fb_read_init_pdiv.i_fval_init		;
+
+	assign	i_resend_rdy				= driver.driver_fb_read_cmd.i_resend_rdy		;
+	assign	i_addr_cmd_wr_done			= driver.driver_fb_read_cmd.i_addr_cmd_wr_done		;
+
+	assign	iv_rd_ptr_now				= driver.driver_fb_read_core.iv_rd_ptr_now		;
+	assign	iv_block_id_now				= driver.driver_fb_read_core.iv_block_id_now		;
+
+	assign	i_fval_pdiv					= driver.driver_fb_read_init_pdiv.o_fval		;
+	assign	i_pval						= driver.driver_fb_read_init_pdiv.o_pval		;
+	assign	i_aval						= driver.driver_fb_read_init_pdiv.o_aval		;
+	assign	i_info_flag					= driver.driver_fb_read_init_pdiv.o_info_flag		;
+	assign	i_image_flag				= driver.driver_fb_read_init_pdiv.o_image_flag		;
+	assign	i_statis_flag				= driver.driver_fb_read_init_pdiv.o_statis_flag		;
+	assign	iv_rd_addr					= driver.driver_fb_read_init_pdiv.ov_rd_addr		;
+	assign	iv_rd_length				= driver.driver_fb_read_init_pdiv.ov_rd_length		;
+
+
+	//	-------------------------------------------------------------------------------------
+	//	例化 tx_bram_w32w64 模块
+	//	-------------------------------------------------------------------------------------
+	tx_bram_w32w64 tx_bram_w32w64_inst (
+	.clka		(clk_axi			),
+	.wea		(ram_wr_be			),
+	.addra		(ram_wr_addr		),
+	.dina		({{ram_din_cnt+3},{ram_din_cnt+2},{ram_din_cnt+1},{ram_din_cnt}}	),
+	.clkb		(clk_axi			),
+	.addrb		(ram_rd_addr		),
+	.doutb		(ram_rd_data		)
+	);
+
+	reg		[7:0]				ram_din_cnt	= 'b0;
+
+	integer		i = 0;
+
+	always	#(100/2.0)		clk_axi			= !clk_axi;
+
+	initial begin
+		#200
+		repeat(20) @ (posedge clk);
+		for(i=0;i<16;i=i+1) begin
+
+		end
+
+
+
+
+	end
+
+
+	always @ (posedge clk) begin
+		if(ram_wr_be[0]==1'b1) begin
+			ram_din_cnt	<= ram_din_cnt + 4;
+			ram_wr_addr	<= ram_wr_addr + 1;
+		end
+		else begin
+			ram_din_cnt	<= 0;
+			ram_wr_addr	<= 0;
+		end
+	end
+
+
+
+
+
+
+
+
+
+
+	//generate vcd file
+	//initial begin
+	//$dumpfile("test.vcd");
+	//$dumpvars(1,top_frame_buffer_inst);
+	//end
+
+	//for lattice simulation
+	//GSR   GSR_INST (.GSR (1'b1)); //< global reset sig>
+	//PUR   PUR_INST (.PUR (1'b1)); //<powerup reset sig>
+
+
+
+endmodule
