@@ -1,0 +1,450 @@
+//-------------------------------------------------------------------------------------------------
+//  -- 版权所有者   : 中国大恒（集团）有限公司北京图像视觉技术分公司, 2010 -2018.
+//  -- 保密级别     ：绝密.
+//  -- 部门         : 硬件部，FPGA工作组
+//  -- 模块名       : data_comb_pipeline
+//  -- 设计者       : 张少强
+//-------------------------------------------------------------------------------------------------
+//
+//  -- 版本记录 :
+//
+//  -- 作者         :| 版本号	:| 修改日期				:|  修改说明
+//-------------------------------------------------------------------------------------------------
+//  -- 张少强       :| V1.0		:| 2018/09/13 10:26:52	:|  初始版本
+//-------------------------------------------------------------------------------------------------
+//
+//  -- 模块描述     :
+//              1)  :
+//
+//              2)  :
+//
+//              3)  :
+//
+//-------------------------------------------------------------------------------------------------
+//`include			"data_comb_def.v"
+//仿真单位/精度
+`timescale 1ns/1ps
+//-------------------------------------------------------------------------------------------------
+
+module data_comb_pipeline # (
+	parameter			DATA_WD				= 64		,	//数据位宽
+	parameter			BE_WD				= 8				//字节使能信号位宽
+	)
+	(
+	input					clk_gev							,	//时钟信号
+	input					reset_gev						,	//复位信号，clk时钟域;复位时所有的计数器、移位寄存器恢复初始值
+	input	[DATA_WD-1:0]	iv_data							,	//clk_gev时钟域，输入数据信号
+	input	[BE_WD-1:0]		iv_be							,	//clk_gev时钟域，输入字节使能信号
+	input					i_valid							,	//clk_gev时钟域，输入数据有效信号
+	input					i_done							,	//clk_gev时钟域，表示一组数据完成，可以输出残数据（be不全为1的数据）和冗余数据（data和be全为0）
+	input					i_stop							,	//clk_gev时钟域，终止信号，i_stop为1时说明后端fifo满，此时不允许读出数据，o_valid不能输出高
+	output	[DATA_WD-1:0]	ov_data							,	//clk_gev时钟域，输出数据信号
+	output	[BE_WD-1:0]		ov_be							,	//clk_gev时钟域，输出字节使能信号
+	output	reg				o_valid							,	//clk_gev时钟域，输出数据有效信号
+	output					o_done							,	//clk_gev时钟域，输出表示包尾
+	output					o_stop								//clk_gev时钟域，输出本模块忙，前端应该立即停止输入
+	);
+	//	===============================================================================================
+	//	ref paramters
+	//	===============================================================================================
+	localparam			PTR_WD	= log2(BE_WD)+1;	//计数器ptr最多存放两个clk的data，数据量不会超过2*BE_WD
+	//	===============================================================================================
+	//	ref functions
+	//	===============================================================================================
+	//	-------------------------------------------------------------------------------------
+	//	计算位宽
+	//	-------------------------------------------------------------------------------------
+	function integer log2 (input integer xx);
+		integer x;
+		begin
+			x	= xx-1 ;
+			for (log2=0;x>0;log2=log2+1) begin
+				x	= x >> 1;
+			end
+		end
+	endfunction
+	//	-------------------------------------------------------------------------------------
+	//	计数be中1的个数
+	//	-------------------------------------------------------------------------------------
+	function [PTR_WD:0]	be2cnt;
+		input	[BE_WD-1:0]	be;
+		integer	i;
+		begin
+			be2cnt = 0;
+			for(i=0;i<BE_WD;i=i+1) begin
+				be2cnt = be2cnt + be[i];
+			end
+		end
+	endfunction
+	//	-------------------------------------------------------------------------------------
+	//	按照输入值，编码成be输出
+	//	-------------------------------------------------------------------------------------
+	function [BE_WD-1:0] cnt2be;
+		input [PTR_WD:0] cnt;
+		integer i;
+		begin
+			cnt2be = {(BE_WD){1'b0}};//先初始化为全0
+			if(cnt>=BE_WD) begin
+				cnt2be = {(BE_WD){1'b1}};
+			end
+			else begin
+				for(i=0;i<cnt;i=i+1) begin
+					cnt2be = {cnt2be[BE_WD-2:0],1'b1};//将1左移位进cnt2be中
+				end
+			end
+		end
+	endfunction
+	//	-------------------------------------------------------------------------------------
+	//	完成将data_in右移位进right_shift中的功能
+	//	-------------------------------------------------------------------------------------
+
+
+	generate
+		if(DATA_WD==64) begin
+			function [2*64-1:0] right_shift;
+				input [2*64-1:0] 	data_shift_in;
+				input [64-1:0] 	data_in;
+				input [3-1:0]		ptr;
+				integer i;
+				begin
+					case(ptr)
+						0: begin
+							right_shift = {{(8*8){1'b0}},data_in};
+						end
+						1: begin
+							right_shift = {{(7*8){1'b0}},data_in,data_shift_in[1*8-1:0]};
+						end
+						2: begin
+							right_shift = {{(6*8){1'b0}},data_in,data_shift_in[2*8-1:0]};
+						end
+						3: begin
+							right_shift = {{(5*8){1'b0}},data_in,data_shift_in[3*8-1:0]};
+						end
+						4: begin
+							right_shift = {{(4*8){1'b0}},data_in,data_shift_in[4*8-1:0]};
+						end
+						5: begin
+							right_shift = {{(3*8){1'b0}},data_in,data_shift_in[5*8-1:0]};
+						end
+						6: begin
+							right_shift = {{(2*8){1'b0}},data_in,data_shift_in[6*8-1:0]};
+						end
+						7: begin
+							right_shift = {{(1*8){1'b0}},data_in,data_shift_in[7*8-1:0]};
+						end
+						default	: begin
+							right_shift = 'b0;
+						end
+					endcase
+				end
+			endfunction
+		end
+		else if(DATA_WD==128) begin
+			function [2*128-1:0] right_shift;
+				input [2*128-1:0] 	data_shift_in;
+				input [128-1:0] 	data_in;
+				input [4-1:0]		ptr;
+				integer i;
+				begin
+					case(ptr)
+						0: begin
+							right_shift = {{(16*8){1'b0}},data_in};
+						end
+						1: begin
+							right_shift = {{(15*8){1'b0}},data_in,data_shift_in[1*8-1:0]};
+						end
+						2: begin
+							right_shift = {{(14*8){1'b0}},data_in,data_shift_in[2*8-1:0]};
+						end
+						3: begin
+							right_shift = {{(13*8){1'b0}},data_in,data_shift_in[3*8-1:0]};
+						end
+						4: begin
+							right_shift = {{(12*8){1'b0}},data_in,data_shift_in[4*8-1:0]};
+						end
+						5: begin
+							right_shift = {{(11*8){1'b0}},data_in,data_shift_in[5*8-1:0]};
+						end
+						6: begin
+							right_shift = {{(10*8){1'b0}},data_in,data_shift_in[6*8-1:0]};
+						end
+						7: begin
+							right_shift = {{(9*8){1'b0}},data_in,data_shift_in[7*8-1:0]};
+						end
+						8: begin
+							right_shift = {{(8*8){1'b0}},data_in,data_shift_in[8*8-1:0]};
+						end
+						9: begin
+							right_shift = {{(7*8){1'b0}},data_in,data_shift_in[9*8-1:0]};
+						end
+						10: begin
+							right_shift = {{(6*8){1'b0}},data_in,data_shift_in[10*8-1:0]};
+						end
+						11: begin
+							right_shift = {{(5*8){1'b0}},data_in,data_shift_in[11*8-1:0]};
+						end
+						12: begin
+							right_shift = {{(4*8){1'b0}},data_in,data_shift_in[12*8-1:0]};
+						end
+						13: begin
+							right_shift = {{(3*8){1'b0}},data_in,data_shift_in[13*8-1:0]};
+						end
+						14: begin
+							right_shift = {{(2*8){1'b0}},data_in,data_shift_in[14*8-1:0]};
+						end
+						15: begin
+							right_shift = {{(1*8){1'b0}},data_in,data_shift_in[15*8-1:0]};
+						end
+						default	: begin
+							right_shift = 'b0;
+						end
+					endcase
+				end
+			endfunction
+		end
+		else if(DATA_WD==32) begin
+			function [2*32-1:0] right_shift;
+				input [2*32-1:0] 	data_shift_in;
+				input [32-1:0] 	data_in;
+				input [2-1:0]		ptr;
+				integer i;
+				begin
+					case(ptr)
+						0: begin
+							right_shift = {{(4*8){1'b0}},data_in};
+						end
+						1: begin
+							right_shift = {{(3*8){1'b0}},data_in,data_shift_in[1*8-1:0]};
+						end
+						2: begin
+							right_shift = {{(2*8){1'b0}},data_in,data_shift_in[2*8-1:0]};
+						end
+						3: begin
+							right_shift = {{(1*8){1'b0}},data_in,data_shift_in[3*8-1:0]};
+						end
+						default	: begin
+							right_shift = 'b0;
+						end
+					endcase
+				end
+			endfunction
+		end
+	endgenerate
+	//以下仅适用DATA_WD等于64的情况
+	function [2*64-1:0] right_shift;
+		input [2*64-1:0] 	data_shift_in;
+		input [64-1:0] 	data_in;
+		input [3-1:0]		ptr;
+		integer i;
+		begin
+			case(ptr)
+				0: begin
+					right_shift = {{(8*8){1'b0}},data_in};
+				end
+				1: begin
+					right_shift = {{(7*8){1'b0}},data_in,data_shift_in[1*8-1:0]};
+				end
+				2: begin
+					right_shift = {{(6*8){1'b0}},data_in,data_shift_in[2*8-1:0]};
+				end
+				3: begin
+					right_shift = {{(5*8){1'b0}},data_in,data_shift_in[3*8-1:0]};
+				end
+				4: begin
+					right_shift = {{(4*8){1'b0}},data_in,data_shift_in[4*8-1:0]};
+				end
+				5: begin
+					right_shift = {{(3*8){1'b0}},data_in,data_shift_in[5*8-1:0]};
+				end
+				6: begin
+					right_shift = {{(2*8){1'b0}},data_in,data_shift_in[6*8-1:0]};
+				end
+				7: begin
+					right_shift = {{(1*8){1'b0}},data_in,data_shift_in[7*8-1:0]};
+				end
+				default	: begin
+					right_shift = 128'b0;
+				end
+			endcase
+		end
+	endfunction
+	//	===============================================================================================
+	//	ref signals
+	//	===============================================================================================
+	reg		[PTR_WD	:0]		ptr_wr	;//写入后(还未读出)时存放在移位寄存器里的数据字节数,注意写指针比读指针位宽大1，可以存放2倍读指针的数，因为在写指针里会出现溢出的情况
+	reg		[PTR_WD-1	:0]	ptr_rd	;//写入并且读出后存放在移位寄存器里的数据字节数
+	reg		[2*DATA_WD-1:0]	data_wr	;
+	wire	[2*DATA_WD-1:0]	data_rd	;
+	reg		[2*DATA_WD-1:0]	data_shift=0;
+	reg		[1:0]			done_step ;
+	reg		[BE_WD-1:0]		be_dly = {BE_WD{1'b0}};
+	wire	[DATA_WD-1:0]	wv_data							;
+	//	===============================================================================================
+	//	ref ARCHITECTURE
+	//	===============================================================================================
+	//	-------------------------------------------------------------------------------------
+	//	ptr:用于指示移位寄存器中的有效数据字节数
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk_gev) begin
+		if(reset_gev) begin
+			ptr_wr <= 'b0;
+		end
+		else if(i_valid) begin//当i_valid为1时数据写入移位寄存器，同时ptr_wr要累加有效字节数
+			ptr_wr <=ptr_rd + be2cnt(iv_be);
+		end
+		else if(done_step == 2 || done_step == 3) begin//done_step第二步，读出移位寄存器中的全部数据，同时清空指针
+			ptr_wr <= 'b0;
+		end
+		else begin
+			ptr_wr <= ptr_rd;
+		end
+	end
+
+
+	always @ (*) begin
+		if(~o_valid) begin //当o_valid为0时不读出数据，读指针和写指针相同
+			ptr_rd = ptr_wr;
+		end
+		else if(ptr_wr<BE_WD) begin
+			ptr_rd = 0;
+		end
+		else begin
+			ptr_rd = ptr_wr - BE_WD;
+		end
+	end
+	//	-------------------------------------------------------------------------------------
+	//	-ref done_step
+	//	done_step第一步：
+	//	--存在性：可能没有，当i_done=1时i_valid为0，就没有第一步，直接进入第二步，因为剩余的数据可以一拍清空
+	//	--作用：尽可能多的读出数据，可能在这一步就读出了所有的数据，也可能剩余数据交给第二步读完
+	//	done_step第二步：
+	//	--存在性：一定存在
+	//	--作用：如果还有剩余数据，那么在这一步读出所有的数据；否则输出全0的冗余字
+	//	done_step第三步：
+	//	--存在性：可能存在
+	//	--作用：输出全0的冗余字
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk_gev) begin
+		if(reset_gev) begin
+			done_step <= 'd0;
+		end
+		if(i_done) begin
+			if(i_valid) begin
+				done_step <= 'd1;
+			end
+			else begin
+				done_step <= 'd2;
+			end
+		end
+		else if(done_step==1 && o_valid)begin//第一步完成后进入第二步，因为第二步一定存在
+			done_step <= 'd2;
+		end
+		else if(done_step==2 && o_valid) begin//第二步完成后是否进入第三步要看第二步有没有输出冗余字
+			if(|ov_be==0) begin
+				done_step <= 'd0;
+			end
+			else begin
+				done_step <= 'd3;
+			end
+		end
+		else if(done_step==3 && o_valid) begin//当输出o_valid为1时说明完成了第三步
+			done_step <= 'd0;
+		end
+	end
+//	-------------------------------------------------------------------------------------
+//	-ref o_valid
+//	1. 当写计数器大于BE_WD时，说明可以输出be全1的满数据，此时o_valid为1
+//	2. 当进入done_step步骤时，可能输出be全1的满数据，也可能输出be不全1的残数据，还可能输出be全0的冗余数据，此时o_valid也需要为1
+//	-------------------------------------------------------------------------------------
+
+	always @ (*) begin
+		o_valid = 1'b0;
+		if(i_stop) begin
+			o_valid = 1'b0;
+		end
+		else if(ptr_wr >= BE_WD) begin
+			o_valid = 1'b1;
+		end
+		else if(done_step != 0) begin
+			o_valid = 1'b1;
+		end
+		else begin
+			o_valid = 1'b0;
+		end
+	end
+
+	//	-------------------------------------------------------------------------------------
+	//	data_shift
+	//	当i_valid时，把iv_data右移位进data_shift
+	//	当o_valid时，从data_shift移出ov_data
+	//	-------------------------------------------------------------------------------------
+//	assign	data_wr = i_valid ? right_shift(data_shift,wv_data,ptr_reg) : data_shift;
+	always @ (posedge clk_gev) begin
+		if(reset_gev) begin
+			data_wr <= 'b0;
+		end
+		else if(i_valid) begin
+			data_wr <= right_shift(data_rd,wv_data,ptr_rd);
+		end
+		else if(done_step==2 && o_valid) begin//当o_valid=1时才说明数据已经被读出，才可以执行清空
+			data_wr <= 'b0;
+		end
+		else begin
+			data_wr <= data_rd;
+		end
+	end
+	assign	data_rd = o_valid ? data_wr >> DATA_WD : data_wr;
+//	always @ (posedge clk_gev) begin
+//		//时钟域复位或者停流时要复位
+//		if(reset_gev) begin
+//			data_shift <= {2*DATA_WD{1'b0}};
+//		end
+//		//done_step第一步读出移位寄存器中的全部数据,然后清空移位寄存器
+//		else if(done_step==1 && o_valid) begin//当o_valid=1时才说明数据已经被读出，才可以执行清空
+//			data_shift <= {2*DATA_WD{1'b0}};
+//		end
+//		else begin
+//			data_shift <= data_rd;
+//		end
+//	end
+	//	-------------------------------------------------------------------------------------
+	//	ov_data
+	//	当o_valid有效时，输出ov_data
+	//	-------------------------------------------------------------------------------------
+	assign ov_data = o_valid ? data_wr[DATA_WD-1:0] : {DATA_WD{1'b0}};
+	//	-------------------------------------------------------------------------------------
+	//	ov_be
+	//	当done_step==1或2时，ov_be中1的个数为ptr_wr的值,否则
+	//	当dodone_step==2时，ov_be为全0，否则
+	//	当o_valid有效时，ov_be为全1，否则
+	//	ov_be为全0
+	//	-------------------------------------------------------------------------------------
+	assign ov_be = 	done_step==1 ? cnt2be(ptr_wr) :
+					done_step==2 ? cnt2be(ptr_wr) :
+					done_step==3 ? {BE_WD{1'b0}} :
+					o_valid ? {BE_WD{1'b1}} : {BE_WD{1'b0}};
+	//	-------------------------------------------------------------------------------------
+	//	o_stop:o_stop为1时i_valid必须为0
+	//	1.当i_stop为1时o_stop为1
+	//	2.done_step不为0时输出o_stop为1，此时需要清空data_shift和添加尾端全0标志
+	//	-------------------------------------------------------------------------------------
+	assign	o_stop = i_stop || (done_step != 0);
+	//	-------------------------------------------------------------------------------------
+	//	o_done
+	//	-------------------------------------------------------------------------------------
+	assign o_done = o_valid && (|ov_be==0);
+	//	-------------------------------------------------------------------------------------
+	//	instantiate "data10to01" module
+	//	-------------------------------------------------------------------------------------
+	data10to01 # (
+	.DATA_WD	(DATA_WD	),
+	.BE_WD		(BE_WD		),
+	.PTR_WD		(PTR_WD		)
+	)
+	data10to01_inst (
+	.iv_data	(iv_data	),
+	.iv_be		(iv_be		),
+	.ov_data	(wv_data	)
+//	.ov_be		(wv_be		)//使用wv_be或者iv_be在最后效果上是一样的，但使用iv_be时序性能好
+	);
+endmodule
