@@ -1,0 +1,484 @@
+//-------------------------------------------------------------------------------------------------
+//  -- 版权所有者   : 中国大恒（集团）有限公司北京图像视觉技术分公司, 2010 -2018.
+//  -- 保密级别     ：绝密.
+//  -- 部门         : 硬件部，FPGA工作组
+//  -- 模块名       : gvsp_tx
+//  -- 设计者       : 张少强
+//-------------------------------------------------------------------------------------------------
+//
+//  -- 版本记录 :
+//
+//  -- 作者         :| 版本号	:| 修改日期				:|  修改说明
+//-------------------------------------------------------------------------------------------------
+//  -- 张少强       :| V1.0		:| 2018/11/20 16:26:32	:|  初始版本
+//-------------------------------------------------------------------------------------------------
+//						|gige_vision:
+//  					|	-------------------------------------------------------------------------
+//           			|	|gvcp_tx:																|
+//						|	|																		|
+//  frame_buffer -->----|-->|	fifo_latch	-->		gvsp_ctrl_core--|	 							|
+//						|	|				-->		|	|	|	|	resend_status					|
+//              		|	|				-->		|	|	|	frame_info_analysis					|
+//						|	|				-->		|	|	ip_udp_gvsp_format	|					|
+//						|	|				-->		|	gev_format				|	-->packet_comb	|	--> mac
+//						|	|				-->		packet_image				|					|
+//-------------------------------------------------------------------------------------------------
+//`include			"gvsp_tx_def.v"
+//仿真单位/精度
+`timescale 1ns/1ps
+//-------------------------------------------------------------------------------------------------
+
+module gvsp_tx # (
+	parameter	SHORT_REG_WD   								= 16		,	//短寄存器位宽
+	parameter	REG_WD  						 			= 32		,	//寄存器位宽
+	parameter	LONG_REG_WD  						 		= 64		,	//长寄存器位宽
+	parameter	GEV_DE_WD									= 2			,	//数据单元使能位宽，4byte数据使用一个使能位
+	parameter	GEV_BE_WD									= 8			,	//字节使能位宽，1byte数据使用一个使能位
+	parameter	GEV_DATA_WD									= 64		,	//数据位宽，支持32、64、128
+	parameter	PB_RD_CNT_WD								= 13		,	//packet buffer read cnt位宽，= log2(packet buffer depth)
+	parameter	PKT_LENGTH_WD								= 13		,	//packet length 包长寄存器宽度
+	parameter	PKT_CNT_WD									= 18		,	//packet cnt 包个数寄存器宽度
+	parameter	INFO_SIZE									= 256		,	//INFO段数据量，以byte为单位
+	parameter	STATIS_SIZE									= 256			//STATIS段数据量，以byte为单位
+	)
+	(
+	//  -------------------------------------------------------------------------------------
+	//  时钟和复位信号
+	//  -------------------------------------------------------------------------------------
+	input							clk_gev								,	//gev工作时钟
+	input							reset_gev							,	//gev工作时钟域的复位信号，高有效
+	//  -------------------------------------------------------------------------------------
+	//  控制数据
+	//  -------------------------------------------------------------------------------------
+	input							i_stream_enable						,	//clk_gev时钟域，流停止信号，高有效，有效时允许数据从帧存读出，无效时立即停止读出，并复位读写地址指针，清帧存
+	input							i_ge_transfer_start					,	//clk_gev时钟域，ge传输有效信号，高有效，以一个完整帧为单位，有效时允许数据从帧存读出，无效时不能读出数据，但是不会复位读帧号，在读一帧开始时生效
+	//  -------------------------------------------------------------------------------------
+	//  与 frame buffer 交互
+	//  -------------------------------------------------------------------------------------
+	output							o_fb_rd								,	//clk_gev时钟域，帧存后端fifo读出使能信号，高有效
+	input							i_fb_empty							,	//clk_gev时钟域，帧存后端fifo空信号，高有效
+	input							i_fb_busy							,	//clk_gev时钟域，帧存后端fifo busy信号，高有效
+	input	[GEV_DE_WD-1:0]			iv_data_is_cmd						,	//clk_gev时钟域，帧存后端fifo输出数据是命令数据，单bit代表4byte，1-表示是命令数据，0-表示是图像数据
+	input	[GEV_DE_WD-1:0]			iv_dval								,	//clk_gev时钟域，帧存后端fifo输出数据有效信号，单bit代表4byte，1-表示数据有效，0-表示数据无效
+	input	[GEV_DATA_WD-1:0]		iv_data								,	//clk_gev时钟域，帧存后端fifo输出数据，支持32、64、128
+
+	//	-------------------------------------------------------------------------------------
+	//	寄存器模块信号
+	//	-------------------------------------------------------------------------------------
+	input							i_test_pkt_enable					,	//clk_gev时钟域，测试包发送使能
+	output							o_test_pkt_over						,	//clk_gev时钟域，测试包发送完成，1个clk的高脉冲，寄存器模块接收到该信号后清i_test_pkt_enable
+	input	[31:0]					iv_pc_ip							,	//clk_gev时钟域，ip pc address
+	input	[31:0]					iv_camera_ip						,	//clk_gev时钟域，ip camera address
+	input	[15:0]					iv_pc_port_sc						,	//clk_gev时钟域，stream channel gvsp包pc端口号
+	input	[15:0]					iv_camera_port						,	//clk_gev时钟域，相机udp端口号
+	input  	[PKT_LENGTH_WD-1:0]		iv_pkt_length						,	//clk_gev时钟域，packet length 正常包包长,仅payload部分，不包括ip、udp、gvsp头
+	input  	[PKT_CNT_WD-1:0]		iv_pkt_cnt							,	//clk_gev时钟域，packet cnt 正常包个数(包含帧信息部分)
+	input  	[PKT_LENGTH_WD-1:0]		iv_remain_pkt_length				,	//clk_gev时钟域，remain packet length 残包包长(包含帧信息部分)
+	//  -------------------------------------------------------------------------------------
+	//  与 packet switch 交互
+	//  -------------------------------------------------------------------------------------
+	input							clk_gtx								,	//gtx工作时钟,与 packet switch的交互时钟
+	input							reset_gtx							,	//gtx工作时钟域的复位信号，高有效
+	input							i_pb_rd_en							,	//clk_gtx时钟域，packet buffer读使能，高有效
+	output							o_pb_empty							,	//clk_gtx时钟域，packet buffer空信号，高有效,高时不能读packet_buffer
+	output							o_pb_busy							,	//clk_gtx时钟域，packet buffer忙信号，高有效,高时不能读packet_buffer
+	output	[GEV_BE_WD-1:0]			ov_be_switch						,	//clk_gtx时钟域，输出数据的字节使能信号，高有效
+	output	[GEV_DATA_WD-1:0]		ov_data_switch						,	//clk_gtx时钟域，输出数据的位宽，支持32、64、128
+	input							i_pcb_rd_en							,	//clk_gtx时钟域，packet cmd buffer读使能，高有效
+	output							o_pcb_empty							,	//clk_gtx时钟域，packet cmd buffer空信号，高有效，高时不能读packet_cmd buffer
+	output							o_pcb_busy								//clk_gtx时钟域，packet cmd buffer忙信号，高有效，高时不能读packet_cmd buffer
+	);
+	//	===============================================================================================
+	//	ref functions
+	//	===============================================================================================
+
+
+	//	===============================================================================================
+	//	ref paramters
+	//	===============================================================================================
+
+
+	//	===============================================================================================
+	//	ref signals
+	//	===============================================================================================
+	//	fifo_latch
+	wire	[GEV_DE_WD-1:0]			wv_data_is_cmd_latch;
+	wire	[GEV_DE_WD-1:0]			wv_dval_latch		;
+	wire	[GEV_DATA_WD-1:0]		wv_data_latch		;
+	//	gvsp_ctrl_core
+	wire							w_fb_rd_data		;
+	wire							w_fb_rd_cmd			;
+	wire							w_info_flag			;
+	wire							w_statis_flag		;
+	wire							w_leader_flag		;
+	wire							w_image_flag		;
+	wire							w_chunk_flag		;
+	wire							w_trailer_flag		;
+	wire							w_test_flag			;
+	wire							w_new_resd_frm_flag	;
+	wire							w_new_norm_frm_flag	;
+	wire							w_fval_flag			;
+	wire							w_all_done			;
+	wire							w_all_again			;
+	wire							w_all_not_exist		;
+	//	resend_status
+	wire							w_fb_rd_resend		;
+	wire							w_resend_done		;
+	wire							w_resend_start		;
+	wire							w_resending_flag	;
+	wire							w_unavail_flag		;
+	wire	[LONG_REG_WD-1:0]		wv_bid_resend		;
+	wire	[REG_WD-1:0]			wv_pid_first		;
+	wire	[REG_WD-1:0]			wv_pid_last			;
+	//	frame_info_analysis
+	wire							w_fb_rd_analysis	;
+	wire							w_analysis_done		;
+	wire							w_analysis_start	;
+	wire	[GEV_DATA_WD-1:0]		wv_data_analysis_ctrl;
+	wire	[GEV_DE_WD-1:0]			wv_dval_analysis_ctrl;
+	wire	[LONG_REG_WD-1:0]		wv_bid_normal		;
+	wire							w_chunk_mode_active	;
+	wire	[LONG_REG_WD-1:0]		wv_timestamp		;
+	wire	[REG_WD-1:0]			wv_pixel_format		;
+	wire	[SHORT_REG_WD-1:0]		wv_offset_x			;
+	wire	[SHORT_REG_WD-1:0]		wv_offset_y			;
+	wire	[SHORT_REG_WD-1:0]		wv_width			;
+	wire	[SHORT_REG_WD-1:0]		wv_height			;
+	wire	[LONG_REG_WD-1:0]		wv_frame_interval	;
+	wire	[REG_WD-1:0]			wv_payloadsize		;
+	wire	[REG_WD-1:0]			wv_imagesize		;
+	//	ip_udp_gvsp_format
+	wire							w_ip_done			;
+	wire							w_ip_not_exist		;
+	wire							w_ip_start			;
+	wire	[GEV_DATA_WD-1:0]		wv_data_ip			;
+	wire	[GEV_BE_WD-1:0]			wv_be_ip			;
+	//	gev_format
+	wire							w_gev_done			;
+	wire							w_gev_again			;
+	wire							w_gev_start			;
+	wire	[GEV_DATA_WD-1:0]		wv_data_gev			;
+	wire	[GEV_BE_WD-1:0]			wv_be_gev			;
+	wire							w_packet_over_gev	;
+	//	packet_image
+	wire							w_fb_rd_image		;
+	wire							w_image_done		;
+	wire							w_image_start		;
+	wire	[GEV_DATA_WD-1:0]		wv_data_image		;
+	wire	[GEV_BE_WD-1:0]			wv_be_image			;
+	wire							w_packet_over_image	;
+	//	packet_comb
+	wire							w_stop				;
+	wire							w_packet_over		;
+	//	===============================================================================================
+	//	ref ARCHITECTURE
+	//	===============================================================================================
+
+
+
+	//  -------------------------------------------------------------------------------------
+	//	instantiate "fifo_latch" module
+	//  -------------------------------------------------------------------------------------
+	fifo_latch # (
+	.GEV_DE_WD			(GEV_DE_WD			),
+	.GEV_BE_WD			(GEV_BE_WD			),
+	.GEV_DATA_WD		(GEV_DATA_WD		)
+	)
+	fifo_latch_inst (
+	.clk_gev			(clk_gev			),
+	.reset_gev			(reset_gev			),
+	.i_stream_enable	(i_stream_enable	),
+	.i_fb_rd			(o_fb_rd			),
+	.i_fb_busy			(i_fb_busy			),
+	.i_fb_empty			(i_fb_empty			),
+	.iv_data_is_cmd		(iv_data_is_cmd		),
+	.iv_dval			(iv_dval			),
+	.iv_data			(iv_data			),
+	.ov_data_is_cmd		(wv_data_is_cmd_latch	),
+	.ov_dval			(wv_dval_latch			),
+	.ov_data			(wv_data_latch			)
+	);
+	//  -------------------------------------------------------------------------------------
+	//	instantiate "gvsp_ctrl_core" module
+	//  -------------------------------------------------------------------------------------
+	assign w_all_done = w_ip_done || w_gev_done || w_resend_done || w_analysis_done || w_image_done ;
+	assign w_all_again = w_gev_again ;
+	assign w_all_not_exist = w_ip_not_exist;
+	assign w_fb_rd_data= w_fb_rd_analysis || w_fb_rd_resend ||  w_fb_rd_image;//目前可以从fb fifo中读数据的模块
+	assign o_fb_rd = w_fb_rd_cmd || w_fb_rd_data;//读命令和读数据共同组成了fb fifo的读信号
+	gvsp_ctrl_core # (
+	.SHORT_REG_WD			(SHORT_REG_WD			),
+	.REG_WD					(REG_WD					),
+	.LONG_REG_WD			(LONG_REG_WD			),
+	.GEV_DE_WD				(GEV_DE_WD				),
+	.GEV_BE_WD				(GEV_BE_WD				),
+	.GEV_DATA_WD			(GEV_DATA_WD			)
+	)
+	gvsp_ctrl_core_inst (
+	.clk_gev				(clk_gev				),
+	.reset_gev				(reset_gev||~i_stream_enable),
+	.i_ge_transfer_start	(i_ge_transfer_start	),
+	.i_test_pkt_enable		(i_test_pkt_enable		),
+	.o_test_pkt_over		(o_test_pkt_over		),
+	.i_fb_rd_data			(w_fb_rd_data			),
+	.o_fb_rd_cmd			(w_fb_rd_cmd			),
+	.i_fb_empty				(i_fb_empty				),
+	.i_fb_busy				(i_fb_busy				),
+	.iv_data_is_cmd			(wv_data_is_cmd_latch	),
+	.iv_dval				(wv_dval_latch			),
+	.iv_data				(wv_data_latch			),
+	.o_info_flag			(w_info_flag			),
+	.o_statis_flag			(w_statis_flag			),
+	.o_leader_flag			(w_leader_flag			),
+	.o_image_flag			(w_image_flag			),
+	.o_chunk_flag			(w_chunk_flag			),
+	.o_trailer_flag			(w_trailer_flag			),
+	.o_test_flag			(w_test_flag			),
+	.o_new_resd_frm_flag	(w_new_resd_frm_flag	),
+	.o_new_norm_frm_flag	(w_new_norm_frm_flag	),
+	.o_fval_flag			(w_fval_flag			),
+	.i_packet_over			(w_packet_over			),
+	.i_done					(w_all_done				),
+	.i_again				(w_all_again			),
+	.i_not_exist			(w_all_not_exist		),
+	.o_gev_start			(w_gev_start			),
+	.o_ip_start				(w_ip_start				),
+	.o_resend_start			(w_resend_start			),
+	.o_analysis_start		(w_analysis_start		),
+	.o_image_start			(w_image_start			)
+	);
+	//  -------------------------------------------------------------------------------------
+	//	instantiate "resend_status" module
+	//  -------------------------------------------------------------------------------------
+	resend_status # (
+	.REG_WD					(REG_WD					),
+	.LONG_REG_WD			(LONG_REG_WD			),
+	.GEV_DE_WD				(GEV_DE_WD				),
+	.GEV_BE_WD				(GEV_BE_WD				),
+	.GEV_DATA_WD			(GEV_DATA_WD			)
+	)
+	resend_status_inst (
+	.clk_gev				(clk_gev				),
+	.reset_gev				(reset_gev				),
+	.o_fb_rd				(w_fb_rd_resend			),
+	.i_fb_empty				(i_fb_empty				),
+	.i_fb_busy				(i_fb_busy				),
+	.iv_data_is_cmd			(wv_data_is_cmd_latch	),
+	.iv_dval				(wv_dval_latch			),
+	.iv_data				(wv_data_latch			),
+	.i_start				(w_resend_start			),
+	.o_done					(w_resend_done			),
+	.o_resending_flag		(w_resending_flag		),
+	.o_unavail_flag			(w_unavail_flag			),
+	.ov_pid_first			(wv_pid_first			),
+	.ov_pid_last			(wv_pid_last			),
+	.ov_bid_resend			(wv_bid_resend			)
+	);
+	//  -------------------------------------------------------------------------------------
+	//	instantiate "frame_info_analysis" module
+	//  -------------------------------------------------------------------------------------
+	frame_info_analysis_ctrl # (
+	.GEV_DE_WD			(GEV_DE_WD			),
+	.GEV_BE_WD			(GEV_BE_WD			),
+	.GEV_DATA_WD		(GEV_DATA_WD		)
+	)
+	frame_info_analysis_ctrl_inst (
+	.clk_gev			(clk_gev			),
+	.reset_gev			(reset_gev			),
+	.o_fb_rd			(w_fb_rd_analysis	),
+	.i_fb_empty			(i_fb_empty			),
+	.i_fb_busy			(i_fb_busy			),
+	.iv_data_is_cmd		(wv_data_is_cmd_latch),
+	.iv_dval			(wv_dval_latch		),
+	.iv_data			(wv_data_latch		),
+	.i_start			(w_analysis_start	),
+	.o_done				(w_analysis_done	),
+	.ov_data			(wv_data_analysis_ctrl),
+	.ov_dval			(wv_dval_analysis_ctrl)
+	);
+
+	frame_info_analysis # (
+	.INFO_SIZE					(INFO_SIZE					),
+	.STATIS_SIZE				(STATIS_SIZE				),
+	.SHORT_REG_WD				(SHORT_REG_WD				),
+	.REG_WD						(REG_WD						),
+	.LONG_REG_WD				(LONG_REG_WD				),
+	.GEV_DE_WD					(GEV_DE_WD					),
+	.GEV_DATA_WD				(GEV_DATA_WD				)
+	)
+	frame_info_analysis_inst (
+	.clk						(clk_gev					),
+	.reset						(reset_gev					),
+	.i_info_flag				(w_info_flag				),
+	.i_statis_flag				(w_statis_flag				),
+	.iv_dval					(wv_dval_analysis_ctrl		),
+	.iv_cmd_data				(wv_data_analysis_ctrl		),
+	.ov_block_id				(wv_bid_normal				),
+	.ov_timestamp				(wv_timestamp				),
+	.ov_pixel_format			(wv_pixel_format			),
+	.ov_offset_x				(wv_offset_x				),
+	.ov_offset_y				(wv_offset_y				),
+	.ov_width					(wv_width					),
+	.ov_height					(wv_height					),
+	.ov_image_size				(wv_imagesize				),
+	.ov_payload_size			(wv_payloadsize				),
+	.ov_frame_interval			(wv_frame_interval			),
+	.o_chunk_mode_active		(w_chunk_mode_active		),
+	.o_chunkid_en_img			(			),
+	.o_chunkid_en_fid			(			),
+	.o_chunkid_en_ts			(			),
+	.o_chunkid_en_fint			(			),
+	.ov_status					(					),
+	.ov_expect_payload_size		(		),
+	.ov_valid_payload_size		(		)
+	);
+	//  -------------------------------------------------------------------------------------
+	//	instantiate "ip_udp_gvsp_format" module
+	//  -------------------------------------------------------------------------------------
+	ip_udp_gvsp_format # (
+	.SHORT_REG_WD				(SHORT_REG_WD				),
+	.REG_WD						(REG_WD						),
+	.LONG_REG_WD				(LONG_REG_WD				),
+	.GEV_BE_WD					(GEV_BE_WD					),
+	.GEV_DATA_WD				(GEV_DATA_WD				),
+	.PKT_LENGTH_WD				(PKT_LENGTH_WD				),
+	.PKT_CNT_WD					(PKT_CNT_WD					)
+	)
+	ip_udp_gvsp_format_inst (
+	.clk_gev					(clk_gev					),
+	.reset_gev					(reset_gev					),
+	.i_stream_enable			(i_stream_enable			),
+	.i_stop						(w_stop						),
+	.ov_data					(wv_data_ip					),
+	.ov_be						(wv_be_ip					),
+	.iv_pc_ip					(iv_pc_ip					),
+	.iv_camera_ip				(iv_camera_ip				),
+	.iv_pc_port_sc				(iv_pc_port_sc				),
+	.iv_camera_port				(iv_camera_port				),
+	.iv_pkt_length				(iv_pkt_length				),
+	.iv_pkt_cnt					(iv_pkt_cnt					),
+	.iv_remain_pkt_length		(iv_remain_pkt_length		),
+	.i_start					(w_ip_start					),
+	.o_done						(w_ip_done					),
+	.o_not_exist				(w_ip_not_exist				),
+	.i_leader_flag				(w_leader_flag				),
+	.i_image_flag				(w_image_flag				),
+	.i_chunk_flag				(w_chunk_flag				),
+	.i_trailer_flag				(w_trailer_flag				),
+	.i_resending_flag			(w_resending_flag			),
+	.i_unavail_flag				(w_unavail_flag				),
+	.i_test_flag				(w_test_flag				),
+	.i_new_resd_frm_flag		(w_new_resd_frm_flag		),
+	.i_new_norm_frm_flag		(w_new_norm_frm_flag		),
+	.iv_bid_resend				(wv_bid_resend				),
+	.iv_pid_first				(wv_pid_first				),
+	.iv_pid_last				(wv_pid_last				),
+	.iv_bid_normal				(wv_bid_normal				),
+	.i_chunk_mode_active		(w_chunk_mode_active		)
+	);
+	//  -------------------------------------------------------------------------------------
+	//	instantiate "gev_format" module
+	//  -------------------------------------------------------------------------------------
+	gev_format # (
+	.SHORT_REG_WD				(SHORT_REG_WD				),
+	.REG_WD						(REG_WD						),
+	.LONG_REG_WD				(LONG_REG_WD				),
+	.PKT_LENGTH_WD				(PKT_LENGTH_WD				),
+	.PKT_CNT_WD					(PKT_CNT_WD					),
+	.GEV_BE_WD					(GEV_BE_WD					),
+	.GEV_DATA_WD				(GEV_DATA_WD				)
+	)
+	gev_format_inst (
+	.clk_gev					(clk_gev					),
+	.reset_gev					(reset_gev					),
+	.i_stream_enable			(i_stream_enable			),
+	.i_stop						(w_stop						),
+	.ov_data					(wv_data_gev				),
+	.ov_be						(wv_be_gev					),
+	.o_packet_over				(w_packet_over_gev			),
+	.iv_pkt_length				(iv_pkt_length				),
+	.iv_pkt_cnt					(iv_pkt_cnt					),
+	.iv_remain_pkt_length		(iv_remain_pkt_length		),
+	.iv_timestamp				(wv_timestamp				),
+	.iv_pixel_format			(wv_pixel_format			),
+	.iv_offset_x				({16'b0,wv_offset_x}		),
+	.iv_offset_y				({16'b0,wv_offset_y}		),
+	.iv_width					({16'b0,wv_width}			),
+	.iv_height					({16'b0,wv_height}			),
+	.i_chunk_mode_active		(w_chunk_mode_active		),
+	.iv_bid_normal				(wv_bid_normal				),
+	.iv_frame_interval			(wv_frame_interval			),
+	.iv_payloadsize				(wv_payloadsize				),
+	.iv_imagesize				(wv_imagesize				),
+	.i_start					(w_gev_start				),
+	.o_done						(w_gev_done					),
+	.o_again					(w_gev_again				),
+	.i_leader_flag				(w_leader_flag				),
+	.i_chunk_flag				(w_chunk_flag				),
+	.i_trailer_flag				(w_trailer_flag				),
+	.i_resending_flag			(w_resending_flag			),
+	.i_unavail_flag				(w_unavail_flag				),
+	.i_test_flag				(w_test_flag				),
+	.iv_bid_resend				(wv_bid_resend				),
+	.iv_pid_first				(wv_pid_first				),
+	.iv_pid_last				(wv_pid_last				)
+	);
+	//  -------------------------------------------------------------------------------------
+	//	instantiate "packet_image" module
+	//  -------------------------------------------------------------------------------------
+	packet_image # (
+	.GEV_DE_WD			(GEV_DE_WD			),
+	.GEV_BE_WD			(GEV_BE_WD			),
+	.GEV_DATA_WD		(GEV_DATA_WD		)
+	)
+	packet_image_inst (
+	.clk_gev			(clk_gev			),
+	.reset_gev			(reset_gev			),
+	.i_stream_enable	(i_stream_enable	),
+	.o_fb_rd			(w_fb_rd_image		),
+	.i_fb_empty			(i_fb_empty			),
+	.i_fb_busy			(i_fb_busy			),
+	.iv_data_is_cmd		(wv_data_is_cmd_latch),
+	.iv_dval			(wv_dval_latch		),
+	.iv_data			(wv_data_latch		),
+	.i_stop				(w_stop				),
+	.ov_data			(wv_data_image		),
+	.ov_be				(wv_be_image		),
+	.o_packet_over		(w_packet_over_image),
+	.i_start			(w_image_start		),
+	.o_done				(w_image_done		)
+	);
+	//  -------------------------------------------------------------------------------------
+	//	instantiate "packet_comb" module
+	//  -------------------------------------------------------------------------------------
+	//	包结束标志有可能由packet_image模块发出，也有可能有gev_format模块发出
+	assign w_packet_over = w_packet_over_gev || w_packet_over_image;
+	packet_comb # (
+	.GEV_DATA_WD		(GEV_DATA_WD		),
+	.GEV_BE_WD			(GEV_BE_WD			)
+	)
+	packet_comb_inst (
+	.clk_gev			(clk_gev			),
+	.reset_gev			(reset_gev			),
+	.i_stream_enable	(i_stream_enable	),
+	.i_packet_over		(w_packet_over		),
+	.o_stop				(w_stop				),
+	.iv_be_image		(wv_be_image		),
+	.iv_data_image		(wv_data_image		),
+	.iv_data_ip			(wv_data_ip			),
+	.iv_be_ip			(wv_be_ip			),
+	.iv_be_gev			(wv_be_gev			),
+	.iv_data_gev		(wv_data_gev		),
+	.clk_gtx			(clk_gtx			),
+	.reset_gtx			(reset_gtx			),
+	.i_pb_rd_en			(i_pb_rd_en			),
+	.o_pb_empty			(o_pb_empty			),
+	.o_pb_busy			(o_pb_busy			),
+	.ov_be_switch		(ov_be_switch		),
+	.ov_data_switch		(ov_data_switch		),
+	.i_pcb_rd_en		(i_pcb_rd_en		),
+	.o_pcb_empty		(o_pcb_empty		),
+	.o_pcb_busy			(o_pcb_busy			)
+	);
+
+endmodule

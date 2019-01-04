@@ -1,0 +1,216 @@
+//-------------------------------------------------------------------------------------------------
+//  -- 版权所有者   : 中国大恒（集团）有限公司北京图像视觉技术分公司, 2010 -2015.
+//  -- 保密级别     ：绝密.
+//  -- 部门         : 硬件部，FPGA工作组
+//  -- 模块名       : frame_info_analysis_wrap
+//  -- 设计者       : 邢海涛
+//-------------------------------------------------------------------------------------------------
+//
+//  -- 版本记录 :
+//
+//  -- 作者         :| 版本号	:| 修改日期				:|  修改说明
+//-------------------------------------------------------------------------------------------------
+//  -- 邢海涛       :| V1.0		:| 2018/8/4 11:55:28	:|  划分模块端口
+//-------------------------------------------------------------------------------------------------
+//
+//  -- 模块描述     :
+//              1)  : daheng imaging 协议规范，定义了图像信息格式、图像统计格式
+//
+//              2)  : 1v表示 version 1.x ，1表示大版本号，该版本号升级表示不再向下兼容，x表示小版本号，升级该版本号表示继续向下兼容
+//
+//              3)  : 升级该模块时应该尽量保持向下兼容。修改parameter，修改端口，视为兼容。向后添加协议，视为兼容。修改之前的协议，视为不兼容。
+//
+//-------------------------------------------------------------------------------------------------
+//`include			"frame_info_analysis_wrap_def.v"
+//仿真单位/精度
+`timescale 1ns/1ps
+//-------------------------------------------------------------------------------------------------
+module frame_info_analysis_wrap # (
+	parameter	SHORT_REG_WD   								= 16		,	//短寄存器位宽
+	parameter	REG_WD  						 			= 32		,	//寄存器位宽
+	parameter	LONG_REG_WD  						 		= 64		,	//长寄存器位宽
+	parameter	GEV_DE_WD									= 2			,	//数据单元使能位宽，4byte数据使用一个使能位
+	parameter	GEV_DATA_WD									= 64			//数据位宽，支持32、64、128
+	)
+	(
+	//  -------------------------------------------------------------------------------------
+	//  时钟和复位信号
+	//  -------------------------------------------------------------------------------------
+	input							clk									,	//工作时钟
+	input							reset								,	//工作时钟域的复位信号，高有效
+	//  -------------------------------------------------------------------------------------
+	//  输入命令数据
+	//  -------------------------------------------------------------------------------------
+	input							i_resending							,	//clk时钟域，表示当前是resend信息流，高有效
+	input							i_info_flag							,	//clk时钟域，信息段标志，高有效
+	input							i_statis_flag						,	//clk时钟域，统计段标志，高有效
+	input	[GEV_DE_WD-1:0]			iv_dval								,	//clk时钟域，数据有效信号，单bit代表4byte，1-表示数据有效，0-表示数据无效
+	input	[GEV_DATA_WD-1:0]		iv_cmd_data							,	//clk时钟域，命令数据，位宽可变，支持32、64、128
+	//  -------------------------------------------------------------------------------------
+	//  控制数据
+	//  -------------------------------------------------------------------------------------
+	input							i_stream_enable						,	//clk时钟域，流停止信号，高有效，有效时允许数据从帧存读出，无效时立即停止读出，并复位读写地址指针，清帧存
+	//  -------------------------------------------------------------------------------------
+	//  控制数据
+	//  -------------------------------------------------------------------------------------
+	output	[LONG_REG_WD-1:0]		ov_block_id							,	//clk时钟域，block id，当前roi的帧号
+	output	[LONG_REG_WD-1:0]		ov_timestamp						,	//clk时钟域，time stamp，当前roi的时间戳
+	output	[REG_WD-1:0]			ov_pixel_format						,	//clk时钟域，pixel format，当前roi的像素格式
+	output	[REG_WD-1:0]			ov_offset_x							,	//clk时钟域，offset_x，当前roi的水平偏移
+	output	[REG_WD-1:0]			ov_offset_y							,	//clk时钟域，offset_y，当前roi的垂直偏移
+	output	[REG_WD-1:0]			ov_width							,	//clk时钟域，width，当前roi的宽度
+	output	[REG_WD-1:0]			ov_height							,	//clk时钟域，height，当前roi的高度
+	output	[REG_WD-1:0]			ov_image_size						,	//clk时钟域，image size，当前roi图像大小，以byte为单位
+	output							o_chunk_mode_active					,	//clk时钟域，chunk开关寄存器
+	output							o_chunkid_en_img					,	//clk时钟域，image开关寄存器
+	output							o_chunkid_en_fid					,	//clk时钟域，frame id开关寄存器
+	output							o_chunkid_en_ts						,	//clk时钟域，时间戳开关寄存器
+	output	[LONG_REG_WD-1:0]		ov_frame_image_size					,	//clk时钟域，image size，要写入到帧存的image size
+	output	[LONG_REG_WD-1:0]		ov_valid_image_size						//clk时钟域，valid image size，实际写入到帧存的image size
+	);
+
+
+	//	ref paramters
+
+
+	//	ref functions
+
+
+	//	ref signals
+	//	-------------------------------------------------------------------------------------
+	//	正常数据流的信息
+	//	-------------------------------------------------------------------------------------
+	wire	[LONG_REG_WD-1:0]		wv_block_id_normal					;	//frame_info_normal_inst输出，clk时钟域，block id，当前roi的帧号
+	wire	[LONG_REG_WD-1:0]		wv_timestamp_normal					;	//frame_info_normal_inst输出，clk时钟域，time stamp，当前roi的时间戳
+	wire	[REG_WD-1:0]			wv_pixel_format_normal				;	//frame_info_normal_inst输出，clk时钟域，pixel format，当前roi的像素格式
+	wire	[REG_WD-1:0]			wv_offset_x_normal					;	//frame_info_normal_inst输出，clk时钟域，offset_x，当前roi的水平偏移
+	wire	[REG_WD-1:0]			wv_offset_y_normal					;	//frame_info_normal_inst输出，clk时钟域，offset_y，当前roi的垂直偏移
+	wire	[REG_WD-1:0]			wv_width_normal						;	//frame_info_normal_inst输出，clk时钟域，width，当前roi的宽度
+	wire	[REG_WD-1:0]			wv_height_normal					;	//frame_info_normal_inst输出，clk时钟域，height，当前roi的高度
+	wire	[REG_WD-1:0]			wv_image_size_normal				;	//frame_info_normal_inst输出，clk时钟域，image size，当前roi图像大小，以byte为单位
+	wire							w_chunk_mode_active_normal			;	//frame_info_normal_inst输出，clk时钟域，chunk开关寄存器
+	wire							w_chunkid_en_img_normal				;	//frame_info_normal_inst输出，clk时钟域，image开关寄存器
+	wire							w_chunkid_en_fid_normal				;	//frame_info_normal_inst输出，clk时钟域，frame id开关寄存器
+	wire							w_chunkid_en_ts_normal				;	//frame_info_normal_inst输出，clk时钟域，时间戳开关寄存器
+	wire	[LONG_REG_WD-1:0]		wv_frame_image_size_normal			;	//frame_info_normal_inst输出，clk时钟域，image size，要写入到帧存的image size
+	wire	[LONG_REG_WD-1:0]		wv_valid_image_size_normal			;	//frame_info_normal_inst输出，clk时钟域，valid image size，实际写入到帧存的image size
+
+	//	-------------------------------------------------------------------------------------
+	//	重传数据流的信息
+	//	-------------------------------------------------------------------------------------
+	wire	[LONG_REG_WD-1:0]		wv_block_id_resend					;	//frame_info_resend_inst输出，clk时钟域，block id，当前roi的帧号
+	wire	[LONG_REG_WD-1:0]		wv_timestamp_resend					;	//frame_info_resend_inst输出，clk时钟域，time stamp，当前roi的时间戳
+	wire	[REG_WD-1:0]			wv_pixel_format_resend				;	//frame_info_resend_inst输出，clk时钟域，pixel format，当前roi的像素格式
+	wire	[REG_WD-1:0]			wv_offset_x_resend					;	//frame_info_resend_inst输出，clk时钟域，offset_x，当前roi的水平偏移
+	wire	[REG_WD-1:0]			wv_offset_y_resend					;	//frame_info_resend_inst输出，clk时钟域，offset_y，当前roi的垂直偏移
+	wire	[REG_WD-1:0]			wv_width_resend						;	//frame_info_resend_inst输出，clk时钟域，width，当前roi的宽度
+	wire	[REG_WD-1:0]			wv_height_resend					;	//frame_info_resend_inst输出，clk时钟域，height，当前roi的高度
+	wire	[REG_WD-1:0]			wv_image_size_resend				;	//frame_info_resend_inst输出，clk时钟域，image size，当前roi图像大小，以byte为单位
+	wire							w_chunk_mode_active_resend			;	//frame_info_resend_inst输出，clk时钟域，chunk开关寄存器
+	wire							w_chunkid_en_img_resend				;	//frame_info_resend_inst输出，clk时钟域，image开关寄存器
+	wire							w_chunkid_en_fid_resend				;	//frame_info_resend_inst输出，clk时钟域，frame id开关寄存器
+	wire							w_chunkid_en_ts_resend				;	//frame_info_resend_inst输出，clk时钟域，时间戳开关寄存器
+	wire	[LONG_REG_WD-1:0]		wv_frame_image_size_resend			;	//frame_info_resend_inst输出，clk时钟域，image size，要写入到帧存的image size
+	wire	[LONG_REG_WD-1:0]		wv_valid_image_size_resend			;	//frame_info_resend_inst输出，clk时钟域，valid image size，实际写入到帧存的image size
+
+
+
+	wire	[GEV_DE_WD-1:0]			wv_dval_normal						;	//正常信息解析模块数据有效信号
+	wire	[GEV_DE_WD-1:0]			wv_dval_resend						;	//重传信息解析模块数据有效信号
+
+	//	ref ARCHITECTURE
+	//	-------------------------------------------------------------------------------------
+	//	当重传无效时，正常解析模块才能工作；当重传有效时，重传解析模块才能生效
+	//	-------------------------------------------------------------------------------------
+	assign	wv_dval_normal			= (i_resending==1'b0) ? iv_dval : 'b0;
+	assign	wv_dval_resend			= (i_resending==1'b1) ? iv_dval : 'b0;
+
+	//	-------------------------------------------------------------------------------------
+	//	当重传无效时，选择的是正常解析的数据；当重传有效时，选择的是重传解析的数据
+	//	-------------------------------------------------------------------------------------
+	assign	ov_block_id				= (i_resending==1'b0) ? wv_block_id_normal			: wv_block_id_resend;
+	assign	ov_timestamp			= (i_resending==1'b0) ? wv_timestamp_normal			: wv_timestamp_resend;
+	assign	ov_pixel_format			= (i_resending==1'b0) ? wv_pixel_format_normal		: wv_pixel_format_resend;
+	assign	ov_offset_x				= (i_resending==1'b0) ? wv_offset_x_normal			: wv_offset_x_resend;
+	assign	ov_offset_y				= (i_resending==1'b0) ? wv_offset_y_normal			: wv_offset_y_resend;
+	assign	ov_width				= (i_resending==1'b0) ? wv_width_normal				: wv_width_resend;
+	assign	ov_height				= (i_resending==1'b0) ? wv_height_normal			: wv_height_resend;
+	assign	ov_image_size			= (i_resending==1'b0) ? wv_image_size_normal		: wv_image_size_resend;
+	assign	o_chunk_mode_active		= (i_resending==1'b0) ? w_chunk_mode_active_normal	: w_chunk_mode_active_resend;
+	assign	o_chunkid_en_img		= (i_resending==1'b0) ? w_chunkid_en_img_normal		: w_chunkid_en_img_resend;
+	assign	o_chunkid_en_fid		= (i_resending==1'b0) ? w_chunkid_en_fid_normal		: w_chunkid_en_fid_resend;
+	assign	o_chunkid_en_ts			= (i_resending==1'b0) ? w_chunkid_en_ts_normal		: w_chunkid_en_ts_resend;
+	assign	ov_frame_image_size		= (i_resending==1'b0) ? wv_frame_image_size_normal	: wv_frame_image_size_resend;
+	assign	ov_valid_image_size		= (i_resending==1'b0) ? wv_valid_image_size_normal	: wv_valid_image_size_resend;
+
+
+	//	-------------------------------------------------------------------------------------
+	//	正常信息的解析模块
+	//	-------------------------------------------------------------------------------------
+	frame_info_analysis # (
+	.SHORT_REG_WD				(SHORT_REG_WD				),
+	.REG_WD						(REG_WD						),
+	.LONG_REG_WD				(LONG_REG_WD				),
+	.GEV_DE_WD					(GEV_DE_WD					),
+	.GEV_DATA_WD				(GEV_DATA_WD				)
+	)
+	frame_info_normal_inst (
+	.clk						(clk						),
+	.reset						(reset						),
+	.i_info_flag				(i_info_flag				),
+	.i_statis_flag				(i_statis_flag				),
+	.iv_dval					(wv_dval_normal				),
+	.iv_cmd_data				(iv_cmd_data				),
+	.i_stream_enable			(i_stream_enable			),
+	.ov_block_id				(wv_block_id_normal			),
+	.ov_timestamp				(wv_timestamp_normal		),
+	.ov_pixel_format			(wv_pixel_format_normal		),
+	.ov_offset_x				(wv_offset_x_normal			),
+	.ov_offset_y				(wv_offset_y_normal			),
+	.ov_width					(wv_width_normal			),
+	.ov_height					(wv_height_normal			),
+	.ov_image_size				(wv_image_size_normal		),
+	.o_chunk_mode_active		(w_chunk_mode_active_normal	),
+	.o_chunkid_en_img			(w_chunkid_en_img_normal	),
+	.o_chunkid_en_fid			(w_chunkid_en_fid_normal	),
+	.o_chunkid_en_ts			(w_chunkid_en_ts_normal		),
+	.ov_frame_image_size		(wv_frame_image_size_normal	),
+	.ov_valid_image_size		(wv_valid_image_size_normal	)
+	);
+
+	//	-------------------------------------------------------------------------------------
+	//	重传信息的解析模块
+	//	-------------------------------------------------------------------------------------
+	frame_info_analysis # (
+	.SHORT_REG_WD				(SHORT_REG_WD				),
+	.REG_WD						(REG_WD						),
+	.LONG_REG_WD				(LONG_REG_WD				),
+	.GEV_DE_WD					(GEV_DE_WD					),
+	.GEV_DATA_WD				(GEV_DATA_WD				)
+	)
+	frame_info_resend_inst (
+	.clk						(clk						),
+	.reset						(reset						),
+	.i_info_flag				(i_info_flag				),
+	.i_statis_flag				(i_statis_flag				),
+	.iv_dval					(wv_dval_resend				),
+	.iv_cmd_data				(iv_cmd_data				),
+	.ov_block_id				(wv_block_id_resend			),
+	.ov_timestamp				(wv_timestamp_resend		),
+	.ov_pixel_format			(wv_pixel_format_resend		),
+	.ov_offset_x				(wv_offset_x_resend			),
+	.ov_offset_y				(wv_offset_y_resend			),
+	.ov_width					(wv_width_resend			),
+	.ov_height					(wv_height_resend			),
+	.ov_image_size				(wv_image_size_resend		),
+	.o_chunk_mode_active		(w_chunk_mode_active_resend	),
+	.o_chunkid_en_img			(w_chunkid_en_img_resend	),
+	.o_chunkid_en_fid			(w_chunkid_en_fid_resend	),
+	.o_chunkid_en_ts			(w_chunkid_en_ts_resend		),
+	.ov_frame_image_size		(wv_frame_image_size_resend	),
+	.ov_valid_image_size		(wv_valid_image_size_resend	)
+	);
+
+
+
+endmodule
