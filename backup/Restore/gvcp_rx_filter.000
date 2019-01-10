@@ -1,0 +1,725 @@
+
+//-------------------------------------------------------------------------------------------------
+//  -- 版权所有者   : 中国大恒（集团）有限公司北京图像视觉技术分公司, 2010 -2015.
+//  -- 保密级别     ：绝密.
+//  -- 部门         : 硬件部，FPGA工作组
+//  -- 模块名       : gvcp_rx_filter.v
+//  -- 设计者       : 胡汉
+//-------------------------------------------------------------------------------------------------
+//
+//  --修改记录  :
+//
+//  -- 作者         :| 修改日期     :|  修改说明
+//---------------------------------------------------------------------------------------
+//  -- 胡汉	        :| 12/30/2013   :|  初始版本
+//  -- 陈小平       :| 1/30/2015    :|  根据mer-200-14gx项目设计，添加信号补充，注释，规范化
+//  -- 陈小平       :| 02/10/2015   :|  根据mer-200-14gx项目设计，系统测试定版，添加了信号补充，注释；
+//  -- 陈小平       :| 07/20/2015   :|  根据GIGE1.2协议，force IP不应该清心跳为0，添加gvcp_cmd_match_forceip信号；
+//  -- 陈小平       :| 02/04/2016   :|  拆分匹配信号；
+//  -- 		        :| 			    :|
+//---------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
+//
+//  -- 模块描述     :
+//              1)  : 进行gvcp包的过滤
+//
+//				2)  : 产生心跳寄存器清零信号
+//
+//				3)  : 产生重传命令的数据和使能信号
+//
+//-------------------------------------------------------------------------------------------------
+//仿真单位/精度
+`timescale      1ns/100ps
+//-------------------------------------------------------------------------------------------------
+
+module gvcp_rx_filter(
+	input		  				clk_grx							,	//mac接收数据时钟，PHY CHIP给FPGA逻辑的输出，千兆网时是125Mhz，百兆网时是25M
+	input						rx_enable						,	//mac输出的rx_enable信号
+	input		  				reset_grx						,	//模块复位信号，高复位
+
+	input			[7:0]		iv_rx_data						,	//mac接收数据总线，8bit，125Mhz的clk_grx时钟域
+	input						i_rx_data_valid					,	//mac接收数据包数据有效信号，高有效，125Mhz的clk_grx时钟域
+	input						i_rx_good_frame					,	//mac接收数据包结束信号，一个有效周期，如果CRC32校验正确，则有效，125Mhz的clk_grx时钟域
+	input						i_rx_bad_frame					,	//mac接收数据包内容错误信号，一个有效周期，如果CRC32校验错误，则起来表明数据包错误，125Mhz的clk_grx时钟域
+	input			[31:0]		iv_camera_ip					,	//当前相机的配置IP地址，clk_grx时钟域
+	input			[31:0]		iv_discov_ip_mask				,	//将找相机IP地址的掩码寄存器，clk_grx时钟域
+	input			[47:0]		iv_camera_src_mac				,	//当前传输数据包源mac地址，clk_grx时钟域
+	input			[31:0]		iv_host_pc_ip					,	//PC的IP，clk_grx时钟域
+	input			[15:0]		iv_host_pc_port					,	//PC的端口，clk_grx时钟域
+	input			[15:0]		iv_mesg_dst_port				,	//消息目的端口
+
+	output               		o_gvcp_match					,	//当前从mac接收数据包，和协议定义的gvcp匹配包
+	output   reg            	o_heartbeat_clr					,	//产生的清心跳信号
+	output   reg    [9:0]   	ov_rxpkt_byte_addr				,	//当前从mac接收数据包的字节地址
+	output   reg            	o_resend_pkt_wren				,	//重传数据包命令的写使能，一个周期，高有效，写入cmdfifo
+	output	 reg	[47:0]		ov_resend_pkt_para					//重传数据包命令的写数据，48bit，高有效，写入cmdfifo数据端
+	);
+
+//  ===============================================================================================
+//  模块设计中，需要使用的线网和寄存器描述
+//  ===============================================================================================
+	reg				[47:0] 		rxpkt_dstmac_addr				;
+	reg				[15:0] 		rxpkt_ethernet_type				;
+//	reg				[47:0] 		rxpkt_srcmac_addr				;
+	reg				[15:0] 		rxpkt_hardware_type				;
+	reg				[15:0]		rxpkt_protocal_type				;
+	reg				[15:0] 		rxpkt_arp_operate_code			;
+	reg				[7:0]		rxpkt_protcol					;
+	reg				[31:0]		rxpkt_src_ip					;
+	reg				[31:0] 		rxpkt_dst_ip					;
+	reg				[7:0] 		rxpkt_icmp_type					;
+	reg				[7:0] 		rxpkt_icmp_code					;
+	reg				[15:0] 		rxpkt_dst_port					;
+	reg				[31:0] 		rxpkt_arp_dst_ip				;
+	reg				[7:0] 		rxpkt_gvcp_head_flag			;
+	reg				[15:0] 		rxpkt_gvcp_cmd					;
+	reg				[15:0] 		rxpkt_pic_resend_blkid			;
+	reg				[15:0] 		rxpkt_resend_start_pktid		;
+	reg				[15:0] 		rxpkt_resend_end_pktid			;
+//  -------------------------------------------------------------------------------------
+//  数据包头的相关域匹配寄存器定义
+//  -------------------------------------------------------------------------------------
+	reg        					dst_mac_match_0xff				;
+	reg        					dst_mac_match_camera_mac		;
+	reg        					dst_ip_match_0xff				;
+	reg        					dst_ip_match_camera_ip			;
+	reg        					dhcp_message_match_ack			;
+	reg        					ethernet_type_match_ip			;
+	reg        					protcol_match_udp				;
+	reg							protcol_match_icmp				;
+	reg							hardware_type_match_ethernet	;
+	reg							protcol_type_match_arp			;
+	reg        					ethernet_type_match_arp			;
+	reg        					dst_port_match_dhcp				;
+	reg        					arp_src_ip_match_camera_ip		;
+	reg        					dst_port_match_gvcp				;
+	reg        					gvcp_match_head_flag			;
+	reg        					arp_operate_code_match_req		;
+	reg        					arp_operate_code_match_ack		;
+	reg							icmp_type_match_ping			;
+	reg							icmp_type_match_unreachable		;
+	reg							icmp_code_match_ping			;
+//	reg							src_port_match_0f74				;
+	reg							dst_port_match_message			;
+	reg							dst_ip_match_0xff_flag1			;
+	reg							dst_ip_match_0xff_flag2			;
+	reg							dst_ip_match_0xff_flag3			;
+	reg							match_start_addr_gt58			;
+
+//  -------------------------------------------------------------------------------------
+//  几种常用的GVCP包匹配寄存器定义
+//  -------------------------------------------------------------------------------------
+	reg							gvcp_discov_match				;
+	reg							gvcp_normal_match				;
+	reg							udp_dhcp_match					;
+	reg							arp_cmd_match					;
+	reg							arp_ack_match					;
+	reg							resend_pkt_match				;
+	reg							icmp_ping_match					;
+	reg							icmp_unreachable_match			;
+	reg							message_ack_match				;
+	reg							gvcp_match						;
+	reg        					gvcp_cmd_match_resend			;
+	reg							gvcp_match_pc_ip				;
+	reg							gvcp_match_pc_port				;
+	reg        					gvcp_cmd_match_forceip			;
+
+//  -------------------------------------------------------------------------------------
+//  其它寄存器定义
+//  -------------------------------------------------------------------------------------
+	wire						gvcp_match_1clk					;
+	reg							gvcp_match0						;
+	reg							gvcp_match1						;
+	reg							gvcp_match2						;
+	reg							gvcp_match3						;
+	reg							w_heartbeat_clr					;
+	reg							w_heartbeat_clr_dly1			;
+	reg							w_heartbeat_clr_dly2			;
+
+//  ===============================================================================================
+//  step1, 提取接收数据包头中相关域参数数据
+//  ===============================================================================================
+//  -------------------------------------------------------------------------------------
+//  提取接收数据包的字节地址，ov_rxpkt_byte_addr
+//  -------------------------------------------------------------------------------------
+	always @ (posedge clk_grx)
+		begin
+	  		if( reset_grx)
+	  			begin
+					ov_rxpkt_byte_addr <= 10'h0;
+				end
+			else if(i_rx_good_frame | i_rx_bad_frame)
+				begin
+					ov_rxpkt_byte_addr <= 10'h0;
+				end
+			else if(i_rx_data_valid && rx_enable)
+				begin
+					ov_rxpkt_byte_addr <= ov_rxpkt_byte_addr + 10'h1;
+				end
+		end
+
+//  -------------------------------------------------------------------------------------
+//  提取接收数据包每个字节的数据并放到相应的寄存器中
+//  -------------------------------------------------------------------------------------
+	always@(posedge clk_grx)
+		begin
+			if(rx_enable)
+				begin
+					case (ov_rxpkt_byte_addr)
+				        //-------------------Ethernet header---------------------  14Bytes
+				        10'h00  : rxpkt_dstmac_addr[47:40] 			<= iv_rx_data;
+				        10'h01  : rxpkt_dstmac_addr[39:32] 			<= iv_rx_data;
+				        10'h02  : rxpkt_dstmac_addr[31:24] 			<= iv_rx_data;
+				        10'h03  : rxpkt_dstmac_addr[23:16] 			<= iv_rx_data;
+				        10'h04  : rxpkt_dstmac_addr[15: 8] 			<= iv_rx_data;
+				        10'h05  : rxpkt_dstmac_addr[7 : 0] 			<= iv_rx_data;
+				        10'h0c  : rxpkt_ethernet_type[15:8] 		<= iv_rx_data;
+				        10'h0d  : rxpkt_ethernet_type[7:0] 			<= iv_rx_data;
+				        //-------------------IP header---------------------------  20Bytes
+				        10'h0e  : rxpkt_hardware_type[15:8] 		<= iv_rx_data;
+				        10'h0f  : rxpkt_hardware_type[7:0] 			<= iv_rx_data;
+				        10'h10	: rxpkt_protocal_type[15:8]			<= iv_rx_data;
+				        10'h11	: rxpkt_protocal_type[7:0]			<= iv_rx_data;
+				        10'h14  : rxpkt_arp_operate_code[15:8]		<= iv_rx_data;
+				        10'h15  : rxpkt_arp_operate_code[7:0] 		<= iv_rx_data;
+				        10'h17  : rxpkt_protcol[7:0] 				<= iv_rx_data;
+				        10'h1a  : rxpkt_src_ip[31:24]				<= iv_rx_data;
+				        10'h1b  : rxpkt_src_ip[23:16]				<= iv_rx_data;
+				        10'h1c  : rxpkt_src_ip[15:8]				<= iv_rx_data;
+				        10'h1d  : rxpkt_src_ip[7:0]					<= iv_rx_data;
+				        10'h1e  : rxpkt_dst_ip[31:24] 				<= iv_rx_data;
+				        10'h1f  : rxpkt_dst_ip[23:16] 				<= iv_rx_data;
+				        10'h20  : rxpkt_dst_ip[15: 8] 				<= iv_rx_data;
+				        10'h21  : rxpkt_dst_ip[7 : 0] 				<= iv_rx_data;
+				        //--------------------UDP header------------------------- 8Bytes
+				        10'h22  : rxpkt_icmp_type 					<= iv_rx_data;
+				        10'h23  : rxpkt_icmp_code 					<= iv_rx_data;
+				        10'h24  : rxpkt_dst_port[15:8] 				<= iv_rx_data;
+				        10'h25  : rxpkt_dst_port[7:0] 				<= iv_rx_data;
+				        10'h26  : rxpkt_arp_dst_ip[31:24] 			<= iv_rx_data;
+				        10'h27  : rxpkt_arp_dst_ip[23:16] 			<= iv_rx_data;
+				        10'h28  : rxpkt_arp_dst_ip[15: 8] 			<= iv_rx_data;
+				        10'h29  : rxpkt_arp_dst_ip[7 : 0] 			<= iv_rx_data;
+			        	//--------------------gvcp command header----------------- 8Bytes
+				        10'h2a  : rxpkt_gvcp_head_flag 				<= iv_rx_data;
+				        10'h2c  : rxpkt_gvcp_cmd[15:8] 				<= iv_rx_data;
+				        10'h2d  : rxpkt_gvcp_cmd[7:0] 				<= iv_rx_data;
+				        10'h34  : rxpkt_pic_resend_blkid[15:8] 		<= iv_rx_data;
+				        10'h35  : rxpkt_pic_resend_blkid[7:0] 		<= iv_rx_data;
+				        10'h38  : rxpkt_resend_start_pktid[15:8]	<= iv_rx_data;
+				        10'h39  : rxpkt_resend_start_pktid[7:0] 	<= iv_rx_data;
+				        10'h3c  : rxpkt_resend_end_pktid[15:8] 		<= iv_rx_data;
+				        10'h3d  : rxpkt_resend_end_pktid[7:0] 		<= iv_rx_data;
+				        default : ;
+				      endcase
+			    end
+		end
+
+
+//  ===============================================================================================
+//  step2, 求取数据包头中相关域参数匹配情况
+//  ===============================================================================================
+//  --------------------------------------------------------------------------------------
+//	产生接收的字节地址开始匹配标识
+//  --------------------------------------------------------------------------------------
+	always@(posedge clk_grx)
+		begin
+			if(i_rx_good_frame | i_rx_bad_frame)
+				begin
+					match_start_addr_gt58 			<= 1'h0;
+				end
+			else if( (ov_rxpkt_byte_addr == 10'h3a) && rx_enable )
+				begin
+					match_start_addr_gt58 			<= 1'h1;
+				end
+		end
+//  --------------------------------------------------------------------------------------
+//	目的mac地址匹配广播地址，和目的mac地址匹配相机mac地址
+//  --------------------------------------------------------------------------------------
+	always@(posedge clk_grx)
+		begin
+			if(i_rx_good_frame | i_rx_bad_frame)
+				begin
+					dst_mac_match_0xff 				<= 1'h0;
+					dst_mac_match_camera_mac 		<= 1'h0;
+				end
+			else if( match_start_addr_gt58 )
+				begin
+					if(&(rxpkt_dstmac_addr))		//48'hffffffffffff
+						begin
+							dst_mac_match_0xff 				<= 1'b1;
+						end
+
+					if(rxpkt_dstmac_addr == iv_camera_src_mac)
+						begin
+							dst_mac_match_camera_mac 		<= 1'b1;
+						end
+				end
+		end
+
+//  --------------------------------------------------------------------------------------
+//	以太网类型匹配IP或ARP
+//  --------------------------------------------------------------------------------------
+	always@(posedge clk_grx)
+		begin
+			if(i_rx_good_frame | i_rx_bad_frame)
+				begin
+					ethernet_type_match_ip  		<= 1'h0;
+					ethernet_type_match_arp 		<= 1'h0;
+				end
+			else if( match_start_addr_gt58 )
+				begin
+					if(rxpkt_ethernet_type == 16'h0800)
+						begin
+							ethernet_type_match_ip  		<= 1'h1;
+							ethernet_type_match_arp 		<= 1'h0;
+						end
+					else if(rxpkt_ethernet_type == 16'h0806)
+						begin
+							ethernet_type_match_ip  		<= 1'h0;
+							ethernet_type_match_arp 		<= 1'h1;
+						end
+				end
+		end
+//  --------------------------------------------------------------------------------------
+//	hardware type匹配为ethernet
+//  --------------------------------------------------------------------------------------
+	always@(posedge clk_grx)
+		begin
+			if(i_rx_good_frame | i_rx_bad_frame)
+				begin
+					hardware_type_match_ethernet	<= 1'h0;
+				end
+			else if( match_start_addr_gt58 )
+				begin
+					if(rxpkt_hardware_type == 16'h0001)
+						begin
+							 hardware_type_match_ethernet	<= 1'h1;
+						end
+				end
+		end
+//  --------------------------------------------------------------------------------------
+//	protocal type匹配为arp
+//  --------------------------------------------------------------------------------------
+	always@(posedge clk_grx)
+		begin
+			if(i_rx_good_frame | i_rx_bad_frame)
+				begin
+					protcol_type_match_arp			<= 1'h0;
+				end
+			else if( match_start_addr_gt58 )
+				begin
+
+					if(rxpkt_protocal_type == 16'h0800)
+						begin
+							 protcol_type_match_arp			<= 1'h1;
+						end
+				end
+		end
+//  --------------------------------------------------------------------------------------
+//	arp操作码匹配为请求或响应命令
+//  --------------------------------------------------------------------------------------
+	always@(posedge clk_grx)
+		begin
+			if(i_rx_good_frame | i_rx_bad_frame)
+				begin
+
+					arp_operate_code_match_req  	<= 1'h0;
+					arp_operate_code_match_ack  	<= 1'h0;
+				end
+			else if( match_start_addr_gt58 )
+				begin
+
+					if( rxpkt_arp_operate_code == 16'h01)
+						begin
+							arp_operate_code_match_req  	<= 1'h1;
+							arp_operate_code_match_ack  	<= 1'h0;
+						end
+					else if(rxpkt_arp_operate_code == 16'h02)
+						begin
+							arp_operate_code_match_req  	<= 1'h0;
+							arp_operate_code_match_ack  	<= 1'h1;
+						end
+				end
+		end
+//  --------------------------------------------------------------------------------------
+//	protcol匹配为UDP或IMCP
+//  --------------------------------------------------------------------------------------
+	always@(posedge clk_grx)
+		begin
+			if(i_rx_good_frame | i_rx_bad_frame)
+				begin
+
+					protcol_match_udp       		<= 1'h0;
+					protcol_match_icmp				<= 1'h0;
+				end
+			else if( match_start_addr_gt58 )
+				begin
+					if(rxpkt_protcol == 8'h11)
+						begin
+							protcol_match_udp       		<= 1'h1;
+							protcol_match_icmp				<= 1'h0;
+						end
+					else if(rxpkt_protcol == 8'h01)
+						begin
+							protcol_match_udp       		<= 1'h0;
+							protcol_match_icmp      		<= 1'h1;
+						end
+				end
+		end
+//  --------------------------------------------------------------------------------------
+//	源IP匹配为PC的IP
+//  --------------------------------------------------------------------------------------
+	always@(posedge clk_grx)
+		begin
+			if(i_rx_good_frame | i_rx_bad_frame)
+				begin
+					gvcp_match_pc_ip				<= 1'h0;
+				end
+			else if( match_start_addr_gt58 )
+				begin
+					if(rxpkt_src_ip == iv_host_pc_ip)
+						begin
+							gvcp_match_pc_ip       			<= 1'h1;
+						end
+				end
+		end
+//  --------------------------------------------------------------------------------------
+//	目的IP匹配广播地址
+//	掩码为FF.FF.FF.FF时，为广播包；，
+//	掩码为FF.FF.FF.00时，接收到同网段目的IP最后8bit为FF时，也为广播包；
+//	掩码为FF.FF.F0.00时，接收到同网段目的IP最后12bit为FFF时，也为广播包。
+//  --------------------------------------------------------------------------------------
+//  --------------------------------------------------------------------------------------
+//	if( (((iv_discov_ip_mask | rxpkt_dst_ip) == 32'hffff_ffff) &&
+//					    ((iv_discov_ip_mask & rxpkt_dst_ip) == (iv_discov_ip_mask & iv_camera_ip)))
+//					    || (rxpkt_dst_ip == 32'hffff_ffff) )
+//	将此逻辑拆分成三段
+//  --------------------------------------------------------------------------------------
+//	always@(posedge clk_grx)
+//			if(i_rx_good_frame | i_rx_bad_frame)
+//				begin
+//					dst_ip_match_0xff_flag1				<= 1'h0;
+//					dst_ip_match_0xff_flag2				<= 1'h0;
+//					dst_ip_match_0xff_flag3				<= 1'h0;
+//				end
+//			else
+//				begin
+//					if(&(iv_discov_ip_mask | rxpkt_dst_ip))
+//					dst_ip_match_0xff_flag1				<= 1'h1;
+//
+//					if((iv_discov_ip_mask & rxpkt_dst_ip) == (iv_discov_ip_mask & iv_camera_ip))
+//					dst_ip_match_0xff_flag2				<= 1'h1;
+//
+//					if(&rxpkt_dst_ip)
+//					dst_ip_match_0xff_flag3				<= 1'h1;
+//				end
+
+	always@(posedge clk_grx)
+		begin
+			if(i_rx_good_frame | i_rx_bad_frame)
+				begin
+					dst_ip_match_0xff 				<= 1'h0;
+				end
+			else if( match_start_addr_gt58 )
+				begin
+					if( (((iv_discov_ip_mask | rxpkt_dst_ip) == 32'hffff_ffff) &&
+					    ((iv_discov_ip_mask & rxpkt_dst_ip) == (iv_discov_ip_mask & iv_camera_ip)))
+					    || (rxpkt_dst_ip == 32'hffff_ffff) )
+					    begin
+							dst_ip_match_0xff 				<= 1'h1;
+						end
+				end
+		end
+//  --------------------------------------------------------------------------------------
+//	目的IP匹配相机IP
+//  --------------------------------------------------------------------------------------
+	always@(posedge clk_grx)
+		begin
+
+			if(i_rx_good_frame | i_rx_bad_frame)
+				begin
+					dst_ip_match_camera_ip 			<= 1'h0;
+				end
+			else if( match_start_addr_gt58 )
+				begin
+					if(rxpkt_dst_ip == iv_camera_ip)
+						begin
+							dst_ip_match_camera_ip 			<= 1'h1;
+						end
+				end
+		end
+//  --------------------------------------------------------------------------------------
+//	icmp type匹配ping命令或Destination Unreachable网络包格式
+//  --------------------------------------------------------------------------------------
+	always@(posedge clk_grx)
+		begin
+			if(i_rx_good_frame | i_rx_bad_frame)
+				begin
+					icmp_type_match_ping			<= 1'h0;
+					icmp_type_match_unreachable		<= 1'h0;
+				end
+			else if( match_start_addr_gt58 )
+				begin
+					if(rxpkt_icmp_type == 8'h08)
+						begin
+							icmp_type_match_ping    		<= 1'h1;
+							icmp_type_match_unreachable    	<= 1'h0;
+						end
+					else if(rxpkt_icmp_type == 8'h03)
+						begin
+							icmp_type_match_ping    		<= 1'h0;
+							icmp_type_match_unreachable    	<= 1'h1;
+						end
+				end
+		end
+
+//  --------------------------------------------------------------------------------------
+//	icmp code匹配ping命令
+//  --------------------------------------------------------------------------------------
+	always@(posedge clk_grx)
+		begin
+			if(i_rx_good_frame | i_rx_bad_frame)
+				begin
+					icmp_code_match_ping			<= 1'h0;
+				end
+			else if( match_start_addr_gt58 )
+				begin
+					if(rxpkt_icmp_code == 8'h0)
+						begin
+							icmp_code_match_ping    		<= 1'h1;
+						end
+				end
+		end
+
+//  --------------------------------------------------------------------------------------
+//	源端口与PC端口匹配标志
+//  --------------------------------------------------------------------------------------
+	always@(posedge clk_grx)
+		begin
+			if(i_rx_good_frame | i_rx_bad_frame)
+				begin
+					dst_port_match_message			<= 1'h0;
+					gvcp_match_pc_port				<= 1'h0;
+				end
+			else if( match_start_addr_gt58 )
+				begin
+					if((rxpkt_icmp_type == iv_host_pc_port[15:8]) && (rxpkt_icmp_code == iv_host_pc_port[7:0]))
+						begin
+							gvcp_match_pc_port    			<= 1'h1;
+							dst_port_match_message			<= 1'h0;
+						end
+					else if((rxpkt_icmp_type == iv_mesg_dst_port[15:8]) && (rxpkt_icmp_code == iv_mesg_dst_port[7:0]))
+						begin
+							gvcp_match_pc_port    			<= 1'h0;
+							dst_port_match_message			<= 1'h1;
+						end
+				end
+		end
+//  --------------------------------------------------------------------------------------
+//	UDP端口匹配GCVP或DHCP
+//  --------------------------------------------------------------------------------------
+	always@(posedge clk_grx)
+		begin
+			if(i_rx_good_frame | i_rx_bad_frame)
+				begin
+					dst_port_match_gvcp    	 		<= 1'h0;
+					dst_port_match_dhcp	 			<= 1'h0;
+				end
+			else if( match_start_addr_gt58 )
+				begin
+
+					if(rxpkt_dst_port == 16'h0f74)
+						begin
+							dst_port_match_gvcp     		<= 1'h1;
+							dst_port_match_dhcp     		<= 1'h0;
+						end
+					else if(rxpkt_dst_port == 16'h44)
+						begin
+							dst_port_match_gvcp    	 		<= 1'h0;
+							dst_port_match_dhcp     		<= 1'h1;
+						end
+				end
+		end
+//  --------------------------------------------------------------------------------------
+//	目的IP匹配为相机IP
+//  --------------------------------------------------------------------------------------
+	always@(posedge clk_grx)
+		begin
+			if(i_rx_good_frame | i_rx_bad_frame)
+				begin
+					arp_src_ip_match_camera_ip  	<= 1'h0;
+				end
+			else if( match_start_addr_gt58 )
+				begin
+					if(&(rxpkt_arp_dst_ip ~^ iv_camera_ip))
+						begin
+							arp_src_ip_match_camera_ip  	<= 1'h1;
+						end
+				end
+		end
+//  --------------------------------------------------------------------------------------
+//	dhcp消息类型匹配为应答包或头标志位匹配
+//  --------------------------------------------------------------------------------------
+	always@(posedge clk_grx)
+		begin
+			if(i_rx_good_frame | i_rx_bad_frame)
+				begin
+
+					dhcp_message_match_ack	 		<= 1'h0;
+					gvcp_match_head_flag     		<= 1'h0;
+				end
+			else if( match_start_addr_gt58 )
+				begin
+					if(rxpkt_gvcp_head_flag == 8'h02)
+						begin
+							dhcp_message_match_ack      	<= 1'h1;
+							gvcp_match_head_flag      		<= 1'h0;
+						end
+					else if(rxpkt_gvcp_head_flag == 8'h42)
+						begin
+							dhcp_message_match_ack      	<= 1'h0;
+							gvcp_match_head_flag      		<= 1'h1;
+						end
+				end
+		end
+//  --------------------------------------------------------------------------------------
+//	GVCP命令匹配重传命令
+//  --------------------------------------------------------------------------------------
+	always@(posedge clk_grx)
+		begin
+			if(i_rx_good_frame | i_rx_bad_frame)
+				begin
+					gvcp_cmd_match_resend    		<= 1'h0;
+				end
+			else if( match_start_addr_gt58 )
+				begin
+					if(rxpkt_gvcp_cmd[15:0] == 16'h0040)
+						begin
+							gvcp_cmd_match_resend    		<= 1'h1;
+						end
+				end
+		end
+//  --------------------------------------------------------------------------------------
+//	GVCP命令匹配重传命令
+//  --------------------------------------------------------------------------------------
+	always@(posedge clk_grx)
+		begin
+			if(i_rx_good_frame | i_rx_bad_frame)
+				begin
+					gvcp_cmd_match_forceip    		<= 1'h0;
+				end
+			else if( match_start_addr_gt58 )
+				begin
+					if(rxpkt_gvcp_cmd[15:0] == 16'h0004)
+						begin
+							gvcp_cmd_match_forceip    		<= 1'h1;
+						end
+				end
+		end
+
+//  ===============================================================================================
+//	step3, 几种类型数据包匹配结果，按照协议进行归纳
+//  ===============================================================================================
+	always@(posedge clk_grx)
+		begin
+			if(rx_enable)
+				begin
+					gvcp_discov_match      	<= dst_mac_match_0xff && ethernet_type_match_ip && protcol_match_udp
+					                           && dst_ip_match_0xff && dst_port_match_gvcp && gvcp_match_head_flag;
+
+					gvcp_normal_match      	<= dst_mac_match_camera_mac && ethernet_type_match_ip && protcol_match_udp
+					                           && dst_ip_match_camera_ip && dst_port_match_gvcp && gvcp_match_head_flag && ~gvcp_cmd_match_resend;
+
+					udp_dhcp_match      	<= ((dst_mac_match_0xff && dst_ip_match_0xff) || (dst_mac_match_camera_mac && dst_ip_match_camera_ip)) && ethernet_type_match_ip
+						                       && protcol_match_udp  && dst_port_match_dhcp && dhcp_message_match_ack;
+
+					arp_cmd_match	   		<= (dst_mac_match_0xff || dst_mac_match_camera_mac) && ethernet_type_match_arp && arp_operate_code_match_req
+					                           && arp_src_ip_match_camera_ip && protcol_type_match_arp && hardware_type_match_ethernet;
+
+					arp_ack_match	   		<= dst_mac_match_camera_mac && ethernet_type_match_arp && arp_operate_code_match_ack
+					                           && arp_src_ip_match_camera_ip && protcol_type_match_arp && hardware_type_match_ethernet;
+
+					resend_pkt_match	   	<= dst_mac_match_camera_mac && ethernet_type_match_ip && protcol_match_udp
+					                           && dst_ip_match_camera_ip && dst_port_match_gvcp && gvcp_cmd_match_resend ;
+
+					icmp_ping_match			<= dst_mac_match_camera_mac && ethernet_type_match_ip && protcol_match_icmp
+											   && dst_ip_match_camera_ip && icmp_type_match_ping && icmp_code_match_ping;
+
+					icmp_unreachable_match	<= dst_mac_match_camera_mac && ethernet_type_match_ip && protcol_match_icmp
+											   && dst_ip_match_camera_ip && icmp_type_match_unreachable;
+
+					message_ack_match		<= dst_mac_match_camera_mac && ethernet_type_match_ip && protcol_match_udp
+					                           && gvcp_match_pc_ip && dst_ip_match_camera_ip && dst_port_match_message;			//gvcp_match_head_flag && gvcp_match_pc_port
+
+					w_heartbeat_clr			<= gvcp_match_pc_ip & gvcp_match_pc_port & gvcp_normal_match & ~gvcp_cmd_match_forceip;						//产生清心跳信号
+				end
+		end
+
+//  ===============================================================================================
+//	step4, 将几种GVCP类型数据包匹配综合起来，输出给外部模块
+//  ===============================================================================================
+	always@(posedge clk_grx)
+		begin
+//		  	if(reset_grx)
+//		  		begin
+//					gvcp_match <= 1'h0;
+//				end
+//			else
+				if(rx_enable)
+				begin
+					gvcp_match <= (gvcp_discov_match  || gvcp_normal_match || udp_dhcp_match || arp_cmd_match
+								  || arp_ack_match || icmp_ping_match || icmp_unreachable_match || message_ack_match);
+				end
+		end
+
+	assign	gvcp_match_1clk = gvcp_match && i_rx_good_frame;
+
+//  --------------------------------------------------------------------------------------
+//	将gvcp_match_1clk延长4个周期
+//	将o_heartbeat_clr信号延长2个周期，输出6个周期（125mhz）
+//  --------------------------------------------------------------------------------------
+	always@(posedge clk_grx)
+		begin
+				gvcp_match0 			<= gvcp_match_1clk;
+				gvcp_match1 			<= gvcp_match0;
+				gvcp_match2 			<= gvcp_match1;
+				gvcp_match3 			<= gvcp_match2;
+				w_heartbeat_clr_dly1	<= w_heartbeat_clr;
+				w_heartbeat_clr_dly2	<= w_heartbeat_clr_dly1;
+				o_heartbeat_clr			<= w_heartbeat_clr | w_heartbeat_clr_dly1 | w_heartbeat_clr_dly2;
+		end
+
+	assign  o_gvcp_match = gvcp_match_1clk | gvcp_match0 | gvcp_match1 | gvcp_match2 | gvcp_match3;
+
+
+//  ===============================================================================================
+//	step5, 产生重传写使能和重传命令
+//  ===============================================================================================
+
+//  -------------------------------------------------------------------------------------
+//  产生数据包重传命令的写信号，一个周期，在数据包接收完毕后
+//  -------------------------------------------------------------------------------------
+	always@(posedge clk_grx)
+		begin
+			if(rx_enable)
+				begin
+					if(resend_pkt_match && i_rx_good_frame)
+						begin
+							o_resend_pkt_wren     	<= 1'h1;
+						end
+					else
+						begin
+							o_resend_pkt_wren     	<= 1'h0;
+						end
+				end
+		end
+//  -------------------------------------------------------------------------------------
+//  产生重传命令
+//  -------------------------------------------------------------------------------------
+	always@(posedge clk_grx)
+		begin
+			ov_resend_pkt_para		<= {rxpkt_pic_resend_blkid, rxpkt_resend_start_pktid, rxpkt_resend_end_pktid};
+		end
+
+endmodule
