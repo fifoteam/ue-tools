@@ -1,0 +1,327 @@
+//-------------------------------------------------------------------------------------------------
+//  -- 版权所有者   : 中国大恒（集团）有限公司北京图像视觉技术分公司, 2010 -2018.
+//  -- 保密级别     ：绝密.
+//  -- 部门         : 硬件部，FPGA工作组
+//  -- 模块名       : gige_vision
+//  -- 设计者       : 张少强
+//-------------------------------------------------------------------------------------------------
+//
+//  -- 版本记录 :
+//
+//  -- 作者         :| 版本号	:| 修改日期				:|  修改说明
+//-------------------------------------------------------------------------------------------------
+//  -- 张少强       :| V1.0		:| 2018/11/21 10:30:39	:|  初始版本
+//-------------------------------------------------------------------------------------------------
+//
+//  -- 模块描述     :
+//              1)  :
+//
+//              2)  :
+//
+//              3)  :
+//
+//-------------------------------------------------------------------------------------------------
+//`include			"gige_vision_def.v"
+//仿真单位/精度
+`timescale 1ns/1ps
+//-------------------------------------------------------------------------------------------------
+
+module gige_vision # (
+	parameter	SHORT_REG_WD   								= 16		,	//短寄存器位宽
+	parameter	REG_WD  						 			= 32		,	//寄存器位宽
+	parameter	LONG_REG_WD  						 		= 64		,	//长寄存器位宽
+	parameter	GEV_DATA_WD									= 64		,	//数据位宽，支持32、64、128
+	parameter	GEV_DE_WD									= 2			,	//与frame_buffer接口的数据位宽也即gvsp_tx中传输的数据位宽
+	parameter	GEV_BE_WD									= 8			,	//字节使能位宽，1byte数据使用一个使能位
+	parameter	MAC_DATA_WD									= 64		,	//与mac接口的数据位宽
+	parameter	MAC_BE_WD									= 8			,	//MAC_DATA_WD字节使能标志位位宽
+	parameter	PB_RD_CNT_WD								= 13		,	//packet buffer read cnt位宽，= log2(packet buffer depth)
+	parameter	PKT_LENGTH_WD								= 13		,	//packet length 包长寄存器宽度
+	parameter	PKT_CNT_WD									= 18		,	//packet cnt 包个数寄存器宽度
+	parameter	INFO_SIZE									= 256		,	//INFO段数据量，以byte为单位
+	parameter	STATIS_SIZE									= 256		,	//STATIS段数据量，以byte为单位
+	parameter	AXI_DATA_WD									= 32		,	//AXI总线数据位宽
+	parameter	AXI_ADDR_WD									= 32			//AXI总线地址位宽
+	)
+	(
+	//  -------------------------------------------------------------------------------------
+	//  时钟和复位信号
+	//  -------------------------------------------------------------------------------------
+	input							clk_gev								,	//gev工作时钟
+	input							reset_gev							,	//gev工作时钟域的复位信号，高有效
+	input							clk_gtx								,	//
+	input							reset_gtx							,	//
+	input							clk_axi								,	//axi工作时钟
+	input							reset_axi							,	//axi工作时钟域的复位信号，高有效
+	input							clk_grx								,	//grx工作时钟(156.25mhz)
+	input							reset_grx							,	//grx工作时钟域的复位信号，高有效
+	input							clk_quick							,
+	input							reset_quick							,
+	//  -------------------------------------------------------------------------------------
+	//  控制数据
+	//  -------------------------------------------------------------------------------------
+	input							i_stream_enable_gev					,	//clk_gev时钟域，流停止信号，高有效，有效时允许数据从帧存读出，无效时立即停止读出，并复位读写地址指针，清帧存
+	input							i_stream_enable_gtx					,	//clk_gtx时钟域，流停止信号，高有效，有效时允许数据从帧存读出，无效时立即停止读出，并复位读写地址指针，清帧存
+	input							i_ge_transfer_start					,	//clk_gev时钟域，ge传输有效信号，高有效，以一个完整帧为单位，有效时允许数据从帧存读出，无效时不能读出数据，但是不会复位读帧号，在读一帧开始时生效
+	//  -------------------------------------------------------------------------------------
+	//  与 frame buffer 交互
+	//  -------------------------------------------------------------------------------------
+	output							o_fb_rd								,	//clk_gev时钟域，帧存后端fifo读出使能信号，高有效
+	input							i_fb_empty							,	//clk_gev时钟域，帧存后端fifo空信号，高有效
+//	input							i_fb_busy							,	//clk_gev时钟域，帧存后端fifo busy信号，高有效
+	input	[GEV_DE_WD-1:0]			iv_data_is_cmd						,	//clk_gev时钟域，帧存后端fifo输出数据是命令数据，单bit代表4byte，1-表示是命令数据，0-表示是图像数据
+	input	[GEV_DE_WD-1:0]			iv_dval								,	//clk_gev时钟域，帧存后端fifo输出数据有效信号，单bit代表4byte，1-表示数据有效，0-表示数据无效
+	input	[GEV_DATA_WD-1:0]		iv_data								,	//clk_gev时钟域，帧存后端fifo输出数据，支持32、64、128
+	//	-------------------------------------------------------------------------------------
+	//	寄存器模块信号
+	//	-------------------------------------------------------------------------------------
+	input							i_test_pkt_enable_gev				,	//clk_gev时钟域，测试包发送使能
+	output							o_test_pkt_over_gev					,	//clk_gev时钟域，测试包发送完成，1个clk的高脉冲，寄存器模块接收到该信号后清i_test_pkt_enable
+	input	[31:0]					iv_pc_ip_gev						,	//clk_gev时钟域，ip pc address
+	input	[31:0]					iv_camera_ip_gev					,	//clk_gev时钟域，ip camera address
+	input	[15:0]					iv_pc_port_sc_gev					,	//clk_gev时钟域，stream channel gvsp包pc端口号
+	input	[15:0]					iv_camera_port_gev					,	//clk_gev时钟域，相机udp端口号
+	input  	[PKT_LENGTH_WD-1:0]		iv_pkt_length_gev					,	//clk_gev时钟域，packet length 正常包包长,仅payload部分，不包括ip、udp、gvsp头
+	input  	[PKT_CNT_WD-1:0]		iv_pkt_cnt_gev						,	//clk_gev时钟域，packet cnt 正常包个数(包含帧信息部分)
+	input  	[PKT_LENGTH_WD-1:0]		iv_remain_pkt_length_gev			,	//clk_gev时钟域，remain packet length 残包包长(包含帧信息部分)
+	input	[SHORT_REG_WD-1:0]		iv_gvcp_length_gtx					,	//clk_gtx时钟域，gvcp包长
+	input	[47:0]					iv_pc_mac_gtx						,	//clk_gtx时钟域，mac pc address
+	input	[47:0]					iv_camera_mac_gev					,	//clk_gtx时钟域，mac camera address
+	input	[47:0]					iv_camera_mac_gtx					,	//clk_gtx时钟域，mac camera address
+	input	[REG_WD-1:0]			iv_packet_gap_gtx					,	//clk_gtx时钟域，包间隔,单位8byte,最小值为2
+	input							i_gvcp_ack_txen_gtx					,	//clk_gtx时钟域，gvcp发送使能，高有效，固件置位，fpga清0
+	output							o_gvcp_ack_tx_start_gtx				,	//clk_gtx时钟域，gvcp开始发送信号，单脉冲信号，高有效，当该信号为1时，将gvcp_ack_txen清0
+	input	[4*8-1	:0]				iv_ip_mask_gev						,	//clk_gtx时钟域，ip掩码，discover相机时使用
+	input	[2*8-1	:0]				iv_pc_port_cc_gev					,	//clk_gtx时钟域，gvcp control channel命令包pc源端口号，用于清心跳
+	input	[2*8-1	:0]				iv_pc_port_mc_gev					,	//clk_gtx时钟域，gvcp message channel应答包pc源端口号
+	input	[REG_WD-1:0]			iv_irq_status_gev					,	//clk_gtx时钟域，中断状态寄存器，指示当前中断的状态类型.bit0位和bit1位分别指示gvcp_rx_ram中两片存储空间的状态
+	output							o_mac_valid_gev						,	//clk_gtx时钟域, 输出数据有效信号，上升沿可以表示一帧的开始
+	output							o_protocal_match_gev				,	//clk_gtx时钟域，输出给异步时钟域，协议匹配标志，包括arp、icmp、dhcp、gvcp协议
+	output							o_heartbeat_clr_gev					,	//clk_gtx时钟域，输出给异步时钟域，清心跳标志
+	output	[LONG_REG_WD-1:0]		ov_resend_block_id_gev				,	//clk_gtx时钟域，block id
+	output	[REG_WD-1:0]			ov_resend_packet_id_first_gev		,	//clk_gtx时钟域，packet id first，重传起始
+	output	[REG_WD-1:0]			ov_resend_packet_id_last_gev		,	//clk_gtx时钟域，packet id last，重传结束
+	output							o_resend_en_gev						,	//clk_gtx时钟域，ov_resend_cmd写使能，发送给重传命令fifo，高有效
+	//axi
+	input	[AXI_ADDR_WD-1:0]		iv_axi_wr_addr						,	//clk_axi时钟域，axi 写地址
+	input 	  						i_axi_wr_en							,	//clk_axi时钟域，axi 写使能
+    input 	  [AXI_DATA_WD-1:0]		iv_axi_wr_data						,	//clk_axi时钟域，axi 写数据
+	input 	  [AXI_DATA_WD/8-1:0]	iv_axi_wr_be						,	//clk_axi时钟域，axi 写字节使能
+    input	[AXI_ADDR_WD-1:0]		iv_axi_rd_addr						,	//clk_axi时钟域，axi 读地址
+    output 	  [AXI_DATA_WD-1:0]		ov_axi_rd_data						,	//clk_axi时钟域，axi 读数据
+	//  -------------------------------------------------------------------------------------
+	//	与 mac 交互，axi stream 信号
+	//  -------------------------------------------------------------------------------------
+	//	tx
+	output	[7:0]					ov_tx_ifg_delay						,	//clk_gtx时钟域，mac控制包间隔输入端口，本设计中设置为0，使用状态机控制包间隔
+	output							o_tx_axis_aresetn					,	//clk_gtx时钟域，mac发送端复位信号
+	output	[MAC_DATA_WD-1:0]		ov_tx_axis_tdata					,	//clk_gtx时钟域，
+	output	[MAC_BE_WD-1:0]			ov_tx_axis_tkeep					,	//clk_gtx时钟域，
+	output							o_tx_axis_tvalid					,	//clk_gtx时钟域，
+	output							o_tx_axis_tlast						,	//clk_gtx时钟域，
+	output							o_tx_axis_tuser						,	//clk_gtx时钟域，
+	input							i_tx_axis_tready					,	//clk_gtx时钟域，
+	//	rx
+	input	[MAC_DATA_WD-1:0]		iv_rx_axis_tdata					,	//clk_grx时钟域，
+	input	[MAC_BE_WD-1:0]			iv_rx_axis_tkeep					,	//clk_grx时钟域，
+	input							i_rx_axis_tvalid					,	//clk_grx时钟域，
+	input							i_rx_axis_tlast						,	//clk_grx时钟域，
+	input							i_rx_axis_tuser						,	//clk_grx时钟域，
+	output							o_rx_axis_tready						//clk_grx时钟域
+	);
+	//	===============================================================================================
+	//	ref functions
+	//	===============================================================================================
+
+
+	//	===============================================================================================
+	//	ref paramters
+	//	===============================================================================================
+	localparam						CLK_GRX_FREQ_KHZ		=	156250	;	//grx时钟频率，khz
+
+	//	===============================================================================================
+	//	ref signals
+	//	===============================================================================================
+	//	gvsp_tx
+	wire							w_pb_empty							;
+	wire							w_pb_busy							;
+	wire	[GEV_BE_WD-1:0]			wv_be_gvsp_tx						;
+	wire	[GEV_DATA_WD-1:0]		wv_data_gvsp_tx						;
+	wire							w_pcb_empty							;
+	wire							w_pcb_busy							;
+	//	gvcp_tx
+	wire	[GEV_BE_WD-1:0]			wv_be_gvcp_tx						;
+	wire	[GEV_DATA_WD-1:0]		wv_data_gvcp_tx						;
+	//	packet_switch
+	wire							w_pb_rd_en							;
+	wire							w_pcb_rd_en							;
+	wire							w_gvcp_tx_rd_en						;
+	//	===============================================================================================
+	//	ref ARCHITECTURE
+	//	===============================================================================================
+
+
+	//	===============================================================================================
+	//	-ref TX
+	//		frame_buffer--> || gvsp_tx						||
+	//						||			--> packet_switch	||-->mac
+	//		microblaze---->	|| gvcp_tx						||
+	//	===============================================================================================
+	//	-------------------------------------------------------------------------------------
+	//	instantiate "gvsp_tx" module
+	//	-------------------------------------------------------------------------------------
+	gvsp_tx # (
+	.SHORT_REG_WD				(SHORT_REG_WD				),
+	.REG_WD						(REG_WD						),
+	.LONG_REG_WD				(LONG_REG_WD				),
+	.GEV_DE_WD					(GEV_DE_WD					),
+	.GEV_BE_WD					(GEV_BE_WD					),
+	.GEV_DATA_WD				(GEV_DATA_WD				),
+	.PB_RD_CNT_WD				(PB_RD_CNT_WD				),
+	.PKT_LENGTH_WD				(PKT_LENGTH_WD				),
+	.PKT_CNT_WD					(PKT_CNT_WD					),
+	.INFO_SIZE					(INFO_SIZE					),
+	.STATIS_SIZE				(STATIS_SIZE				)
+	)
+	gvsp_tx_inst (
+	.clk_gev					(clk_gev					),
+	.reset_gev					(reset_gev					),
+	.i_stream_enable			(i_stream_enable_gev		),
+	.i_ge_transfer_start		(i_ge_transfer_start		),
+	.o_fb_rd					(o_fb_rd					),
+	.i_fb_empty					(i_fb_empty					),
+	.i_fb_busy					(1'b0						),
+	.iv_data_is_cmd				(iv_data_is_cmd				),
+	.iv_dval					(iv_dval					),
+	.iv_data					(iv_data					),
+	.i_test_pkt_enable			(i_test_pkt_enable_gev		),
+	.o_test_pkt_over			(o_test_pkt_over_gev		),
+	.iv_pc_ip					(iv_pc_ip_gev				),
+	.iv_camera_ip				(iv_camera_ip_gev			),
+	.iv_pc_port_sc				(iv_pc_port_sc_gev			),
+	.iv_camera_port				(iv_camera_port_gev			),
+	.iv_pkt_length				(iv_pkt_length_gev			),
+	.iv_pkt_cnt					(iv_pkt_cnt_gev				),
+	.iv_remain_pkt_length		(iv_remain_pkt_length_gev	),
+	.clk_gtx					(clk_gtx					),
+	.reset_gtx					(reset_gtx					),
+	.i_pb_rd_en					(w_pb_rd_en					),
+	.o_pb_empty					(w_pb_empty					),
+	.o_pb_busy					(w_pb_busy					),
+	.ov_be_switch				(wv_be_gvsp_tx				),
+	.ov_data_switch				(wv_data_gvsp_tx			),
+	.i_pcb_rd_en				(w_pcb_rd_en				),
+	.o_pcb_empty				(w_pcb_empty				),
+	.o_pcb_busy					(w_pcb_busy					)
+	);
+	//	-------------------------------------------------------------------------------------
+	//	instantiate "gvcp_tx" module
+	//	-------------------------------------------------------------------------------------
+	gvcp_tx_ram # (
+	.AXI_DATA_WD			(AXI_DATA_WD			),
+	.AXI_ADDR_WD			(AXI_ADDR_WD			),
+	.GEV_BE_WD				(GEV_BE_WD				),
+	.GEV_DATA_WD			(GEV_DATA_WD			),
+	.SHORT_REG_WD			(SHORT_REG_WD			)
+	)
+	gvcp_tx_ram_inst (
+	.clk_axi				(clk_axi				),
+	.reset_axi				(reset_axi				),
+	.i_axi_lite_wr_en		(i_axi_wr_en			),
+	.iv_axi_lite_be			(iv_axi_wr_be			),
+	.iv_axi_lite_wr_addr	(iv_axi_wr_addr			),
+	.iv_axi_lite_wr_data	(iv_axi_wr_data			),
+	.clk					(clk_gtx				),
+	.reset					(reset_gtx				),
+	.i_tx_axis_tvalid		(o_tx_axis_tvalid		),
+	.iv_gvcp_length			(iv_gvcp_length_gtx		),
+	.i_gvcp_tx_ram_rd		(w_gvcp_tx_rd_en		),
+	.ov_gvcp_tx_ram_be		(wv_be_gvcp_tx			),
+	.ov_gvcp_tx_ram_data	(wv_data_gvcp_tx		)
+	);
+	//	-------------------------------------------------------------------------------------
+	//	instantiate "packet_switch" module
+	//	-------------------------------------------------------------------------------------
+	packet_switch # (
+	.SHORT_REG_WD			(SHORT_REG_WD			),
+	.REG_WD					(REG_WD					),
+	.LONG_REG_WD			(LONG_REG_WD			),
+	.TX_DATA_WD				(GEV_DATA_WD			),
+	.TX_BE_WD				(GEV_BE_WD				),
+	.MAC_BE_WD				(MAC_BE_WD				),
+	.MAC_DATA_WD			(MAC_DATA_WD			)
+	)
+	packet_switch_inst (
+	.clk					(clk_gtx				),
+	.reset					(reset_gtx				),
+	.i_stream_enable		(i_stream_enable_gtx	),
+	.i_pb_empty				(w_pb_empty				),
+	.o_pb_rd_en				(w_pb_rd_en				),
+	.iv_gvsp_be				(wv_be_gvsp_tx			),
+	.iv_gvsp_data			(wv_data_gvsp_tx		),
+	.o_pcb_rd_en			(w_pcb_rd_en			),
+	.i_pcb_empty			(w_pcb_empty			),
+	.iv_pc_mac				(iv_pc_mac_gtx			),
+	.iv_camera_mac			(iv_camera_mac_gtx		),
+	.iv_packet_gap			(iv_packet_gap_gtx		),
+	.i_gvcp_ack_txen		(i_gvcp_ack_txen_gtx	),
+	.o_gvcp_ack_tx_start	(o_gvcp_ack_tx_start_gtx),
+	.o_gvcp_tx_ram_rd		(w_gvcp_tx_rd_en		),
+	.iv_gvcp_tx_ram_be		(wv_be_gvcp_tx			),
+	.iv_gvcp_tx_ram_data	(wv_data_gvcp_tx		),
+	.ov_tx_ifg_delay		(ov_tx_ifg_delay		),
+	.o_tx_axis_aresetn		(o_tx_axis_aresetn		),
+	.ov_tx_axis_tdata		(ov_tx_axis_tdata		),
+	.ov_tx_axis_tkeep		(ov_tx_axis_tkeep		),
+	.o_tx_axis_tvalid		(o_tx_axis_tvalid		),
+	.o_tx_axis_tlast		(o_tx_axis_tlast		),
+	.o_tx_axis_tuser		(o_tx_axis_tuser		),
+	.i_tx_axis_tready		(i_tx_axis_tready		)
+	);
+	//	===============================================================================================
+	//	-ref RX
+	//		microblaze<--- 	|| gvcp_rx						||<--mac
+	//	===============================================================================================
+	gvcp_rx # (
+	.MAC_BE_WD						(MAC_BE_WD						),
+	.MAC_DATA_WD					(MAC_DATA_WD					),
+	.CLK_IN_FREQ_KHZ				(5				),
+	.CLK_OUT_FREQ_KHZ				(1				),
+	.REG_WD							(REG_WD							),
+	.LONG_REG_WD					(LONG_REG_WD					),
+	.AXI_DATA_WD					(AXI_DATA_WD					),
+	.AXI_ADDR_WD					(AXI_ADDR_WD					)
+	)
+	gvcp_rx_inst (
+	.clk_grx						(clk_grx						),
+	.reset_grx						(reset_grx						),
+	.iv_rx_axis_tdata				(iv_rx_axis_tdata				),
+	.iv_rx_axis_tkeep				(iv_rx_axis_tkeep				),
+	.i_rx_axis_tvalid				(i_rx_axis_tvalid				),
+	.i_rx_axis_tlast				(i_rx_axis_tlast				),
+	.i_rx_axis_tuser				(i_rx_axis_tuser				),
+	.o_rx_axis_tready				(o_rx_axis_tready				),
+	.clk							(clk_quick						),
+	.reset							(reset_quick					),
+	.iv_camera_mac					(iv_camera_mac_gev				),
+	.iv_camera_ip					(iv_camera_ip_gev				),
+	.iv_pc_ip						(iv_pc_ip_gev						),
+	.iv_ip_mask						(iv_ip_mask_gev						),
+	.iv_pc_port_cc					(iv_pc_port_cc_gev					),
+	.iv_pc_port_mc					(iv_pc_port_mc_gev					),
+	.iv_irq_status					(iv_irq_status_gev					),
+	.o_mac_valid					(o_mac_valid_gev					),
+	.o_protocal_match				(o_protocal_match_gev				),
+	.o_heartbeat_clr				(o_heartbeat_clr_gev				),
+	.ov_resend_block_id				(ov_resend_block_id_gev				),
+	.ov_resend_packet_id_first		(ov_resend_packet_id_first_gev		),
+	.ov_resend_packet_id_last		(ov_resend_packet_id_last_gev		),
+	.o_resend_en					(o_resend_en_gev					),
+	.clk_axi						(clk_axi						),
+	.reset_axi						(reset_axi						),
+	.iv_axi_rd_addr					(iv_axi_rd_addr					),
+	.ov_axi_rd_data					(ov_axi_rd_data					)
+	);
+
+
+endmodule

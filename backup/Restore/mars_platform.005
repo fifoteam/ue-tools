@@ -1,0 +1,1557 @@
+//-------------------------------------------------------------------------------------------------
+//  -- 版权所有者   : 中国大恒（集团）有限公司北京图像视觉技术分公司, 2010 -2015.
+//  -- 保密级别     ：绝密.
+//  -- 部门         : 硬件部，FPGA工作组
+//  -- 模块名       : mars_platform
+//  -- 设计者       : 邢海涛
+//-------------------------------------------------------------------------------------------------
+//
+//  -- 版本记录 :
+//
+//  -- 作者         :| 版本号	:| 修改日期				:|  修改说明
+//-------------------------------------------------------------------------------------------------
+//  -- 邢海涛       :| V1.0		:| 2018/12/05 15:01:27	:|  初始版本
+//-------------------------------------------------------------------------------------------------
+//
+//  -- 模块描述     :
+//              1)  :
+//
+//              2)  :
+//
+//              3)  :
+//
+//-------------------------------------------------------------------------------------------------
+//`include			"mars_platform_def.v"
+//仿真单位/精度
+`timescale 1ns/1ps
+//-------------------------------------------------------------------------------------------------
+
+module mars_platform # (
+	//	-------------------------------------------------------------------------------------
+	//	sensor 相关参数
+	//	-------------------------------------------------------------------------------------
+	parameter		SENSOR_SERIES									= "PYTHON"					,	//sensor系列，PYTHON  SONYIMX CMV
+	parameter		SENSOR_MODEL									= "PYTHON25K"				,	//sensor系列中的具体型号
+	parameter		CHANNEL_NUM										= 16						,	//差分通道个数
+	//	-------------------------------------------------------------------------------------
+	//	DDR memory 相关参数
+	//	-------------------------------------------------------------------------------------
+	parameter		MEM_DQ_WD										= 32						,	//DDR3 数据宽度
+	parameter		MEM_ADDR_WD										= 14						,	//DDR3 地址宽度
+	parameter		MEM_BANKADDR_WD									= 3							,	//DDR3 bank地址宽度
+	parameter		MEM_SIZE_MBIT									= 2048						,	//DDR3 存储容量，以MBIT为单位，支持 512、1024、2048、4096
+	parameter		MEM_DM_WD										= MEM_DQ_WD/8				,	//DDR3 数据屏蔽信号宽度
+	parameter		MEM_DQS_WD										= MEM_DQ_WD/8				,	//DDR3 数据选通信号宽度
+	parameter		FRAME_DEPTH_MAX									= 4							,	//最大的帧存深度，最小是1帧。可设置为 1 2 3 4 5 6 ......
+	//	-------------------------------------------------------------------------------------
+	//	interface 相关参数
+	//	-------------------------------------------------------------------------------------
+	parameter		INTERFACE_SERIES								= "10GIGE"					,	//interface系列，1GIGE 5GIGE 10GIGE USB3.0 CXP
+	parameter		ETH_PKT_LENGTH_MAX								= 8192						,	//以太网包长最大值，以byte为单位，最小是8192，最大是65532
+	//	-------------------------------------------------------------------------------------
+	//	相机功能 相关参数
+	//	-------------------------------------------------------------------------------------
+	parameter		MROI_NUM_MAX 									= 1							,	//Multi-ROI的最大个数，如果不支持，则写1
+	parameter		SIMULATION										= "FALSE"						//仿真模式，复位时间变短，加速仿真
+	)
+	(
+	//	-------------------------------------------------------------------------------------
+	//	晶振输入
+	//	-------------------------------------------------------------------------------------
+	input															clk_osc						,	//板上晶振时钟
+	//	-------------------------------------------------------------------------------------
+	//	sensor相关
+	//	-------------------------------------------------------------------------------------
+	input															i_clk_p						,  	//sensor输出的差分串行时钟正极，最大支持到600MHz
+	input															i_clk_n						,	//sensor输出的差分串行时钟负极，最大支持到600MHz
+	input	[CHANNEL_NUM-1:0]										iv_data_p					, 	//sensor输出的差分串行数据正极，最大支持到1200Mb/s，图像数据
+	input	[CHANNEL_NUM-1:0]										iv_data_n					, 	//sensor输出的差分串行数据负极，最大支持到1200Mb/s，图像数据
+	input															i_ctrl_p					,	//sensor输出的差分串行数据正极，最大支持到1200Mb/s，控制数据
+	input															i_ctrl_n					,	//sensor输出的差分串行数据负极，最大支持到1200Mb/s，控制数据
+	output															o_clk_sensor_diff_p			,	//python sensor驱动差分时钟正极，360MHz
+	output															o_clk_sensor_diff_n			,	//python sensor驱动差分时钟负极，360MHz
+	output															o_trigger_sensor			,	//sensor 触发输出
+	input															i_monitor					,	//sensor 状态输入
+	output															o_reset_sensor_n			,	//clk_sensor 时钟域，Sensor的复位信号，低有效，1ms宽度，FPGA配置完成后立即输出。相机运行中不复位Sensor
+	inout	[3:0]													io_sensor_spi				,	//0-mosi 1-miso 2-sck 3-cs
+	//	-------------------------------------------------------------------------------------
+	//	IO接口信号
+	//	-------------------------------------------------------------------------------------
+	input															i_optocoupler				,	//输入引脚，光耦驱动，宽度从0到无穷大都有可能，上下沿有毛刺，宽度大于帧周期时需要屏蔽下降沿的误触发，异步信号
+	input	[1:0]													iv_gpio						,	//输入引脚，三极管驱动，双向IO的输入端，宽度从0到无穷大都有可能，较容易受干扰，异步信号。双向IO配置为输入时需屏蔽为0
+	output															o_optocoupler				,	//输出引脚，连接到光耦，光耦输出电路有延时，上沿延时7~44us，下沿延时9~35us
+	output	[1:0]													ov_gpio						,	//输出引脚，连接到三极管，双向IO的输出端，延时<1us,双向IO配置为输入时需配置为0
+	output															o_f_led_gre					,	//输出引脚，连接到LED，绿色指示灯，高电平点亮
+	output															o_f_led_red					,	//输出引脚，连接到LED，红色指示灯，高电平点亮
+	inout 															iic_scl_io					,
+	inout 															iic_sda_io					,
+	//  -------------------------------------------------------------------------------------
+	//  DDR3 芯片接口
+	//  -------------------------------------------------------------------------------------
+	inout	[MEM_DQ_WD-1:0]											ddr3_dq						,  	//DDR3 数据信号
+	output	[MEM_ADDR_WD-1:0]										ddr3_addr					,	//DDR3 地址信号
+	output	[MEM_BANKADDR_WD-1:0]									ddr3_ba						,	//DDR3 bank 地址信号
+	output                  										ddr3_ras_n					,	//DDR3 行选通信号，低有效
+	output                  										ddr3_cas_n					,	//DDR3 列选通信号，低有效
+	output                  										ddr3_we_n					,	//DDR3 写使能信号，低有效
+	output                  										ddr3_odt					,	//DDR3 阻抗匹配信号，高有效
+	output                  										ddr3_reset_n				,	//DDR3 复位信号，低有效
+	output                  										ddr3_cke					,	//DDR3 时钟使能信号，高有效
+	output  [MEM_DM_WD-1:0]											ddr3_dm						,	//DDR3 数据屏蔽信号，高有效，以byte为单位
+	inout   [MEM_DQS_WD-1:0]										ddr3_dqs_p					,	//DDR3 数据选通信号正，以byte为单位
+	inout   [MEM_DQS_WD-1:0]										ddr3_dqs_n					,	//DDR3 数据选通信号负，以byte为单位
+	output                  										ddr3_ck_p					,	//DDR3 时钟信号正
+	output															ddr3_ck_n					,	//DDR3 时钟信号负
+	//  -------------------------------------------------------------------------------------
+	//  10G PHY 接口
+	//  -------------------------------------------------------------------------------------
+	input  	            											refclk_p					,   // Refclk P - to differential GT clock buffer
+	input  	            											refclk_n					,   // Refclk N - to differential GT clock buffer
+	output 	            											rxaui_tx_l0_p				,   // GT0 TXP
+	output 	            											rxaui_tx_l0_n				,   // GT0 TXN
+	output 	            											rxaui_tx_l1_p				,   // GT1 TXP
+	output 	            											rxaui_tx_l1_n				,   // GT1 TXN
+	input  	            											rxaui_rx_l0_p				,   // GT0 RXP
+	input  	            											rxaui_rx_l0_n				,   // GT0 RXN
+	input  	            											rxaui_rx_l1_p				,   // GT1 RXP
+	input  	            											rxaui_rx_l1_n				,   // GT1 RXN
+	output															mdc							,
+	inout															mdio						,
+	output															o_enet_rstn					,
+
+	//  -------------------------------------------------------------------------------------
+	//  flash 接口
+	//  -------------------------------------------------------------------------------------
+	output 															o_flash_wp					,
+	inout 															spi_io0_io					,	//sensor spi mosi
+	inout 															spi_io1_io					,	//sensor spi miso
+	inout [0:0]														spi_ss_io					,	//sensor spi cs   spi_clk 使用startup的设置，不需要在io中说明
+	output [3:0]													ov_test
+	);
+
+
+	//	ref paramters
+
+	//	-------------------------------------------------------------------------------------
+	//	sensor 相关参数
+	//	-------------------------------------------------------------------------------------
+	localparam			DIFF_TERM									= "TRUE"					;	//Differential Termination
+	localparam			END_STYLE									= "LITTLE"					;	//"LITTLE" or "BIG" , "LITTLE" - {CHANNEL3 CHANNE2 CHANNEL1 CHANNEL0}. "BIG" - {CHANNEL0 CHANNEL1 CHANNEL2 CHANNEL3}.
+	localparam			SAMPL_CLOCK_ARC								= "BUFG"					;	//"BUFIO" or "BUFG" , deserializer clock achitecture
+	localparam			INTER_CLOCK_ARC								= "BUFG"					;	//"BUFR" or "BUFG" , internal clock achitecture
+	localparam			PIXEL_CLOCK_ARC								= "BUFG"					;	//"BUFR" or "BUFR" , pixel clock achitecture
+	localparam			HIGH_PERFORMANCE_MODE 						= "FALSE"					;	//是否开启 HIGH_PERFORMANCE_MODE 模式
+	localparam			REF_FREQ									= 200.0						;	//参考时钟频率
+	localparam			MMCM_CHECK_CLK_PERIOD_NS					= 20						;	//MMCM检测时钟的周期
+
+	localparam			SER_FIRST_BIT								= (SENSOR_SERIES=="PYTHON") ? "MSB" : "LSB"	;	//"LSB" or "MSB" , first bit to the receiver
+	localparam			BIT_RATE_VALUE								= (SENSOR_MODEL=="PYTHON25K" && INTERFACE_SERIES=="10GIGE") ? 16'h720 : 16'h600	;	//串行数据比特率
+	localparam			DESER_WIDTH									= (SENSOR_SERIES=="PYTHON") ? 5 : 6	;	//每个通道解串宽度 4-8
+	localparam real		CLKIN_PERIOD_NS								= (SENSOR_SERIES=="PYTHON") ? 2.778 : 3.333	;	//输入时钟频率，nS为单位
+	localparam			KERNEL_LENTH								= (SENSOR_MODEL=="PYTHON25K") ? 64 : 16	;	//sensor的kernel的长度
+
+	localparam			INCK_PER_US									= (SENSOR_SERIES=="PYTHON") ? 72 : 180		;	//1us的时钟数量，配置范围：大于等于21
+	localparam			T2M_TIMEOUT_US								= 500						;	//trigger to monitor，输出trigger到sensor后等待monitor的最小超时时间，时间单位us。
+	//																									不改变行消隐情况下python系列最大行周期为20us，曝光前可设置最大16行dummy_line，
+	//																									理论最小超时时间为(16+1)*20=340us，目前暂取500us作为从触发到曝光的超时时间
+	localparam			GIGE_ENABLE									= (INTERFACE_SERIES=="10GIGE" || INTERFACE_SERIES=="5GIGE" || INTERFACE_SERIES=="1GIGE") ? "TRUE" : "FALSE"	;	//模块是否用于GIGE。"TRUE"-模块用于GIGE项目；"FALSE"-模块不用于GIGE项目
+
+	//	-------------------------------------------------------------------------------------
+	//	DDR memory 相关参数
+	//	-------------------------------------------------------------------------------------
+	localparam			FRAME_DEPTH_ACTUAL							= 2**log2(FRAME_DEPTH_MAX)	;	//存储器实际上的帧存深度，因为帧存深度实际上是按照 2**N 划分的
+	localparam			FRAME_BUF_DATA_WD							= MEM_DQ_WD*8						;	//帧存处理数据位宽，MIG_7S 配置为慢速时钟，此时数据位宽是DQ位宽的8倍，时钟是外部时钟的1/4
+
+	//	-------------------------------------------------------------------------------------
+	//	interface 相关参数
+	//	-------------------------------------------------------------------------------------
+	localparam		BID_WD											= 16						;	//BID的位宽，gev1.2 位宽是16，gev2.0 位宽是64
+	localparam		PID_WD											= 24						;	//PID的位宽，gev1.2 位宽是24，gev2.0 位宽是32
+	localparam		PKT_LENGTH_WD									= 14						;	//packet length 包长寄存器宽度
+	localparam		PKT_CNT_WD										= 18						;	//一帧图像中包含的完整包个数的位宽
+	localparam		GEV_DATA_WD										= 64						;	//数据位宽，支持32、64、128
+	localparam		GEV_DE_WD										= GEV_DATA_WD/32			;	//与frame_buffer接口的数据位宽也即gvsp_tx中传输的数据位宽
+	localparam		GEV_BE_WD										= GEV_DATA_WD/8				;	//字节使能位宽，1byte数据使用一个使能位
+	localparam		PB_RD_CNT_WD									= log2(ETH_PKT_LENGTH_MAX+1);	//packet buffer read cnt位宽，= log2(packet buffer depth)
+	localparam		MAC_DATA_WD										= (INTERFACE_SERIES=="10GIGE") ? 64 : 32	;	//与mac接口的数据位宽，10GIGE时为64bit，其他速率时暂定32bit
+	localparam		MAC_BE_WD										= MAC_DATA_WD/8				;	//MAC_DATA_WD字节使能标志位位宽
+	//	-------------------------------------------------------------------------------------
+	//	相机功能 相关参数
+	//	-------------------------------------------------------------------------------------
+	//	-------------------------------------------------------------------------------------
+	//	--(1) ctrl_channel 相关
+	//	-------------------------------------------------------------------------------------
+	localparam		SHORT_REG_WD									= 16						;	//短寄存器位宽
+	localparam		REG_WD											= 32						;	//长寄存器位宽
+	localparam		LONG_REG_WD  						 			= 64						;	//长寄存器位宽
+	localparam		LED_CTRL_WIDTH									= 5							;	//LED CTRL 寄存器宽度
+	localparam		AXI_DATA_WD										= 32						;	//AXI总线数据位宽
+	localparam		AXI_ADDR_WD										= 16						;	//AXI总线地址位宽
+	localparam		MROI_OFFSET_WD									= SHORT_REG_WD*MROI_NUM_MAX	;	//Multi-ROI模式下所有roi偏移位宽之和，每个宽高offset的位宽固定为SHORT_REG_WD
+	localparam		MROI_IMAGE_SIZE_WD								= REG_WD*MROI_NUM_MAX		;	//Multi-ROI模式下所有roi image size位宽之和，每个 image_size payload_size 的位宽固定为REG_WD
+	//	-------------------------------------------------------------------------------------
+	//	--(2) frame_info 相关
+	//	-------------------------------------------------------------------------------------
+	localparam		INFO_SIZE										= 256						;	//INFO段数据量，以byte为单位
+	localparam		STATIS_SIZE										= 256						;	//STATIS段数据量，以byte为单位
+	localparam		STATIS_VALID									= "FALSE"					;	//TRUE-statis段中的数据需要计算，FALSE-statis段中的数据填充为0
+	localparam		INFO_WAIT_TIME									= 32						;	//从i_fval上升沿到info_flag之间的距离，以clk为单位
+	localparam		IMAGE_WAIT_TIME									= 16						;	//从info_flag到image_flag之间的距离，以clk为单位
+	localparam		STATIS_WAIT_TIME								= 16						;	//从i_fval下降沿到statis_flag之间的距离，以clk为单位
+	localparam		FVAL_FALL_WAIT_TIME								= 16						;	//从statis_flag到i_fval下降沿之间的距离，以clk为单位
+	localparam		BID_INIT_VALUE									= (GIGE_ENABLE=="TRUE") ? 1 : 0;	//开流之后，BID第一个是多少，U3是0，gige是1
+	//	-------------------------------------------------------------------------------------
+	//	--(3) data_channel 位宽相关
+	//	-------------------------------------------------------------------------------------
+	localparam		SENSOR_DAT_WIDTH								= DESER_WIDTH*2				;	//像素数据宽度
+	localparam		PIX_CLK_FREQ_KHZ								= (SENSOR_SERIES=="PYTHON") ? 72000 : 60000		;	//本地像素时钟的频率，单位KHz
+	localparam		U3V_FVAL_TO_DVAL_TIME							= 95						;	//从fval发出到稳定接收时间戳的时间
+
+	localparam			IMAGE_SIZE_MAX								= (MEM_SIZE_MBIT*1024*1024/(8*FRAME_DEPTH_ACTUAL) - INFO_SIZE*MROI_NUM_MAX - STATIS_SIZE)/(1024*1024)	;	//最大的图像尺寸，以byte为单位
+	localparam			IMAGE_SIZE_WD								= log2(IMAGE_SIZE_MAX*1024*1024+1)	;	//图像数据大小位宽，以字节为单位
+
+
+
+
+	localparam							CLK_PERIOD_NS		= 20		;	//时间戳寄存器的周期
+
+
+	//	ref functions
+
+	//	-------------------------------------------------------------------------------------
+	//	取对数，上取整
+	//	log2取对数的时候，有两种情况。分别是计算计数器的位宽和计算通道偏移的bit数
+	//	1.计算计数器的位宽，使用 y = log2(x+1)，当x=2^n时，y=n+1，可以表示0-2^(n+1)-1的数值
+	//	2.计算通道偏移的bit数，使用 y = log2(x)，当x=2^n时，y=n，可以表示0-2^n-1的数值
+	//	-------------------------------------------------------------------------------------
+	function integer log2 (input integer xx);
+		integer x;
+		begin
+			x	= xx-1 ;
+			for (log2=0;x>0;log2=log2+1) begin
+				x	= x >> 1;
+			end
+		end
+	endfunction
+
+
+
+	//	ref signals
+
+	//	-------------------------------------------------------------------------------------
+	//	-- ref clock_reset
+	//	-------------------------------------------------------------------------------------
+	wire															w_rxaui_locked				;	//rxaui输出，未知时钟域，rxaui锁定信号，高有效
+	wire															w_reset_sensor				;	//ctrl_channel输出，clk_osc_bufg时钟域，复位sensor信号，高有效
+	wire															clk_gtx						;	//rxaui输出，156.25MHz，
+	wire															clk_osc_bufg				;	//clock_reset输出，40MHz，与clk_osc同频同相，用于锁相环的失锁检测
+	wire															clk_ref						;	//clock_reset输出，200MHz，IODELAY2参考时钟
+	wire															clk_gev						;	//clock_reset输出，180MHz，gige_vision工作时钟
+	wire															clk_mig						;	//clock_reset输出，40MHz，ddr控制器驱动时钟，如果晶振在ddr bank同侧，则外部时钟经过ibufg后直接输出；如果晶振在ddr bank异侧，则外部时钟经过ibufg后还需经过bufg再输出
+	wire															clk_pix						;	//clock_reset输出，72MHz，像素时钟
+	wire															clk_microb					;	//clock_reset输出，50MHz，microblaze驱动时钟
+	wire															clk_icap					;	//clock_reset输出，12.5MHz，icap_wrap模块驱动时钟
+	wire															clk_drp						;	//clock_reset输出，50MHz，输出给RXAUI的DRP时钟
+	wire															clk_axi						;	//microblaze输出，50MHz，与clk_microb一样
+	wire															clk_sensor					;	//sensor控制逻辑时钟
+
+	wire															reset_osc_bufg				;	//clock_reset输出，clk_osc_bufg时钟域复位信号
+	wire															reset_rxaui					;	//clock_reset输出，clk_microb 时钟域，输出给rxaui的复位信号，与reset_microb同源
+	wire															reset_pix					;	//clock_reset输出，clk_pix时钟域复位信号
+	wire															reset_microb				;	//clock_reset输出，clk_microb时钟域复位信号
+	wire															reset_icap					;	//clock_reset输出，clk_icap时钟域复位信号
+	wire															reset_mig					;	//clock_reset输出，clk_mig时钟域复位信号
+	wire															reset_gtx					;	//clock_reset输出，clk_gtx时钟域复位信号
+	wire															reset_sensor				;	//clock_reset输出，clk_sensor时钟域复位信号
+	wire															reset_gev					;	//clock_reset输出，clk_gev时钟域复位信号
+
+	wire															w_sensor_reset_done			;	//clock_reset输出，clk_osc_bufg时钟域，sensor复位完成信号，高有效
+	wire															w_interface_generator_locked;	//clock_reset输出，时钟域未知，使用端需要做跨时钟域处理
+
+	//	-------------------------------------------------------------------------------------
+	//	-- ref	io_channel
+	//	-------------------------------------------------------------------------------------
+	wire															w_trigger					;	//io_channel输出，clk_sensor时钟域，IO通道触发信号
+
+
+	//	-------------------------------------------------------------------------------------
+	//	-- ref ctrl channel
+	//	-------------------------------------------------------------------------------------
+	//  -------------------------------------------------------------------------------------
+	//	---- ref general reg
+	//  -------------------------------------------------------------------------------------
+	wire															w_stream_enable				;	//ctrl_channel输出，clk_pix时钟域，流开采信号，没有生效时机
+	wire															w_acquisition_start			;	//ctrl_channel输出，clk_pix时钟域，开采信号，没有生效时机
+	wire	[SHORT_REG_WD-1:0]										wv_frame_depth				;	//clk_fb时钟域，帧缓存深度，0-单帧，1-2帧，2-3帧，3-4帧，在 i_stream_enable 上升沿生效
+	wire															w_fb_transfer_start			;
+	//	wire															w_stream_enable_fb	;	//ctrl_channel输出，clk_fb时钟域，流开采信号，没有生效时机
+	//	wire															w_stream_enable_gev			;	//ctrl_channel输出，clk_gpif时钟域，流开采信号，没有生效时机
+	wire	[8:0]													wv_state					;
+
+
+	//  -------------------------------------------------------------------------------------
+	//	---- ref to io_channel
+	//  -------------------------------------------------------------------------------------
+	//	wire															w_trigger_mode				;	//ctrl_channel输出，clk_pix时钟域，触发模式寄存器，没做生效时机控制
+	//	wire	[3:0]													wv_trigger_source			;	//ctrl_channel输出，clk_pix时钟域，触发源寄存器，没做生效时机控制
+	//	wire															w_trigger_soft				;	//ctrl_channel输出，clk_pix时钟域，软触发寄存器，控制通道自清零，宽度是1个时钟周期
+	//	wire															w_trigger_active			;	//ctrl_channel输出，clk_pix时钟域，触发有效沿寄存器，没做生效时机控制
+	//	wire	[REG_WD-1:0]											wv_trigger_filter_rise		;	//ctrl_channel输出，clk_pix时钟域，上升沿触发滤波寄存器，没做生效时机控制，但保证成组生效
+	//	wire	[REG_WD-1:0]											wv_trigger_filter_fall		;	//ctrl_channel输出，clk_pix时钟域，下降沿触发滤波寄存器，没做生效时机控制，但保证成组生效
+	//	wire	[REG_WD-1:0]											wv_trigger_delay			;	//ctrl_channel输出，clk_pix时钟域，触发延迟寄存器，没做生效时机控制，但保证成组生效
+	//	wire	[2:0]													wv_useroutput_level			;	//ctrl_channel输出，clk_pix时钟域，用户自定义输出寄存器，没做生效时机控制
+	//	wire															w_line2_mode				;	//ctrl_channel输出，clk_pix时钟域，line2输入输出模式寄存器
+	//	wire															w_line3_mode				;	//ctrl_channel输出，clk_pix时钟域，line3输入输出模式寄存器
+	//	wire															w_line0_invert				;	//ctrl_channel输出，clk_pix时钟域，line0极性寄存器
+	//	wire															w_line1_invert				;	//ctrl_channel输出，clk_pix时钟域，line1极性寄存器
+	//	wire															w_line2_invert				;	//ctrl_channel输出，clk_pix时钟域，line2极性寄存器
+	//	wire															w_line3_invert				;	//ctrl_channel输出，clk_pix时钟域，line3极性寄存器
+	//	wire	[2:0]													wv_line_source1				;	//ctrl_channel输出，clk_pix时钟域，line1的输出源选择寄存器
+	//	wire	[2:0]													wv_line_source2				;	//ctrl_channel输出，clk_pix时钟域，line2的输出源选择寄存器
+	//	wire	[2:0]													wv_line_source3				;	//ctrl_channel输出，clk_pix时钟域，line3的输出源选择寄存器
+	//	wire	[4:0]													wv_led_ctrl					;	//ctrl_channel输出，clk_pix时钟域，双色灯控制寄存器
+	//	wire	[3:0]													wv_line_status				;	//io_channel输出，clk_pix时钟域，line状态寄存器，指示IO进行选择后状态
+	wire	[LED_CTRL_WIDTH-1:0]										wv_led_ctrl					;	//led控制寄存器，FPGA外部连接红绿两个LED灯，两个LED同时亮时为黄色。
+
+	//  -------------------------------------------------------------------------------------
+	//	---- ref to microblaze
+	//  -------------------------------------------------------------------------------------
+	wire																w_irq_to_microb				;	//中断信号
+
+
+
+	//	-------------------------------------------------------------------------------------
+	//	---- ref to sensor_channel_python
+	//	-------------------------------------------------------------------------------------
+	wire															w_full_frame_sensor			;	//sensor_channnel_python输出，clk_pix时钟域，完整帧标志，1--图像正在输出，0--图像输出完毕
+	wire	[3:0]													wv_stop_info				;	//sensor_channnel_python输出，clk_pix时钟域，用于调试，停采信号
+	wire	[2:0]													wv_pad_info					;	//sensor_channnel_python输出，clk_pix时钟域，用于调试，引脚上的信号
+	wire	[2:0]													wv_state_info				;	//sensor_channnel_python输出，clk_pix时钟域，用于调试，状态机的信息
+	//	wire															w_trigger_mask				;	//sensor_channnel_python输出，clk_axi 时钟域，触发屏蔽事件时间戳更新标志
+	//	wire															w_trigger_valid_ccd_pix		;	//sensor_channnel_python输出，clk_sensor 时钟域，有效的触发信号
+	wire															w_deser_pll_lock			;	//sensor_channnel_python输出，clk_recover时钟域，解串的mmcm锁定信号，高有效
+	wire															w_deser_done				;	//sensor_channnel_python输出，clk_recover时钟域，字边界对齐完成标志，表示解析成功
+	wire															w_sensor_init_done			;	//ctrl_channel输出，clk_pix时钟域，Sensor初始化完成信号
+
+	wire	[REG_WD-1:0]											wv_python_exposure_delay	;	//ctrl_channel输出，clk_pix时钟域，python系列曝光延时寄存器
+	wire	[REG_WD-1:0]											wv_python_exposure_time		;	//ctrl_channel输出，clk_pix时钟域，python系列曝光时间寄存器
+	wire	[REG_WD-1:0]											wv_python_trigger_interval	;	//ctrl_channel输出，clk_pix时钟域，python系列触发间隔寄存器
+	wire	[REG_WD-1:0]											wv_python_readout_time		;	//ctrl_channel输出，clk_pix时钟域，python系列图像读出时间寄存器
+
+	//	-------------------------------------------------------------------------------------
+	//	---- ref to data_channel
+	//	-------------------------------------------------------------------------------------
+	wire	[REG_WD-1:0]											wv_pixel_format				;	//ctrl_channel输出，clk_pix时钟域，控制通路输出的像素格式寄存器，没做生效时机控制，0x01080001:Mono8、0x01100003:Mono10、0x01080008:BayerGR8、0x0110000C:BayerGR10
+	wire	[2:0]													wv_test_image_sel			;	//ctrl_channel输出，clk_pix时钟域，测试图选择寄存器,000:真实图,001:测试图像1灰度值帧递增,110:测试图像2静止的斜条纹,010:测试图像3滚动的斜条纹
+	wire	[LONG_REG_WD-1:0]										wv_exposure_timestamp		;
+	//	-------------------------------------------------------------------------------------
+	//	---- ref to frame_info
+	//	-------------------------------------------------------------------------------------
+	wire	[MROI_OFFSET_WD-1:0]									wv_single_roi_offset_x		;	//ctrl_channel输出，clk_pix时钟域，roi相对于原始图像的横向坐标位置偏移，单位是像素
+	wire	[MROI_OFFSET_WD-1:0]									wv_single_roi_offset_y		;	//ctrl_channel输出，clk_pix时钟域，roi相对于原始图像的纵向坐标位置偏移，单位是像素
+	wire	[MROI_OFFSET_WD-1:0]									wv_single_roi_width			;	//ctrl_channel输出，clk_pix时钟域，roi宽度，单位是像素
+	wire	[MROI_OFFSET_WD-1:0]									wv_single_roi_height		;	//ctrl_channel输出，clk_pix时钟域，roi高度，单位是像素
+	wire	[MROI_IMAGE_SIZE_WD-1:0]								wv_single_roi_image_size	;	//ctrl_channel输出，clk_pix时钟域，roi图像大小，以byte为单位
+	wire	[MROI_IMAGE_SIZE_WD-1:0]								wv_single_roi_payload_size	;	//ctrl_channel输出，clk_pix时钟域，roi图+chunk像大小，以byte为单位
+
+	wire															w_chunk_mode_active			;	//ctrl_channel输出，clk_pix时钟域，chunk开关寄存器
+	wire															w_chunkid_en_img			;	//ctrl_channel输出，clk_pix时钟域，image开关寄存器
+	wire															w_chunkid_en_fid			;	//ctrl_channel输出，clk_pix时钟域，frame id开关寄存器
+	wire															w_chunkid_en_ts				;	//ctrl_channel输出，clk_pix时钟域，时间戳开关寄存器
+	wire															w_chunkid_en_fint			;	//ctrl_channel输出，clk_pix时钟域，frame interval开关寄存器
+	wire	[REG_WD-1:0]											wv_single_roi_payload_size0	;	//ctrl_channel输出，clk_pix时钟域，要写入到帧存的image size
+
+	//	-------------------------------------------------------------------------------------
+	//	---- ref to frame_buffer
+	//	-------------------------------------------------------------------------------------
+	wire	[PKT_LENGTH_WD-1:0]										wv_pkt_length				;	//ctrl_channel输出，clk_fb时钟域，packet length 正常包包长,仅payload部分，不包括ip、udp、gvsp头
+	wire	[PKT_CNT_WD-1:0]										wv_pkt_cnt					;	//ctrl_channel输出，clk_fb时钟域，packet cnt 正常包个数(包含帧信息部分)
+	wire	[PKT_LENGTH_WD-1:0]										wv_remain_pkt_length		;	//ctrl_channel输出，clk_fb时钟域，remain packet length 残包包长(包含帧信息部分)
+
+
+	//	-------------------------------------------------------------------------------------
+	//	---- ref to gige_vision
+	//	-------------------------------------------------------------------------------------
+	wire	[31:0]													wv_pc_ip					;	//ctrl_channel输出，clk_gev时钟域，ip pc address
+	wire	[31:0]													wv_camera_ip				;	//ctrl_channel输出，clk_gev时钟域，ip camera address
+	wire	[15:0]													wv_pc_port_sc				;	//ctrl_channel输出，clk_gev时钟域，stream channel gvsp包pc端口号
+	wire	[15:0]													wv_camera_port				;	//ctrl_channel输出，clk_gev时钟域，相机udp端口号
+	wire	[SHORT_REG_WD-1:0]										wv_gvcp_length				;	//ctrl_channel输出，clk_gev时钟域，gvcp包长
+	wire	[47:0]													wv_pc_mac					;	//ctrl_channel输出，clk_gtx时钟域，mac pc address
+	wire	[47:0]													wv_camera_mac				;	//ctrl_channel输出，clk_gtx时钟域，mac camera address
+	wire	[REG_WD-1:0]											wv_packet_gap				;	//ctrl_channel输出，clk_gtx时钟域，包间隔,单位8byte,最小值为2
+	wire															w_gvcp_ack_txen				;	//ctrl_channel输出，clk_gtx时钟域，gvcp发送使能，高有效，固件置位，fpga清0
+	wire															w_gvcp_ack_tx_start			;	//ctrl_channel输出，clk_gtx时钟域，gvcp开始发送信号，单脉冲信号，高有效，当该信号为1时，将gvcp_ack_txen清0
+	wire	[4*8-1	:0]												wv_ip_mask					;	//ctrl_channel输出，clk_gtx时钟域，ip掩码，discover相机时使用
+	wire	[2*8-1	:0]												wv_pc_port_cc				;	//ctrl_channel输出，clk_gtx时钟域，gvcp control channel命令包pc源端口号，用于清心跳
+	wire	[2*8-1	:0]												wv_pc_port_mc				;	//ctrl_channel输出，clk_gtx时钟域，gvcp message channel应答包pc源端口号
+
+	wire	[REG_WD-1:0]				wv_gvcp_ack_length			;
+
+	//	wire	[REG_WD-1:0]											wv_irq_status_gtx				;	//clk_gtx时钟域，中断状态寄存器，指示当前中断的状态类型.bit0位和bit1位分别指示gvcp_rx_ram中两片存储空间的状态
+	//	wire															w_mac_valid_gtx					;	//clk_gtx时钟域, 输出数据有效信号，上升沿可以表示一帧的开始
+	//	wire															w_protocal_match_gtx			;	//clk_gtx时钟域，输出给异步时钟域，协议匹配标志，包括arp、icmp、dhcp、gvcp协议
+	//	wire															w_heartbeat_clr_gtx				;	//clk_gtx时钟域，输出给异步时钟域，清心跳标志
+
+	wire	[REG_WD-1:0]			wv_irq_status					;	//clk_gtx时钟域，中断状态寄存器，指示当前中断的状态类型.bit0位和bit1位分别指示gvcp_rx_ram中两片存储空间的状态
+
+	//  -------------------------------------------------------------------------------------
+	//	---- ref to mac
+	//  -------------------------------------------------------------------------------------
+	wire																w_heartbeat_irq				;	//心跳超时产生的中断
+
+	//	-------------------------------------------------------------------------------------
+	//	-- ref microblaze
+	//	-------------------------------------------------------------------------------------
+	wire				w_rd_en_axi	;
+	wire				w_rd_valid_axi	;
+	wire				w_wr_en_axi	;
+	wire				w_wr_valid_axi	;
+
+	wire				w_rd_en_sensor	;
+	wire				w_rd_valid_sensor	;
+	wire				w_wr_en_sensor	;
+	wire				w_wr_valid_sensor	;
+
+
+	wire				w_rd_en_pix	;
+	wire				w_rd_valid_pix	;
+	wire				w_wr_en_pix	;
+	wire				w_wr_valid_pix	;
+
+
+	wire				w_rd_en_fb	;
+	wire				w_rd_valid_fb	;
+	wire				w_wr_en_fb	;
+	wire				w_wr_valid_fb	;
+
+	wire				w_rd_en_gev	;
+	wire				w_rd_valid_gev	;
+	wire				w_wr_en_gev	;
+	wire				w_wr_valid_gev	;
+
+	wire	[AXI_ADDR_WD-1:0]										wv_raddr_axi				;
+	wire	[AXI_ADDR_WD-1:0]										wv_waddr_axi				;
+	wire	[AXI_DATA_WD-1:0]										wv_wdata_axi				;
+	wire	[AXI_DATA_WD-1:0]										wv_rdata_axi_rxram			;
+	wire	[AXI_DATA_WD-1:0]										wv_rdata_axi_reg			;
+	wire	[AXI_DATA_WD-1:0]										wv_rdata_axi				;
+
+	wire	[AXI_ADDR_WD-1:0]										wv_raddr_sensor				;
+	wire	[AXI_ADDR_WD-1:0]										wv_waddr_sensor				;
+	wire	[AXI_DATA_WD-1:0]										wv_wdata_sensor				;
+	wire	[AXI_DATA_WD-1:0]										wv_rdata_sensor				;
+
+	wire	[AXI_ADDR_WD-1:0]										wv_raddr_pix				;
+	wire	[AXI_ADDR_WD-1:0]										wv_waddr_pix				;
+	wire	[AXI_DATA_WD-1:0]										wv_wdata_pix				;
+	wire	[AXI_DATA_WD-1:0]										wv_rdata_pix				;
+
+	wire	[AXI_ADDR_WD-1:0]										wv_raddr_fb					;
+	wire	[AXI_ADDR_WD-1:0]										wv_waddr_fb					;
+	wire	[AXI_DATA_WD-1:0]										wv_wdata_fb					;
+	wire	[AXI_DATA_WD-1:0]										wv_rdata_fb					;
+
+	wire	[AXI_ADDR_WD-1:0]										wv_raddr_gev				;
+	wire	[AXI_ADDR_WD-1:0]										wv_waddr_gev				;
+	wire	[AXI_DATA_WD-1:0]										wv_wdata_gev				;
+	wire	[AXI_DATA_WD-1:0]										wv_rdata_gev				;
+	wire	[3:0]													wv_wr_be_axi				;
+
+	wire	[31:0]													m_axi_if_araddr				;
+	wire	[2:0]													m_axi_if_arprot				;
+	wire	[0:0]													m_axi_if_arready			;
+	wire	[0:0]													m_axi_if_arvalid			;
+	wire	[31:0]													m_axi_if_awaddr				;
+	wire	[2:0]													m_axi_if_awprot				;
+	wire	[0:0]													m_axi_if_awready			;
+	wire	[0:0]													m_axi_if_awvalid			;
+	wire	[0:0]													m_axi_if_bready				;
+	wire	[1:0]													m_axi_if_bresp				;
+	wire	[0:0]													m_axi_if_bvalid				;
+	wire	[31:0]													m_axi_if_rdata				;
+	wire	[0:0]													m_axi_if_rready				;
+	wire	[1:0]													m_axi_if_rresp				;
+	wire	[0:0]													m_axi_if_rvalid				;
+	wire	[31:0]													m_axi_if_wdata				;
+	wire	[0:0]													m_axi_if_wready				;
+	wire	[3:0]													m_axi_if_wstrb				;
+	wire	[0:0]													m_axi_if_wvalid				;
+
+	//	-------------------------------------------------------------------------------------
+	//	-- ref	sensor_channel_python
+	//	-------------------------------------------------------------------------------------
+	wire															clk_recover					;	//sensor_channel_python输出，deser_7s输出，解串之后的恢复时钟，为像素时钟的2倍频
+	wire															reset_recover				;	//sensor_channel_python输出，clk_recover时钟域复位信号
+	wire															w_clk_en_recover			;	//sensor_channnel_python输出，clk_recover时钟域，时钟使能信号
+	wire															w_fval_recover				;	//sensor_channnel_python输出，clk_recover时钟域，输出场有效信号
+	wire															w_lval_recover				;	//sensor_channnel_python输出，clk_recover时钟域，输出行有效信号
+	wire	[SENSOR_DAT_WIDTH*CHANNEL_NUM-1:0]						wv_pix_data_recover			;	//sensor_channnel_python输出，clk_recover时钟域，输出像素数据
+	wire 															w_trigger_mask				;	//sensor_channnel_python输出，clk_sensor时钟域，GIGE系列新增信号，触发屏蔽事件，高有效，从trigger被屏蔽开始至屏蔽期结束为止
+	wire															w_sensor_strobe				;	//sensor_channel_python输出，clk_sensor时钟域，闪光灯信号
+
+	wire	[2:0]													wv_trigger_sensor			;
+
+	//	-------------------------------------------------------------------------------------
+	//	-- ref	data_channel
+	//	-------------------------------------------------------------------------------------
+	wire															w_full_frame_state			;	//data_channel输出，clk_pix时钟域，完整帧状态信号，供固件查询
+	//	wire															w_encrypt_state				;	//ctrl_channel输出，clk_dna时钟域，加密状态，上电后保持不变，可以作为常数
+	wire	[REG_WD-1:0]											wv_pixel_format_data_channel;	//data_channel输出，clk_pix时钟域，目的是让后级模块与数据通道的像素格式保持一致
+	wire															w_fval_ctrl					;	//data_channel输出，clk_pix时钟域，场有效，stream_ctrl 输出的 fval
+	wire															w_fval_data_channel			;	//data_channel输出，clk_pix时钟域，场有效，o_fval与o_lval的相位要保证与输入的相位一致
+	wire															w_lval_data_channel			;	//data_channel输出，clk_pix时钟域，行有效
+	wire	[SENSOR_DAT_WIDTH*CHANNEL_NUM-1:0]						wv_pix_data_data_channel	;	//data_channel输出，clk_pix时钟域，图像数据
+
+	//	-------------------------------------------------------------------------------------
+	//	-- ref	frame_info
+	//	-------------------------------------------------------------------------------------
+	wire															w_fval_frame_info			;	//data_channel输出，clk_pix时钟域，场有效信号，高有效
+	wire															w_dval_frame_info			;	//data_channel输出，clk_pix时钟域，数据有效信号，高有效，数据有效不像行信号一样连续，可以是断续的信号
+	wire															w_info_flag_frame_info		;	//data_channel输出，clk_pix时钟域，信息段标志，高有效
+	wire															w_image_flag_frame_info		;	//data_channel输出，clk_pix时钟域，图像段标志，高有效
+	wire															w_statis_flag_frame_info	;	//data_channel输出，clk_pix时钟域，统计段标志，高有效
+	wire	[FRAME_BUF_DATA_WD-1:0]									wv_data_frame_info			;	//data_channel输出，clk_pix时钟域，图像数据，位宽可变，支持64 128 256
+
+
+	//	-------------------------------------------------------------------------------------
+	//	-- ref	frame_buffer
+	//	-------------------------------------------------------------------------------------
+	wire															clk_fb						;	//frame_buffer输出，帧存模块工作时钟
+	wire															reset_fb					;	//frame_buffer输出，帧存模块工作时钟域的复位信号，高有效
+	wire															w_fb_fifo_overflow			;	//frame_buffer输出，clk_pix时钟域，帧存前端FIFO溢出，高有效，调试使用
+	wire															w_calib_done				;	//frame_buffer输出，时钟域未知，DDR3 校准完成信号，高有效
+	wire															w_fb_empty					;	//frame_buffer输出，clk_gev时钟域，帧存后端fifo空信号，高有效
+	wire	[GEV_DE_WD-1:0]											wv_data_is_cmd_fb			;	//frame_buffer输出，帧存后端fifo输出数据是命令数据，单bit代表4byte，1-表示是命令数据，0-表示是图像数据
+	wire	[GEV_DE_WD-1:0]											wv_dval_fb					;	//frame_buffer输出，帧存后端fifo输出数据有效信号，单bit代表4byte，1-表示数据有效，0-表示数据无效
+	wire	[GEV_DATA_WD-1:0]										wv_data_fb					;	//frame_buffer输出，帧存后端fifo输出数据，支持32、64、128
+	wire															w_frame_cover_event			;	//frame_buffer输出，clk_fb时钟域，帧覆盖事件，单bit脉冲，高有效
+	wire															w_frame_not_empty_event		;	//frame_buffer输出，clk_fb时钟域，帧存不为空事件，单bit脉冲，高有效
+	//	-------------------------------------------------------------------------------------
+	//	-- ref gige_vision
+	//	-------------------------------------------------------------------------------------
+	wire	[LONG_REG_WD-1:0]										wv_resend_block_id			;	//gige_vision输出，clk_gev时钟域，block id
+	wire	[REG_WD-1:0]											wv_resend_packet_id_first	;	//gige_vision输出，clk_gev时钟域，packet id first，重传起始
+	wire	[REG_WD-1:0]											wv_resend_packet_id_last	;	//gige_vision输出，clk_gev时钟域，packet id last，重传结束
+	wire															w_resend_en					;	//gige_vision输出，clk_gev时钟域，ov_resend_cmd写使能，发送给重传命令fifo，高有效
+	wire															w_fb_rd						;	//gige_vision输出，clk_gev时钟域，帧存后端fifo读出使能信号，高有效
+
+	wire	[7:0]													wv_tx_ifg_delay					;	//clk_gtx时钟域，mac控制包间隔输入端口，本设计中设置为0，使用状态机控制包间隔
+	wire															w_tx_axis_aresetn				;	//clk_gtx时钟域，mac发送端复位信号
+	wire	[MAC_DATA_WD-1:0]										wv_tx_axis_tdata				;	//clk_gtx时钟域，
+	wire	[MAC_BE_WD-1:0]											wv_tx_axis_tkeep				;	//clk_gtx时钟域，
+	wire															w_tx_axis_tvalid				;	//clk_gtx时钟域，
+	wire															w_tx_axis_tlast					;	//clk_gtx时钟域，
+	wire															w_tx_axis_tuser					;	//clk_gtx时钟域，
+	wire															w_tx_axis_tready				;	//clk_gtx时钟域，
+	wire	[MAC_DATA_WD-1:0]										wv_rx_axis_tdata				;	//clk_grx时钟域，
+	wire	[MAC_BE_WD-1:0]											wv_rx_axis_tkeep				;	//clk_grx时钟域，
+	wire															w_rx_axis_tvalid				;	//clk_grx时钟域，
+	wire															w_rx_axis_tlast					;	//clk_grx时钟域，
+	wire															w_rx_axis_tuser					;	//clk_grx时钟域，
+	wire															w_gvcp_ack_tx_start_gtx			;	//clk_gtx时钟域，gvcp开始发送信号，单脉冲信号，高有效，当该信号为1时，将gvcp_ack_txen清0
+
+	wire															w_protocal_match				;	//clk_gtx时钟域，输出给异步时钟域，协议匹配标志，包括arp、icmp、dhcp、gvcp协议
+	wire															w_heartbeat_clr					;	//clk_gtx时钟域，输出给异步时钟域，清心跳标志
+
+	//	-------------------------------------------------------------------------------------
+	//	-- ref ten_gig_eth_mac
+	//	-------------------------------------------------------------------------------------
+	wire		[63:0]					xgmii_txd;
+	wire		[7:0]					xgmii_txc;
+	wire		[63:0]					xgmii_rxd;
+	wire		[7:0]					xgmii_rxc;
+	wire								mdio_tri;
+	wire								mdio_out;
+	wire								mdio_in;
+
+
+	wire			axi_tx_ram_cs		;
+
+	wire		[11:0]	wv_temperature_sensor_local	;
+	wire        [11:0]	wv_temperature_sensor_remote;
+	wire		[11:0]	wv_temperature_be			;
+	wire        [11:0]	wv_temperature_ps			;
+
+
+	//	ref ARCHITECTURE
+
+	//	===============================================================================================
+	//	ref ****** glue logic ******
+	//	===============================================================================================
+	assign	o_flash_wp					= 1'b1	;
+	//	assign	mdio						= mdio_tri ? 1'bz :	mdio_out;
+	//	assign	mdio_in						= mdio;
+
+	IOBUF mdio_iobuf (
+	.I		(mdio_out	),
+	.IO		(mdio		),
+	.O		(mdio_in	),
+	.T		(mdio_tri	)
+	);
+
+	assign	wv_state					= {1'b0,w_fb_fifo_overflow,1'b0,w_deser_done,w_deser_pll_lock,w_sensor_reset_done,w_full_frame_state,1'b0,w_calib_done};
+
+
+	assign	axi_tx_ram_cs	= (w_wr_en_axi==1'b1 && wv_waddr_axi[AXI_ADDR_WD-1:2]>=4096 && wv_waddr_axi[AXI_ADDR_WD-1:2]<5120) ? 1'b1 : 1'b0;
+	assign	wv_rdata_axi	= (wv_raddr_axi[AXI_ADDR_WD-1:2]>=1024 && wv_raddr_axi[AXI_ADDR_WD-1:2]<4096) ? wv_rdata_axi_rxram : wv_rdata_axi_reg;
+
+	assign	ov_test[0]		= w_deser_pll_lock;
+	assign	ov_test[1]		= w_deser_done;
+	assign	ov_test[2]		= w_fval_recover;
+	assign	ov_test[3]		= w_lval_recover;
+
+	//	===============================================================================================
+	//	ref ****** auxiliary module ******
+	//	===============================================================================================
+	//	-------------------------------------------------------------------------------------
+	//	时钟复位模块
+	//	-------------------------------------------------------------------------------------
+	clock_reset # (
+	.SIMULATION							(SIMULATION							)
+	)
+	clock_reset_inst (
+	.clk_osc							(clk_osc							),
+	.i_rxaui_locked						(w_rxaui_locked						),
+	.i_phy_speed_change					(1'b0								),				//速率改变信号，是否暂时不用？？
+	.i_reset_sensor						(w_reset_sensor						),
+	.clk_gtx							(clk_gtx							),
+	.clk_osc_bufg						(clk_osc_bufg						),
+	.clk_ref							(clk_ref							),
+	.clk_gev							(clk_gev							),
+	.clk_mig							(clk_mig							),
+	.clk_pix							(clk_pix							),
+	.clk_microb							(clk_microb							),
+	.clk_icap							(clk_icap							),
+	.clk_drp							(clk_drp							),
+	.clk_sensor							(clk_sensor							),
+	.o_clk_sensor_diff_p				(o_clk_sensor_diff_p				),
+	.o_clk_sensor_diff_n				(o_clk_sensor_diff_n				),
+	.reset_osc_bufg						(reset_osc_bufg						),
+	.reset_rxaui						(reset_rxaui						),
+	.reset_pix							(reset_pix							),
+	.reset_microb						(reset_microb						),
+	.reset_icap							(reset_icap							),
+	.reset_mig							(reset_mig							),
+	.reset_gtx							(reset_gtx							),
+	.reset_sensor						(reset_sensor						),
+	.reset_gev							(reset_gev							),
+	.o_enet_rstn						(o_enet_rstn						),
+	.o_reset_sensor_n					(o_reset_sensor_n					),
+	.o_sensor_reset_done				(w_sensor_reset_done				),
+	.o_interface_generator_locked		(w_interface_generator_locked		)
+	);
+
+	//	-------------------------------------------------------------------------------------
+	//	io_channel
+	//	-------------------------------------------------------------------------------------
+	io_channel # (
+	.REG_WD								(REG_WD								),
+	.LED_CTRL_WIDTH						(LED_CTRL_WIDTH						),
+	.PIX_CLK_FREQ_KHZ					(PIX_CLK_FREQ_KHZ					)
+	)
+	io_channel_inst (
+	.clk								(clk_pix							),
+	.i_trigger_mode						(1'b0								),
+	.i_acquisition_start				(1'b1								),
+	.i_stream_enable					(1'b1								),
+	.ov_line_status						(									),
+	.i_line2_mode						(1'b0								),
+	.i_line3_mode						(1'b0								),
+	.i_line0_invert						(1'b0								),
+	.i_line1_invert						(1'b0								),
+	.i_line2_invert						(1'b0								),
+	.i_line3_invert						(1'b0								),
+	.iv_filter_rise						({REG_WD{1'b0}}						),
+	.iv_filter_fall						({REG_WD{1'b0}}						),
+	.i_trigger_soft						(1'b0								),
+	.iv_trigger_source					(4'b0								),
+	.i_trigger_active					(1'b0								),
+	.iv_trigger_delay					({REG_WD{1'b0}}						),
+	.iv_line_source1					(3'b0								),
+	.iv_line_source2					(3'b0								),
+	.iv_line_source3					(3'b0								),
+	.iv_useroutput_level				(3'b0								),
+	.iv_led_ctrl						(wv_led_ctrl						),
+	.i_optocoupler						(i_optocoupler						),
+	.iv_gpio							(iv_gpio							),
+	.o_optocoupler						(o_optocoupler						),
+	.ov_gpio							(ov_gpio							),
+	.o_f_led_gre						(o_f_led_gre						),
+	.o_f_led_red						(o_f_led_red						),
+	.i_usb_slwr_n						(!w_tx_axis_tvalid					),
+	.i_sensor_strobe					(w_sensor_strobe					),
+	.o_trigger							(w_trigger							)
+	);
+
+	//	-------------------------------------------------------------------------------------
+	//	ctrl_channel
+	//	-------------------------------------------------------------------------------------
+	ctrl_channel # (
+	.CLK_PERIOD_NS						(CLK_PERIOD_NS						),
+	.SHORT_REG_WD						(SHORT_REG_WD						),
+	.REG_WD								(REG_WD								),
+	.LONG_REG_WD						(LONG_REG_WD						),
+	.AXI_WD								(AXI_DATA_WD						),		//AXI 地址位宽 32
+	.CTRL_CH_ADDR_WD					(AXI_ADDR_WD						)		//AXI 数据位宽 32
+	)
+	ctrl_channel_inst (
+	//	===============================================================================================
+	//	axi 端口
+	//	===============================================================================================
+	//	-------------------------------------------------------------------------------------
+	//	时钟复位
+	//	-------------------------------------------------------------------------------------
+	.reset_axi							(reset_microb						),
+	.clk_axi							(clk_axi							),
+	.clk_gtx							(clk_gtx							),
+	//	-------------------------------------------------------------------------------------
+	//	axi 时钟域
+	//	-------------------------------------------------------------------------------------
+	.iv_raddr_axi						(wv_raddr_axi						),
+	.iv_waddr_axi						(wv_waddr_axi						),
+	.iv_wdata_axi						(wv_wdata_axi						),
+	.i_rd_en_axi						(w_rd_en_axi						),
+	.i_rd_valid_axi						(w_rd_valid_axi						),
+	.i_wr_en_axi						(w_wr_en_axi						),
+	.i_wr_valid_axi						(w_wr_valid_axi						),
+	.ov_rdata_axi						(wv_rdata_axi_reg					),
+	//	-------------------------------------------------------------------------------------
+	//	sensor 时钟域
+	//	-------------------------------------------------------------------------------------
+	.reset_sensor						(reset_sensor						),
+	.clk_sensor							(clk_sensor							),
+	.iv_raddr_sensor					(wv_raddr_sensor					),
+	.iv_waddr_sensor					(wv_waddr_sensor					),
+	.iv_wdata_sensor					(wv_wdata_sensor					),
+	.i_rd_en_sensor						(w_rd_en_sensor						),
+	.i_rd_valid_sensor					(w_rd_valid_sensor					),
+	.i_wr_en_sensor						(w_wr_en_sensor						),
+	.i_wr_valid_sensor					(w_wr_valid_sensor					),
+	.ov_rdata_sensor					(wv_rdata_sensor					),
+	//	-------------------------------------------------------------------------------------
+	//	pix 时钟域
+	//	-------------------------------------------------------------------------------------
+	.reset_pix							(reset_pix							),
+	.clk_pix							(clk_pix							),
+	.iv_raddr_pix						(wv_raddr_pix						),
+	.iv_waddr_pix						(wv_waddr_pix						),
+	.iv_wdata_pix						(wv_wdata_pix						),
+	.i_rd_en_pix						(w_rd_en_pix						),
+	.i_rd_valid_pix						(w_rd_valid_pix						),
+	.i_wr_en_pix						(w_wr_en_pix						),
+	.i_wr_valid_pix						(w_wr_valid_pix						),
+	.ov_rdata_pix						(wv_rdata_pix						),
+	//	-------------------------------------------------------------------------------------
+	//	fb 时钟域
+	//	-------------------------------------------------------------------------------------
+	.reset_fb							(reset_fb							),
+	.clk_fb								(clk_fb								),
+	.iv_raddr_fb						(wv_raddr_fb						),
+	.iv_waddr_fb						(wv_waddr_fb						),
+	.iv_wdata_fb						(wv_wdata_fb						),
+	.i_rd_en_fb							(w_rd_en_fb							),
+	.i_rd_valid_fb						(w_rd_valid_fb						),
+	.i_wr_en_fb							(w_wr_en_fb							),
+	.i_wr_valid_fb						(w_wr_valid_fb						),
+	.ov_rdata_fb						(wv_rdata_fb						),
+	//	-------------------------------------------------------------------------------------
+	//	gev 时钟域
+	//	-------------------------------------------------------------------------------------
+	.reset_gev							(reset_gev							),
+	.clk_gev							(clk_gev							),
+	.iv_raddr_gev						(wv_raddr_gev						),
+	.iv_waddr_gev						(wv_waddr_gev						),
+	.iv_wdata_gev						(wv_wdata_gev						),
+	.i_rd_en_gev						(w_rd_en_gev						),
+	.i_rd_valid_gev						(w_rd_valid_gev						),
+	.i_wr_en_gev						(w_wr_en_gev						),
+	.i_wr_valid_gev						(w_wr_valid_gev						),
+	.ov_rdata_gev						(wv_rdata_gev						),
+	//	===============================================================================================
+	//	寄存器 端口
+	//	===============================================================================================
+	//	-------------------------------------------------------------------------------------
+	//	axi 时钟域
+	//	-------------------------------------------------------------------------------------
+	.iv_state							(wv_state							),
+	.ov_exposure_timestamp				(wv_exposure_timestamp				),
+	//	.ov_temperature_sensor				(									),
+	//	.ov_temperature_be					(									),
+	.o_load_user_param					(									),
+	//	.ov_dna_reg_l						(									),
+	//	.ov_dna_reg_h						(									),
+	//	.ov_encrypt_reg_l					(									),
+	//	.ov_encrypt_reg_h					(									),
+	.o_encrypt_state					(									),
+	.o_flash_wp							(									),
+	.o_watchdog_enable					(									),
+	.ov_watchdog_thd_reg				(									),
+	.ov_watchdog_cnt_reg				(									),
+	.o_microb_reboot					(									),
+	//	.ov_heartbeat_time					(wv_heartbeat_time					),					//****************
+	//	.o_irq_global_reg					(w_irq_global_reg					),
+	//	.ov_irq_enable_reg					(wv_irq_enable_reg					),
+	//	.ov_irq_clr_reg						(wv_irq_clr_reg						),
+	//	.ov_irq_status_reg					(wv_irq_status						),
+	//	.ov_event_timeout_cnt				(wv_event_timeout_cnt				),
+	//	.ov_dhcp_timeout					(wv_dhcp_timeout					),
+	.o_gvcp_ack_txen					(w_gvcp_ack_txen					),
+	.i_gvcp_ack_tx_start				(w_gvcp_ack_tx_start				),
+	.ov_gvcp_ack_length					(wv_gvcp_ack_length					),
+
+	//  温度读出值(此为只读寄存器，固定为12bit)
+	.iv_temperature_sensor_local		(wv_temperature_sensor_local		),
+	.iv_temperature_sensor_remote		(wv_temperature_sensor_remote		),
+	.iv_temperature_be					(wv_temperature_be		    		),
+	.iv_temperature_ps					(wv_temperature_ps		    		),
+	//	-------------------------------------------------------------------------------------
+	//	sensor 时钟域
+	//	-------------------------------------------------------------------------------------
+	.o_acquisition_start				(w_acquisition_start				),
+	.o_stream_enable					(w_stream_enable					),
+	.ov_useroutput_level				(									),
+	.ov_physic_line0					(									),
+	.ov_physic_line1					(									),
+	.ov_physic_line2					(									),
+	.ov_physic_line3					(									),
+	.iv_line_status						(									),
+	.ov_linein_sel_rise_cnt				(									),
+	.ov_linein_sel_fall_cnt				(									),
+	.ov_linein_filter_rise_cnt			(									),
+	.ov_linein_filter_fall_cnt			(									),
+	.ov_linein_active_cnt				(									),
+	.ov_trigger_n_rise_cnt				(									),
+	.o_trigger_mode					(									),
+	.ov_trigger_source					(									),
+	.o_trigger_soft					(									),
+	.ov_trigger_active					(									),
+	.ov_trigger_filter_rise				(									),
+	.ov_trigger_filter_fall				(									),
+	.ov_trigger_delay					(									),
+	.ov_frame_period_us					(									),
+	.ov_frame_period_line				(									),
+	.ov_trigger_soft_cnt				(									),
+	.ov_strobe_length					(									),
+	.ov_exposure_time					(									),
+	.ov_led_ctrl						(wv_led_ctrl						),
+	.o_reset_sensor						(w_reset_sensor						),
+	.o_sensor_init_done					(w_sensor_init_done					),
+	.o_reset_deser_pll					(									),
+	.ov_slave_hmax						(									),
+	.ov_slave_exposure_delay			(									),
+	.ov_slave_exposure_time				(									),
+	.ov_slave_trigger_interval			(									),
+	.ov_imx_stop_info					(									),
+	.ov_imx_pad_info					(									),
+	.ov_imx_state_info					(									),
+	.ov_python_exposure_delay			(wv_python_exposure_delay			),
+	.ov_python_exposure_time			(wv_python_exposure_time			),
+	.ov_python_trigger_interval			(wv_python_trigger_interval			),
+	.ov_python_readout_time				(wv_python_readout_time				),
+	//	-------------------------------------------------------------------------------------
+	//	pix 时钟域
+	//	-------------------------------------------------------------------------------------
+	.o_param_cfg_done					(									),
+	.ov_pixel_format					(wv_pixel_format					),
+	.ov_test_image_sel					(wv_test_image_sel					),
+	.ov_sensor_offset_x					(									),
+	.ov_sensor_offset_y					(									),
+	.ov_sensor_width					(									),
+	.ov_sensor_height					(									),
+	.ov_single_roi_offset_x				(wv_single_roi_offset_x				),
+	.ov_single_roi_offset_y				(wv_single_roi_offset_y				),
+	.ov_single_roi_pic_width			(wv_single_roi_width				),
+	.ov_single_roi_pic_height			(wv_single_roi_height				),
+	.ov_reverse_xy						(									),
+	.ov_binning_mode					(									),
+	.ov_binning_region_x				(									),
+	.ov_binning_region_y				(									),
+	.ov_roi_offsetx_bf_binning			(									),
+	.ov_roi_offsety_bf_binning			(									),
+	.ov_roi_width_bf_binning			(									),
+	.ov_roi_height_bf_binning			(									),
+	//	.ov_frame_interval					(									),
+	.ov_wb_offset_x_start				(									),
+	.ov_wb_offset_width					(									),
+	.ov_wb_offset_y_start				(									),
+	.ov_wb_offset_height				(									),
+	.ov_wb_gain_r						(									),
+	.ov_wb_gain_g						(									),
+	.ov_wb_gain_b						(									),
+	.iv_wb_statis_r						({LONG_REG_WD{1'b0}}				),
+	.iv_wb_statis_g						({LONG_REG_WD{1'b0}}				),
+	.iv_wb_statis_b						({LONG_REG_WD{1'b0}}				),
+	.ov_wb_num_r						(									),
+	.ov_wb_num_b						(									),
+	.o_unsat_en							(									),
+	.ov_blacklevel_ratio				(									),
+	.ov_blacklevel_value				(									),
+	.o_compensate_en					(									),
+	//	.ov_compensate_gain					(									),
+	.ov_grey_offset_x_start				(									),
+	.ov_grey_offset_width				(									),
+	.ov_grey_offset_y_start				(									),
+	.ov_grey_offset_height				(									),
+	.iv_grey_statis_sum					({LONG_REG_WD{1'b0}}				),
+	.o_pulse_filter_en					(									),
+	.o_gridding_remove_en				(									),
+	.ov_edge_vote_method				(									),
+	.ov_edge_threshold					(									),
+	.o_flat_field_en					(									),
+	.o_chunk_mode_active				(w_chunk_mode_active				),
+	.o_chunkid_en_img					(w_chunkid_en_img					),
+	.o_chunkid_en_fid					(w_chunkid_en_fid					),
+	.o_chunkid_en_ts					(w_chunkid_en_ts					),
+	.o_chunkid_en_fint					(w_chunkid_en_fint					),
+	.o_mroi_global_en					(									),
+	.ov_mroi_single_en					(									),
+	//	-------------------------------------------------------------------------------------
+	//	fb 时钟域
+	//	-------------------------------------------------------------------------------------
+	.ov_single_roi_image_size			(wv_single_roi_image_size			),
+	.ov_frame_buffer_depth				(wv_frame_depth						),
+	.o_frame_overwrite_enable			(									),
+	.o_transfer_mode					(									),
+	.o_transfer_start					(w_fb_transfer_start				),
+	.o_cache_flush						(									),
+	.ov_cache_frame_cnt					(									),
+	.ov_cache_frame_depth				(									),
+	.ov_cur_pkt_length					(wv_pkt_length						),
+	.ov_cur_pic_pkt_cnt					(wv_pkt_cnt							),
+	.ov_remain_pkt_length				(wv_remain_pkt_length				),
+	//	-------------------------------------------------------------------------------------
+	//	gev 时钟域
+	//	-------------------------------------------------------------------------------------
+	.ov_single_roi_payload_size			(wv_single_roi_payload_size			),
+	.ov_pc_mac							(wv_pc_mac							),
+	.ov_camera_mac						(wv_camera_mac						),
+	.ov_camera_ip						(wv_camera_ip						),
+	.ov_pc_ip							(wv_pc_ip							),
+	.ov_ip_mask							(wv_ip_mask							),
+	.ov_camera_port						(wv_camera_port						),
+	.ov_pc_port_sc						(wv_pc_port_sc						),
+	.ov_pc_port_cc						(wv_pc_port_cc						),
+	.ov_pc_port_mc						(wv_pc_port_mc						),
+	.ov_packet_gap						(wv_packet_gap						),
+	.o_arp_filter_enable				(									),
+	.ov_gige_functions					(									),
+	.ov_speed_link						(									),
+	.o_test_pkt_en						(									),
+	//	===============================================================================================
+	//	IRQ 端口
+	//	===============================================================================================
+	.i_rx_axis_tvalid					(w_rx_axis_tvalid					),
+	.i_heartbeat_clr					(w_heartbeat_clr					),
+	.i_gvcp_match						(w_protocal_match					),
+	.i_exposure_flag					(w_fval_ctrl						),
+	.i_overwrite_flag					(w_frame_cover_event				),
+	.i_frame_no_empty					(w_frame_not_empty_event			),
+	.i_trig_mask_flag					(w_trigger_mask						),
+	.o_irq_to_microb					(w_irq_to_microb					),
+	.o_heartbeat_irq					(w_heartbeat_irq					),
+	.ov_irq_status						(wv_irq_status						)
+	);
+
+
+	//	-------------------------------------------------------------------------------------
+	//	microblaze
+	//	-------------------------------------------------------------------------------------
+	generate
+		if(SIMULATION == "FALSE") begin
+			microblaze_wrapper microblaze_wrapper_inst (
+			.clk_mb								(clk_microb						),
+			.i_int_mb               			(w_irq_to_microb      			),
+			.m_axi_if_araddr   					(m_axi_if_araddr   				),
+			.m_axi_if_arprot       				(m_axi_if_arprot       			),
+			.m_axi_if_arready      				(m_axi_if_arready      			),
+			.m_axi_if_arvalid      				(m_axi_if_arvalid      			),
+			.m_axi_if_awaddr       				(m_axi_if_awaddr       			),
+			.m_axi_if_awprot       				(m_axi_if_awprot       			),
+			.m_axi_if_awready      				(m_axi_if_awready      			),
+			.m_axi_if_awvalid      				(m_axi_if_awvalid      			),
+			.m_axi_if_bready       				(m_axi_if_bready       			),
+			.m_axi_if_bresp        				(m_axi_if_bresp        			),
+			.m_axi_if_bvalid       				(m_axi_if_bvalid       			),
+			.m_axi_if_rdata        				(m_axi_if_rdata        			),
+			.m_axi_if_rready       				(m_axi_if_rready       			),
+			.m_axi_if_rresp        				(m_axi_if_rresp        			),
+			.m_axi_if_rvalid       				(m_axi_if_rvalid       			),
+			.m_axi_if_wdata        				(m_axi_if_wdata        			),
+			.m_axi_if_wready       				(m_axi_if_wready       			),
+			.m_axi_if_wstrb        				(m_axi_if_wstrb        			),
+			.m_axi_if_wvalid       				(m_axi_if_wvalid       			),
+			.axi_lite_clk						(clk_axi						),
+			.i_clk_mb_locked					(w_interface_generator_locked	),
+			.i_reset_mb							(reset_microb	     			),
+			.iic_scl_io    						(    					),
+			.iic_sda_io    						(    					),
+			.ov_logic_raddr_0       			(wv_raddr_axi					),
+			.ov_logic_raddr_1       			(wv_raddr_sensor				),
+			.ov_logic_raddr_2       			(wv_raddr_pix					),
+			.ov_logic_raddr_3       			(wv_raddr_fb					),
+			.ov_logic_raddr_4       			(wv_raddr_gev					),
+			.iv_logic_rdata_0       			(wv_rdata_axi					),
+			.iv_logic_rdata_1       			(wv_rdata_sensor				),
+			.iv_logic_rdata_2       			(wv_rdata_pix					),
+			.iv_logic_rdata_3       			(wv_rdata_fb					),
+			.iv_logic_rdata_4       			(wv_rdata_gev					),
+			.ov_logic_waddr_0       			(wv_waddr_axi					),
+			.ov_logic_waddr_1       			(wv_waddr_sensor				),
+			.ov_logic_waddr_2       			(wv_waddr_pix					),
+			.ov_logic_waddr_3       			(wv_waddr_fb					),
+			.ov_logic_waddr_4       			(wv_waddr_gev					),
+			.ov_logic_wdata_0       			(wv_wdata_axi					),
+			.ov_logic_wdata_1       			(wv_wdata_sensor				),
+			.ov_logic_wdata_2       			(wv_wdata_pix					),
+			.ov_logic_wdata_3       			(wv_wdata_fb					),
+			.ov_logic_wdata_4       			(wv_wdata_gev					),
+			.o_rd_en_0             				(w_rd_en_axi           			),
+			.o_rd_en_1             				(w_rd_en_sensor        			),
+			.o_rd_en_2             				(w_rd_en_pix					),
+			.o_rd_en_3             				(w_rd_en_fb						),
+			.o_rd_en_4             				(w_rd_en_gev					),
+			.o_rd_valid_0          				(w_rd_valid_axi					),
+			.o_rd_valid_1          				(w_rd_valid_sensor				),
+			.o_rd_valid_2          				(w_rd_valid_pix					),
+			.o_rd_valid_3          				(w_rd_valid_fb					),
+			.o_rd_valid_4          				(w_rd_valid_gev					),
+			.wr_be_0							(wv_wr_be_axi					),
+			.wr_be_1							(								),
+			.wr_be_2							(								),
+			.wr_be_3							(								),
+			.wr_be_4							(								),
+			.s00_axi_aclk_1      				(clk_sensor						),
+			.s00_axi_aclk_2      				(clk_pix      					),
+			.s00_axi_aclk_3      				(clk_fb    						),
+			.s00_axi_aclk_4      				(clk_gev						),
+			.s00_axi_aresetn_1   				(!reset_sensor		   			),
+			.s00_axi_aresetn_2   				(!reset_pix			   			),
+			.s00_axi_aresetn_3   				(!reset_fb   					),
+			.s00_axi_aresetn_4   				(!reset_gev			   			),
+			.spi_io0_io    						(spi_io0_io						),
+			.spi_io1_io    						(spi_io1_io						),
+			.spi_ss_io     						(spi_ss_io 						),
+			.o_wr_en_0             				(w_wr_en_axi					),
+			.o_wr_en_1             				(w_wr_en_sensor					),
+			.o_wr_en_2             				(w_wr_en_pix					),
+			.o_wr_en_3             				(w_wr_en_fb						),
+			.o_wr_en_4             				(w_wr_en_gev					),
+			.o_wr_valid_0          				(w_wr_valid_axi        			),
+			.o_wr_valid_1          				(w_wr_valid_sensor				),
+			.o_wr_valid_2          				(w_wr_valid_pix					),
+			.o_wr_valid_3          				(w_wr_valid_fb					),
+			.o_wr_valid_4          				(w_wr_valid_gev					),
+			.GPIO_0_tri_io						(io_sensor_spi					)
+			);
+		end
+		else begin
+			assign	clk_axi				= driver.axi_lite.clk_axi						;
+			assign	w_wr_en_axi			= driver.axi_lite.w_wr_en_axi					;
+			assign	w_wr_valid_axi		= driver.axi_lite.w_wr_valid_axi				;
+			assign	w_wr_en_sensor		= driver.axi_lite.w_wr_en_sensor				;
+			assign	w_wr_valid_sensor	= driver.axi_lite.w_wr_valid_sensor	    		;
+			assign	w_wr_en_pix			= driver.axi_lite.w_wr_en_pix					;
+			assign	w_wr_valid_pix		= driver.axi_lite.w_wr_valid_pix				;
+			assign	w_wr_en_fb			= driver.axi_lite.w_wr_en_fb					;
+			assign	w_wr_valid_fb		= driver.axi_lite.w_wr_valid_fb		    		;
+			assign	w_wr_en_gev			= driver.axi_lite.w_wr_en_gev					;
+			assign	w_wr_valid_gev		= driver.axi_lite.w_wr_valid_gev				;
+			assign	wv_waddr_axi		= driver.axi_lite.wv_waddr_axi		    		;
+			assign	wv_wdata_axi		= driver.axi_lite.wv_wdata_axi		    		;
+			assign	wv_waddr_sensor		= driver.axi_lite.wv_waddr_sensor				;
+			assign	wv_wdata_sensor		= driver.axi_lite.wv_wdata_sensor				;
+			assign	wv_waddr_pix		= driver.axi_lite.wv_waddr_pix		    		;
+			assign	wv_wdata_pix		= driver.axi_lite.wv_wdata_pix		    		;
+			assign	wv_waddr_fb			= driver.axi_lite.wv_waddr_fb					;
+			assign	wv_wdata_fb			= driver.axi_lite.wv_wdata_fb					;
+			assign	wv_waddr_gev		= driver.axi_lite.wv_waddr_gev		    		;
+			assign	wv_wdata_gev		= driver.axi_lite.wv_wdata_gev		    		;
+		end
+	endgenerate
+
+	//	===============================================================================================
+	//	ref ****** data flow ******
+	//	===============================================================================================
+	//	-------------------------------------------------------------------------------------
+	//	sensor_channel
+	//	-------------------------------------------------------------------------------------
+	sensor_channel_python # (
+	.DIFF_TERM						(DIFF_TERM						),
+	.SER_FIRST_BIT					(SER_FIRST_BIT					),
+	.END_STYLE						(END_STYLE						),
+	.SAMPL_CLOCK_ARC				(SAMPL_CLOCK_ARC				),
+	.INTER_CLOCK_ARC				(INTER_CLOCK_ARC				),
+	.PIXEL_CLOCK_ARC				(PIXEL_CLOCK_ARC				),
+	.HIGH_PERFORMANCE_MODE			(HIGH_PERFORMANCE_MODE			),
+	.BIT_RATE_VALUE					(BIT_RATE_VALUE					),
+	.REF_FREQ						(REF_FREQ						),
+	.CHANNEL_NUM					(CHANNEL_NUM					),
+	.DESER_WIDTH					(DESER_WIDTH					),
+	.CLKIN_PERIOD_NS				(CLKIN_PERIOD_NS				),
+	.MMCM_CHECK_CLK_PERIOD_NS		(MMCM_CHECK_CLK_PERIOD_NS		),
+	.SIMULATION						(SIMULATION						),
+	.KERNEL_LENTH					(KERNEL_LENTH					),
+	.SENSOR_DAT_WIDTH				(SENSOR_DAT_WIDTH				),
+	.SHORT_REG_WD					(SHORT_REG_WD					),
+	.REG_WD							(REG_WD							),
+	.INCK_PER_US					(INCK_PER_US					),
+	.GIGE_ENABLE					(GIGE_ENABLE					),
+	.T2M_TIMEOUT_US					(T2M_TIMEOUT_US					)
+	)
+	sensor_channel_python_inst (
+	.i_clk_p						(i_clk_p						),
+	.i_clk_n						(i_clk_n						),
+	.iv_data_p						(iv_data_p						),
+	.iv_data_n						(iv_data_n						),
+	.i_ctrl_p						(i_ctrl_p						),
+	.i_ctrl_n						(i_ctrl_n						),
+	.clk_ref						(clk_ref						),
+	.clk_mmcm_check					(clk_microb						),
+	.i_sensor_init_done				(w_sensor_init_done				),
+	.clk_recover					(clk_recover					),
+	.reset_recover					(reset_recover					),
+	.o_deser_pll_lock				(w_deser_pll_lock				),
+	.o_word_align_done				(w_deser_done					),
+	.o_clk_en						(w_clk_en_recover				),
+	.o_fval							(w_fval_recover					),
+	.o_lval							(w_lval_recover					),
+	.ov_pix_data					(wv_pix_data_recover			),
+	.clk_pix						(clk_pix						),
+	.reset_pix						(reset_pix						),
+	.iv_python_exposure_time		(wv_python_exposure_time		),
+	.iv_python_exposure_delay		(wv_python_exposure_delay[SHORT_REG_WD-1:0]		),
+	.iv_python_trig_interval		(wv_python_trigger_interval		),
+	.iv_python_readout_time			(wv_python_readout_time			),
+	.i_trigger_mode					(1'b0							),
+	.i_trigger						(w_trigger						),
+	.i_acquisition_start			(w_acquisition_start			),
+	.i_python_exposure_monitor		(i_monitor						),
+	.o_strobe						(w_sensor_strobe				),
+	.ov_trigger						(wv_trigger_sensor				),
+	.o_full_frame					(w_full_frame_sensor			),
+	.o_trigger_mask					(w_trigger_mask					),
+	.o_valid_integration			(								),
+	.ov_stop_info					(wv_stop_info					),
+	.ov_pad_info					(wv_pad_info					),
+	.ov_state_info					(wv_state_info					),
+	.o_inter_trig					(								),
+	.ov_inter_exposure_time			(								)
+	);
+
+	assign	o_trigger_sensor		= wv_trigger_sensor[0];
+
+
+	//	-------------------------------------------------------------------------------------
+	//	data channel--mainly for ISP
+	//	-------------------------------------------------------------------------------------
+	data_channel # (
+	.SENSOR_DAT_WIDTH				(SENSOR_DAT_WIDTH				),
+	.CHANNEL_NUM					(CHANNEL_NUM					),
+	.KERNEL_LENTH					(KERNEL_LENTH					),
+	.PIX_CLK_FREQ_KHZ				(PIX_CLK_FREQ_KHZ				),
+	.U3V_FVAL_TO_DVAL_TIME			(U3V_FVAL_TO_DVAL_TIME			),
+	.REG_WD							(REG_WD							),
+	.MROI_NUM_MAX					(MROI_NUM_MAX					)
+	)
+	data_channel_inst (
+	.clk_recover					(clk_recover					),
+	.reset_recover					(reset_recover					),
+	.i_clk_en						(w_clk_en_recover				),
+	.i_fval							(w_fval_recover					),
+	.i_lval							(w_lval_recover					),
+	.iv_pix_data					(wv_pix_data_recover			),
+	.clk_pix						(clk_pix						),
+	.reset_pix						(reset_pix						),
+	.i_full_frame_sensor			(w_full_frame_sensor			),
+	.i_acquisition_start			(w_acquisition_start			),
+	.i_stream_enable				(w_stream_enable				),
+	.i_encrypt_state				(1'b1							),
+	.iv_pixel_format				(wv_pixel_format				),
+	.iv_test_image_sel				(wv_test_image_sel				),
+	.o_full_frame_state				(w_full_frame_state				),
+	.o_fval_ctrl					(w_fval_ctrl					),
+	.o_fval							(w_fval_data_channel			),
+	.o_lval							(w_lval_data_channel			),
+	.ov_pix_data					(wv_pix_data_data_channel		),
+	.ov_pixel_format				(wv_pixel_format_data_channel	)
+	);
+
+	//	-------------------------------------------------------------------------------------
+	//	frame info 模块
+	//	-------------------------------------------------------------------------------------
+	frame_info # (
+	.SENSOR_DAT_WIDTH				(SENSOR_DAT_WIDTH				),
+	.CHANNEL_NUM					(CHANNEL_NUM					),
+	.DATA_WD						(FRAME_BUF_DATA_WD				),
+	.STATIS_VALID					(STATIS_VALID					),
+	.INFO_WAIT_TIME					(INFO_WAIT_TIME					),
+	.IMAGE_WAIT_TIME				(IMAGE_WAIT_TIME				),
+	.STATIS_WAIT_TIME				(STATIS_WAIT_TIME				),
+	.FVAL_FALL_WAIT_TIME			(FVAL_FALL_WAIT_TIME			),
+	.BID_INIT_VALUE					(BID_INIT_VALUE					),
+	.INFO_SIZE						(INFO_SIZE						),
+	.STATIS_SIZE					(STATIS_SIZE					),
+	.MROI_MAX_NUM					(MROI_NUM_MAX					),
+	.MROI_OFFSET_WD					(MROI_OFFSET_WD					),
+	.MROI_IMAGE_SIZE_WD				(MROI_IMAGE_SIZE_WD				),
+	.SHORT_REG_WD					(SHORT_REG_WD					),
+	.REG_WD							(REG_WD							),
+	.LONG_REG_WD					(LONG_REG_WD					)
+	)
+	frame_info_inst (
+	.clk							(clk_pix						),
+	.reset							(reset_pix						),
+	.i_fval							(w_fval_data_channel			),
+	.i_lval							(w_lval_data_channel			),
+	.iv_pix_data					(wv_pix_data_data_channel		),
+	.i_stream_enable				(w_stream_enable				),
+	.i_mroi_global_en				(1'b0							),
+	.iv_mroi_single_en				(32'h1							),
+	.iv_pixel_format				(wv_pixel_format_data_channel	),
+	.iv_timestamp					(wv_exposure_timestamp			),
+	.iv_frame_interval				({LONG_REG_WD{1'b0}}			),
+	.iv_single_roi_offset_x			(wv_single_roi_offset_x			),
+	.iv_single_roi_offset_y			(wv_single_roi_offset_y			),
+	.iv_single_roi_width			(wv_single_roi_width			),
+	.iv_single_roi_height			(wv_single_roi_height			),
+	.iv_single_roi_image_size		(wv_single_roi_image_size		),
+	.iv_single_roi_payload_size		(wv_single_roi_payload_size		),
+	.i_chunk_mode_active			(w_chunk_mode_active			),
+	.i_chunkid_en_img				(w_chunkid_en_img				),
+	.i_chunkid_en_fid				(w_chunkid_en_fid				),
+	.i_chunkid_en_ts				(w_chunkid_en_ts				),
+	.i_chunkid_en_fint				(w_chunkid_en_fint				),
+	.iv_expect_payload_size			(wv_single_roi_payload_size		),
+	.o_fval							(w_fval_frame_info				),
+	.o_dval							(w_dval_frame_info				),
+	.o_info_flag					(w_info_flag_frame_info			),
+	.o_image_flag					(w_image_flag_frame_info		),
+	.o_statis_flag					(w_statis_flag_frame_info		),
+	.ov_data						(wv_data_frame_info				)
+	);
+
+	//	-------------------------------------------------------------------------------------
+	//	帧存模块
+	//	-------------------------------------------------------------------------------------
+	frame_buffer # (
+	.BID_WD							(BID_WD							),
+	.PID_WD							(PID_WD							),
+	.DATA_WD						(FRAME_BUF_DATA_WD				),
+	.IMAGE_SIZE_WD					(REG_WD							),
+	.MEM_SIZE_MBIT					(MEM_SIZE_MBIT					),
+	.SHORT_REG_WD					(SHORT_REG_WD					),
+	.REG_WD							(REG_WD							),
+	.LONG_REG_WD					(LONG_REG_WD					),
+	.GEV_DATA_WD					(GEV_DATA_WD					),
+	.GEV_DE_WD						(GEV_DE_WD						),
+	.FRAME_DEPTH_MAX				(FRAME_DEPTH_MAX				),
+	.MEM_DQ_WD						(MEM_DQ_WD						),
+	.MEM_ADDR_WD					(MEM_ADDR_WD					),
+	.MEM_BANKADDR_WD				(MEM_BANKADDR_WD				),
+	.MEM_DM_WD						(MEM_DM_WD						),
+	.MEM_DQS_WD						(MEM_DQS_WD						),
+	.PKT_LENGTH_WD					(PKT_LENGTH_WD					),
+	.PKT_CNT_WD						(PKT_CNT_WD						)
+	)
+	frame_buffer_inst (
+	.clk_in							(clk_pix						),
+	.i_fval							(w_fval_frame_info				),
+	.i_dval							(w_dval_frame_info				),
+	.i_info_flag					(w_info_flag_frame_info			),
+	.i_image_flag					(w_image_flag_frame_info		),
+	.i_statis_flag					(w_statis_flag_frame_info		),
+	.iv_data						(wv_data_frame_info				),
+	.iv_image_size					(wv_single_roi_image_size		),
+	.o_fb_fifo_overflow				(w_fb_fifo_overflow				),
+	.clk_gev						(clk_gev						),
+	.reset_gev						(reset_gev						),
+	.iv_resend_block_id				(wv_resend_block_id				),
+	.iv_resend_packet_id_first		(wv_resend_packet_id_first		),
+	.iv_resend_packet_id_last		(wv_resend_packet_id_last		),
+	.i_resend_en					(w_resend_en					),
+	.i_fb_rd						(w_fb_rd						),
+	.o_fb_empty						(w_fb_empty						),
+	.ov_data_is_cmd					(wv_data_is_cmd_fb				),
+	.ov_dval						(wv_dval_fb						),
+	.ov_data						(wv_data_fb						),
+	.i_stream_enable				(w_stream_enable				),
+	.i_fb_transfer_start			(w_fb_transfer_start			),
+	.iv_frame_depth					(wv_frame_depth					),
+	.i_fb_overwrite					(1'b1							),
+	.iv_pkt_length					(wv_pkt_length					),
+	.iv_remain_pkt_length			(wv_remain_pkt_length			),
+	.iv_pic_pkt_cnt					(wv_pkt_cnt						),
+	.i_mroi_global_en				(1'b0							),
+	.iv_mroi_num_en					(1'b0							),
+	.ov_mroi_num_resend				(								),
+	.o_frame_cover_event			(w_frame_cover_event			),
+	.o_frame_not_empty_event		(w_frame_not_empty_event		),
+	.clk_mig						(clk_mig						),
+	.reset_mig						(reset_mig						),
+	.clk_ref						(clk_ref						),
+	.clk_fb							(clk_fb							),
+	.reset_fb						(reset_fb						),
+	.o_calib_done					(w_calib_done					),
+	.ddr3_dq						(ddr3_dq						),
+	.ddr3_addr						(ddr3_addr						),
+	.ddr3_ba						(ddr3_ba						),
+	.ddr3_ras_n						(ddr3_ras_n						),
+	.ddr3_cas_n						(ddr3_cas_n						),
+	.ddr3_we_n						(ddr3_we_n						),
+	.ddr3_odt						(ddr3_odt						),
+	.ddr3_reset_n					(ddr3_reset_n					),
+	.ddr3_cke						(ddr3_cke						),
+	.ddr3_dm						(ddr3_dm						),
+	.ddr3_dqs_p						(ddr3_dqs_p						),
+	.ddr3_dqs_n						(ddr3_dqs_n						),
+	.ddr3_ck_p						(ddr3_ck_p						),
+	.ddr3_ck_n						(ddr3_ck_n						)
+	);
+
+
+	//	-------------------------------------------------------------------------------------
+	//	gige vision 处理模块
+	//	-------------------------------------------------------------------------------------
+	gige_vision # (
+	.SHORT_REG_WD						(SHORT_REG_WD						),
+	.REG_WD								(REG_WD								),
+	.LONG_REG_WD						(LONG_REG_WD						),
+	.GEV_DATA_WD						(GEV_DATA_WD						),
+	.GEV_DE_WD							(GEV_DE_WD							),
+	.GEV_BE_WD							(GEV_BE_WD							),
+	.MAC_DATA_WD						(MAC_DATA_WD						),
+	.MAC_BE_WD							(MAC_BE_WD							),
+	.PB_RD_CNT_WD						(PB_RD_CNT_WD						),
+	.PKT_LENGTH_WD						(PKT_LENGTH_WD						),
+	.PKT_CNT_WD							(PKT_CNT_WD							),
+	.INFO_SIZE							(INFO_SIZE							),
+	.STATIS_SIZE						(STATIS_SIZE						),
+	.AXI_DATA_WD						(AXI_DATA_WD						),
+	.AXI_ADDR_WD						(AXI_ADDR_WD						)
+	)
+	gige_vision_inst (
+	.clk_gev							(clk_gev							),
+	.reset_gev							(reset_gev							),
+	.clk_quick							(clk_gev							),
+	.reset_quick						(reset_gev							),
+	.clk_gtx							(clk_gtx							),
+	.reset_gtx							(reset_gtx							),
+	.clk_axi							(clk_axi							),
+	.reset_axi							(reset_microb						),	//不确定 此处用rset_microb是否合适
+	.clk_grx							(clk_gtx							),	//clk_grx clk_gtx 是同一个时钟
+	.reset_grx							(reset_gtx							),	//
+	.i_stream_enable_gev				(w_stream_enable					),
+	.i_stream_enable_gtx				(w_stream_enable					),
+	.i_ge_transfer_start				(1'b1								),
+	.o_fb_rd							(w_fb_rd							),
+	.i_fb_empty							(w_fb_empty							),
+	.iv_data_is_cmd						(wv_data_is_cmd_fb					),
+	.iv_dval							(wv_dval_fb							),
+	.iv_data							(wv_data_fb							),
+	.i_test_pkt_enable_gev				(1'b0								),
+	.o_test_pkt_over_gev				(									),
+	.iv_pc_ip_gev						(wv_pc_ip							),
+	.iv_camera_ip_gev					(wv_camera_ip						),
+	.iv_pc_port_sc_gev					(wv_pc_port_sc						),
+	.iv_camera_port_gev					(wv_camera_port						),
+	.iv_pkt_length_gev					(wv_pkt_length						),
+	.iv_pkt_cnt_gev						(wv_pkt_cnt							),
+	.iv_remain_pkt_length_gev			(wv_remain_pkt_length				),
+	.iv_gvcp_length_gtx					(wv_gvcp_ack_length					),
+	.iv_pc_mac_gtx						(wv_pc_mac							),
+	.iv_camera_mac_gev					(wv_camera_mac						),
+	.iv_camera_mac_gtx					(wv_camera_mac						),
+	.iv_packet_gap_gtx					(wv_packet_gap						),
+	.i_gvcp_ack_txen_gtx				(w_gvcp_ack_txen					),
+	.o_gvcp_ack_tx_start_gtx			(w_gvcp_ack_tx_start				),				//***********
+	.iv_ip_mask_gev						(wv_ip_mask							),
+	.iv_pc_port_cc_gev					(wv_pc_port_cc						),
+	.iv_pc_port_mc_gev					(wv_pc_port_mc						),
+
+	.iv_irq_status_gev					(wv_irq_status						),
+
+	.o_mac_valid_gev					(									),
+	.o_protocal_match_gev				(w_protocal_match					),
+	.o_heartbeat_clr_gev				(w_heartbeat_clr					),
+
+	.ov_resend_block_id_gev				(wv_resend_block_id					),
+	.ov_resend_packet_id_first_gev		(wv_resend_packet_id_first			),
+	.ov_resend_packet_id_last_gev		(wv_resend_packet_id_last			),
+	.o_resend_en_gev					(w_resend_en						),
+
+	.iv_axi_wr_addr						(wv_waddr_axi						),
+	.iv_axi_wr_be						(wv_wr_be_axi						),
+	.i_axi_wr_en						(w_wr_en_axi & axi_tx_ram_cs		),
+	.iv_axi_wr_data						(wv_wdata_axi						),
+	.iv_axi_rd_addr						(wv_raddr_axi						),
+	.ov_axi_rd_data						(wv_rdata_axi_rxram					),
+
+	.ov_tx_ifg_delay					(wv_tx_ifg_delay					),
+	.o_tx_axis_aresetn					(w_tx_axis_aresetn					),
+	.ov_tx_axis_tdata					(wv_tx_axis_tdata					),
+	.ov_tx_axis_tkeep					(wv_tx_axis_tkeep					),
+	.o_tx_axis_tvalid					(w_tx_axis_tvalid					),
+	.o_tx_axis_tlast					(w_tx_axis_tlast					),
+	.o_tx_axis_tuser					(w_tx_axis_tuser					),
+	.i_tx_axis_tready					(w_tx_axis_tready					),
+
+	.iv_rx_axis_tdata					(wv_rx_axis_tdata					),
+	.iv_rx_axis_tkeep					(wv_rx_axis_tkeep					),
+	.i_rx_axis_tvalid					(w_rx_axis_tvalid					),
+	.i_rx_axis_tlast					(w_rx_axis_tlast					),
+	.i_rx_axis_tuser					(w_rx_axis_tuser					)
+	);
+
+//	ila_96 ila_96_macrx_inst (
+//	.clk		(clk_gtx		),
+//	.probe0		({'b0,
+//	w_tx_axis_tready,
+//	wv_tx_axis_tdata,
+//	wv_tx_axis_tkeep,
+//	w_tx_axis_tvalid,
+//	w_tx_axis_tlast,
+//	w_tx_axis_tuser}		)
+//	);
+
+	ila_96 ila_96_macrx_inst (
+	.clk		(clk_gtx		),
+	.probe0		({'b0,
+	gige_vision_inst.wv_data_gvcp_tx[7:0],
+	gige_vision_inst.wv_be_gvcp_tx,
+	gige_vision_inst.w_gvcp_tx_rd_en,
+	gige_vision_inst.iv_axi_wr_data[7:0],
+	gige_vision_inst.iv_axi_wr_addr[7:0],
+	gige_vision_inst.iv_axi_wr_be,
+	gige_vision_inst.i_axi_wr_en}		)
+	);
+
+	ila_96 ila_96_mactx_inst (
+	.clk		(clk_gtx		),
+	.probe0		({'b0,
+	gige_vision_inst.gvcp_rx_inst.gvcp_rx_filter_inst.gvcp_discover_packet,
+	gige_vision_inst.gvcp_rx_inst.o_protocal_match,
+	wv_rx_axis_tdata,
+	wv_rx_axis_tkeep,
+	w_rx_axis_tvalid,
+	w_rx_axis_tuser,
+	w_rx_axis_tlast}		)
+	);
+
+	//	-------------------------------------------------------------------------------------
+	//	ten_gig_eth_mac
+	//	-------------------------------------------------------------------------------------
+	ten_gig_eth_mac_0_support ten_gig_eth_mac_inst (
+	.tx_clk0						(clk_gtx					),
+	.reset							(reset_gtx					),
+	.tx_axis_aresetn				(w_tx_axis_aresetn			),
+	.tx_axis_tdata					(wv_tx_axis_tdata			),
+	.tx_axis_tvalid					(w_tx_axis_tvalid			),
+	.tx_axis_tlast					(w_tx_axis_tlast			),
+	.tx_axis_tuser					(w_tx_axis_tuser			),
+	.tx_ifg_delay					(wv_tx_ifg_delay			),
+	.tx_axis_tkeep					(wv_tx_axis_tkeep			),
+	.tx_axis_tready					(w_tx_axis_tready			),
+	.tx_statistics_vector			(							),
+	.tx_statistics_valid			(							),
+
+	.pause_val						(0							),
+	.pause_req						(0							),
+
+	.rx_axis_aresetn				(w_tx_axis_aresetn			),	//此处用w_tx_axis_aresetn是否合适
+	.rx_axis_tdata					(wv_rx_axis_tdata			),
+	.rx_axis_tkeep					(wv_rx_axis_tkeep			),
+	.rx_axis_tvalid					(w_rx_axis_tvalid			),
+	.rx_axis_tuser					(w_rx_axis_tuser			),
+	.rx_axis_tlast					(w_rx_axis_tlast			),
+	.rx_statistics_vector			(							),
+	.rx_statistics_valid			(							),
+
+	.s_axi_aclk             		(clk_axi					),
+	.s_axi_aresetn          		(1'b1						),
+	.s_axi_awaddr           		(m_axi_if_awaddr[10:0]		),
+	.s_axi_awvalid          		(m_axi_if_awvalid    		),
+	.s_axi_awready          		(m_axi_if_awready    		),
+	.s_axi_wdata            		(m_axi_if_wdata[31:0] 		),
+	.s_axi_wvalid           		(m_axi_if_wvalid     		),
+	.s_axi_wready           		(m_axi_if_wready     		),
+	.s_axi_bresp            		(m_axi_if_bresp[1:0]  		),
+	.s_axi_bvalid           		(m_axi_if_bvalid     		),
+	.s_axi_bready           		(m_axi_if_bready     		),
+	.s_axi_araddr           		(m_axi_if_araddr[10:0]		),
+	.s_axi_arvalid          		(m_axi_if_arvalid    		),
+	.s_axi_arready          		(m_axi_if_arready    		),
+	.s_axi_rdata            		(m_axi_if_rdata      		),
+	.s_axi_rresp            		(m_axi_if_rresp[1:0]		),
+	.s_axi_rvalid           		(m_axi_if_rvalid			),
+	.s_axi_rready           		(m_axi_if_rready			),
+	.xgmacint               		(							),
+	.mdc                    		(mdc						),
+	.mdio_in                		(mdio_in					),
+	.mdio_out               		(mdio_out					),
+	.mdio_tri               		(mdio_tri					),
+	.tx_dcm_locked          		(w_rxaui_locked				),
+	.xgmii_txd              		(xgmii_txd					),
+	.xgmii_txc              		(xgmii_txc					),
+	.rx_clk0                		(clk_gtx					),
+	.rx_dcm_locked          		(w_rxaui_locked				),
+	.xgmii_rxd              		(xgmii_rxd					),
+	.xgmii_rxc              		(xgmii_rxc					)
+	);
+
+	//	-------------------------------------------------------------------------------------
+	//	rxaui
+	//	-------------------------------------------------------------------------------------
+	rxaui_0 rxaui_inst (
+	.reset							(1'b0						),
+	.dclk							(clk_microb					),
+	.clk156_out						(clk_gtx					), // Output clock than can be used for external logic
+	.clk156_lock					(w_rxaui_locked				),
+	.pll0outclk_out					(							),
+	.pll0lock_out					(							),
+	.pll0outrefclk_out				(							),
+	.pll1outclk_out					(							),
+	.pll1outrefclk_out				(							),
+	.common_pll_reset_out			(							),
+	.refclk_p						(refclk_p					),
+	.refclk_n						(refclk_n					),
+	.xgmii_txd						(xgmii_txd					),
+	.xgmii_txc						(xgmii_txc					),
+	.xgmii_rxd						(xgmii_rxd					),
+	.xgmii_rxc						(xgmii_rxc					),
+	.rxaui_tx_l0_p					(rxaui_tx_l0_p				),
+	.rxaui_tx_l0_n					(rxaui_tx_l0_n				),
+	.rxaui_tx_l1_p					(rxaui_tx_l1_p				),
+	.rxaui_tx_l1_n					(rxaui_tx_l1_n				),
+	.rxaui_rx_l0_p					(rxaui_rx_l0_p				),
+	.rxaui_rx_l0_n					(rxaui_rx_l0_n				),
+	.rxaui_rx_l1_p					(rxaui_rx_l1_p				),
+	.rxaui_rx_l1_n					(rxaui_rx_l1_n				),
+	.signal_detect					(2'b11						),
+	.debug							(							),
+	.configuration_vector			(7'h00						),
+	.status_vector					(							)
+	);
+
+	//  -------------------------------------------------------------------------------------
+	//	temperature_read 模块
+	//  -------------------------------------------------------------------------------------
+
+
+	temperature_read temperature_read_inst(
+	.i_wb_clk						(clk_axi  					),
+	.i_wb_rst						(1'b0		           		),
+	.scl							(iic_scl_io                 ),
+	.sda							(iic_sda_io                 ),
+	.ov_temperature_sensor_local	(wv_temperature_sensor_local),
+	.ov_temperature_sensor_remote	(wv_temperature_sensor_remote ),
+	.ov_temperature_be				(wv_temperature_be		    ),
+	.ov_temperature_ps				(wv_temperature_ps		    )
+	);
+
+
+
+
+
+
+endmodule

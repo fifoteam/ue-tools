@@ -1,0 +1,323 @@
+//-------------------------------------------------------------------------------------------------
+//  -- 版权所有者   : 中国大恒（集团）有限公司北京图像视觉技术分公司, 2010 -2018.
+//  -- 保密级别     ：绝密.
+//  -- 部门         : 硬件部，FPGA工作组
+//  -- 模块名       : gvcp_tx_ram
+//  -- 设计者       : 张少强
+//-------------------------------------------------------------------------------------------------
+//
+//  -- 版本记录 :
+//
+//  -- 作者         :| 版本号	:| 修改日期				:|  修改说明
+//-------------------------------------------------------------------------------------------------
+//  -- 张少强       :| V1.0		:| 2018/09/05 09:47:56	:|  初始版本
+//-------------------------------------------------------------------------------------------------
+//
+//  -- 模块描述     :
+//              1)  :
+//
+//              2)  :
+//
+//              3)  :
+//
+//-------------------------------------------------------------------------------------------------
+//`include			"gvcp_tx_ram_def.v"
+//仿真单位/精度
+`timescale 1ns/1ps
+//-------------------------------------------------------------------------------------------------
+
+module gvcp_tx_ram # (
+	parameter	AXI_DATA_WD									= 32		,	//AXI总线数据位宽
+	parameter	AXI_ADDR_WD									= 32		,	//AXI总线地址位宽
+	parameter	GEV_BE_WD									= 8			,	//本模块输入字节使能标志位位宽
+	parameter	GEV_DATA_WD									= 64		,	//本模块输入数据位宽，支持8/16/32/64/128
+	parameter	SHORT_REG_WD								= 16			//固定为16
+	)
+	(
+	//  -------------------------------------------------------------------------------------
+	//  axi lite 信号
+	//  -------------------------------------------------------------------------------------
+	input							clk_axi								,	//axi工作时钟
+	input							reset_axi							,	//axi工作时钟域的复位信号，高有效
+	input 	  						i_axi_lite_wr_en					,	//clk_axi时钟域，axi 写使能
+	input 	  [AXI_DATA_WD/8-1:0]	iv_axi_lite_be						,	//clk_axi时钟域，axi 字节使能
+    input 	  [AXI_ADDR_WD-1:0]		iv_axi_lite_wr_addr					,	//clk_axi时钟域，axi 写地址
+    input 	  [AXI_DATA_WD-1:0]		iv_axi_lite_wr_data					,	//clk_axi时钟域，axi 写数据
+
+	//  -------------------------------------------------------------------------------------
+	//  时钟和复位信号
+	//  -------------------------------------------------------------------------------------
+	input							clk									,	//工作时钟
+	input							reset								,	//工作时钟域的复位信号，高有效
+	//	-------------------------------------------------------------------------------------
+	//	控制寄存器输入
+	//	-------------------------------------------------------------------------------------
+	input	[SHORT_REG_WD-1:0]		iv_gvcp_length						,	//clk时钟域，gvcp包长
+	//  -------------------------------------------------------------------------------------
+	//  packet switch 交互
+	//  -------------------------------------------------------------------------------------
+	input							i_tx_axis_tvalid					,
+	input							i_gvcp_tx_ram_rd					,	//clk时钟域，gvcp tx ram 读信号，高有效
+	output	[GEV_BE_WD-1:0]			ov_gvcp_tx_ram_be					,	//clk时钟域，gvcp数据字节有效信号，高有效
+	output	[GEV_DATA_WD-1:0]		ov_gvcp_tx_ram_data						//clk时钟域，gvcp数据
+	);
+	//	===============================================================================================
+	//	ref functions
+	//	===============================================================================================
+	//	-------------------------------------------------------------------------------------
+	//	计算位宽
+	//	-------------------------------------------------------------------------------------
+	function integer log2 (input integer xx);
+		integer x;
+		begin
+			x	= xx-1 ;
+			for (log2=0;x>0;log2=log2+1) begin
+				x	= x >> 1;
+			end
+		end
+	endfunction
+
+	//	===============================================================================================
+	//	ref paramters
+	//	===============================================================================================
+	localparam					TX_BE_LOG	=	log2(GEV_BE_WD)	;
+	//	-------------------------------------------------------------------------------------
+	//
+	//	-------------------------------------------------------------------------------------
+	function [GEV_BE_WD-1:0] tx_decoder;
+		input [TX_BE_LOG-1:0] a;
+		integer i;
+		begin
+			for(i=0; i<GEV_BE_WD;i=i+1) begin
+				if(i<a) begin
+					tx_decoder[i]=1'b1;
+				end
+				else begin
+					tx_decoder[i]=1'b0;
+				end
+			end
+		end
+	endfunction
+	//	===============================================================================================
+	//	ref signals
+	//	===============================================================================================
+	wire						ram_wr_en				;	//ram写使能
+	wire	[8:0]				ram_wr_addr				;	//ram写地址
+	wire	[31:0]				ram_wr_data				;	//ram写数据
+	wire	[3:0]				ram_wr_be				;	//ram写字节使能
+	reg		[15:0]				byte_cnt	=	GEV_BE_WD;	//字节计数器，表示从ram中读出数据的字节数
+	reg		[15:0]				byte_cnt_latch	=	GEV_BE_WD;
+	wire	[15:0]				byte_cnt2				;
+	reg		[SHORT_REG_WD-1:0]	gvcp_length_latch		;
+	wire	[10-TX_BE_LOG:0]	ram_rd_addr				;	//ram读地址,深度随TX_BE_WD增加依次递减
+	wire	[GEV_DATA_WD-1:0]	ram_rd_data				;	//ram读出的数据
+	reg		[GEV_BE_WD-1:0]		gvcp_tx_ram_be_reg		;
+	//	===============================================================================================
+	//	ref ARCHITECTURE
+	//	===============================================================================================
+	//  -------------------------------------------------------------------------------------
+	//	edge
+	//  -------------------------------------------------------------------------------------
+
+	//	-------------------------------------------------------------------------------------
+	//	-ref ram_wr_en
+	//	-------------------------------------------------------------------------------------
+	assign		ram_wr_en		=	i_axi_lite_wr_en	;
+	//	-------------------------------------------------------------------------------------
+	//	-ref ram_wr_be
+	//	当ram_wr_en有效时：截取iv_axi_lite_wr_addr[9:2]位作为ram_wr_addr的地位，高位补0
+	//	当ram_wr_en无效时，为0
+	//	-------------------------------------------------------------------------------------
+	assign		ram_wr_be[0]		=	ram_wr_en ? iv_axi_lite_be[3]	: 4'b0	;
+	assign		ram_wr_be[1]		=	ram_wr_en ? iv_axi_lite_be[2]	: 4'b0	;
+	assign		ram_wr_be[2]		=	ram_wr_en ? iv_axi_lite_be[1]	: 4'b0	;
+	assign		ram_wr_be[3]		=	ram_wr_en ? iv_axi_lite_be[0]	: 4'b0	;
+	//	-------------------------------------------------------------------------------------
+	//	-ref ram_wr_data
+	//	当ram_wr_en有效时：与iv_axi_lite_wr_data同步
+	//	当ram_wr_en无效时，为0
+	//	-------------------------------------------------------------------------------------
+	assign		ram_wr_data		=	ram_wr_en ? iv_axi_lite_wr_data : 32'b0	;
+	//	-------------------------------------------------------------------------------------
+	//	-ref ram_wr_addr
+	//	当ram_wr_en有效时：截取iv_axi_lite_wr_addr[9:2]位作为ram_wr_addr的地位，高位补0
+	//	当ram_wr_en无效时，为0
+	//	-------------------------------------------------------------------------------------
+	assign		ram_wr_addr		=	ram_wr_en ? {1'b0,iv_axi_lite_wr_addr[9:2]}	: 9'b0	;
+	//	-------------------------------------------------------------------------------------
+	//	byte_cnt
+	//	1.初始值为TX_BE_WD
+	//	2.i_gvcp_tx_ram_rd为1时byte_cnt累加TX_BE_WD
+	//	3.当byte_cnt大于等于iv_gvcp_length时恢复为初始值
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		if(byte_cnt == GEV_BE_WD) begin
+			gvcp_length_latch <= iv_gvcp_length;//当byte_cnt开始计数时，不允许gvcp_length_latch变化
+		end
+	end
+
+	always @ (posedge clk) begin
+		if(reset) begin
+			byte_cnt <= GEV_BE_WD	;
+		end
+		else if(i_gvcp_tx_ram_rd) begin
+			if(byte_cnt >= gvcp_length_latch) begin
+				byte_cnt <= GEV_BE_WD	;
+			end
+			else begin
+				byte_cnt <= byte_cnt + GEV_BE_WD	;
+			end
+		end
+		else if(~i_tx_axis_tvalid)begin
+			byte_cnt <= GEV_BE_WD	;
+		end
+	end
+	always @ (posedge clk) begin
+		if(i_gvcp_tx_ram_rd) begin
+			byte_cnt_latch <= byte_cnt;
+		end
+	end
+	assign byte_cnt2 = i_gvcp_tx_ram_rd ? byte_cnt : byte_cnt_latch;
+	//	-------------------------------------------------------------------------------------
+	//	-ref ram_rd_addr
+	//	当i_gvcp_tx_ram_rd为1时，由byte_cnt右移N位得到ram_rd_addr
+	//	--当TX_BE_WD为1时，N等于0
+	//	--当TX_BE_WD为2时，N等于1
+	//	--当TX_BE_WD为4时，N等于2
+	//	--当TX_BE_WD为8时，N等于3
+	//	--当TX_BE_WD为16时，N等于4
+	//	当i_gvcp_tx_ram_rd为0时，ram_rd_addr为0
+	//	-------------------------------------------------------------------------------------
+	assign ram_rd_addr = (i_tx_axis_tvalid || i_gvcp_tx_ram_rd) ? byte_cnt2[15:TX_BE_LOG] : 0;
+	//	-------------------------------------------------------------------------------------
+	//	-ref	ov_gvcp_tx_ram_data
+	//	-------------------------------------------------------------------------------------
+//	assign ov_gvcp_tx_ram_data = i_gvcp_tx_ram_rd ? {ram_rd_data[6*8+:8],ram_rd_data[7*8+:8],ram_rd_data[4*8+:8],ram_rd_data[5*8+:8],ram_rd_data[2*8+:8],ram_rd_data[3*8+:8],ram_rd_data[0*8+:8],ram_rd_data[1*8+:8]} : 0 ;
+
+
+//	assign	ov_gvcp_tx_ram_data	= {ram_rd_data[63:32],ram_rd_data[31:0]};
+	assign	ov_gvcp_tx_ram_data	= {ram_rd_data[39:32],ram_rd_data[47:40],ram_rd_data[55:48],ram_rd_data[63:56],ram_rd_data[7:0],ram_rd_data[15:8],ram_rd_data[23:16],ram_rd_data[31:24]};
+
+
+	//	-------------------------------------------------------------------------------------
+	//	-ref	ov_gvcp_tx_ram_be
+	//	1.当i_gvcp_tx_ram_rd为0时，为0（组合逻辑）
+	//	2.当i_gvcp_tx_ram_rd为1时
+	//		a.如果当前byte_cnt大于等于iv_gvcp_length,为0（时序逻辑）
+	//		b.如果当前byte_cnt小于等于iv_gvcp_length-GEV_BE_WD,为全1（时序逻辑）
+	//		c.如果介于iv_gvcp_length-TX_BE_WD和iv_gvcp_length之间，为
+	//			假设TX_BE_WD等于8
+	//			--当iv_gvcp_length[2:0]=0时，为8’b0000_0000
+	//			--当iv_gvcp_length[2:0]=1时，为8’b0000_0001
+	//			--当iv_gvcp_length[2:0]=2时，为8’b0000_0011
+	//			--当iv_gvcp_length[2:0]=3时，为8’b0000_0111
+	//			--当iv_gvcp_length[2:0]=4时，为8’b0000_1111
+	//			--当iv_gvcp_length[2:0]=5时，为8’b0001_1111
+	//			--当iv_gvcp_length[2:0]=6时，为8’b0011_1111
+	//			--当iv_gvcp_length[2:0]=7时，为8’b0111_1111
+	//	-------------------------------------------------------------------------------------
+	generate
+		if(GEV_BE_WD==1) begin //当TX_BE_WD==1时，gvcp_tx_ram_be_reg非1即0
+			always @ (posedge clk) begin
+				if(byte_cnt2 >= gvcp_length_latch) begin
+					gvcp_tx_ram_be_reg <= 1'b0;
+				end
+				else begin
+					gvcp_tx_ram_be_reg <= 1'b1;
+				end
+			end
+		end
+		else begin
+			always @ (posedge clk) begin
+				if(byte_cnt2 >= gvcp_length_latch) begin
+					gvcp_tx_ram_be_reg <= {(GEV_BE_WD){1'b0}};
+				end
+				else if(byte_cnt2 <= gvcp_length_latch-GEV_BE_WD) begin
+					gvcp_tx_ram_be_reg <= {(GEV_BE_WD){1'b1}};
+				end
+				else begin
+					gvcp_tx_ram_be_reg <= tx_decoder(gvcp_length_latch[TX_BE_LOG-1:0]);
+				end
+			end
+		end
+	endgenerate
+
+
+	assign ov_gvcp_tx_ram_be = (i_tx_axis_tvalid || i_gvcp_tx_ram_rd) ? gvcp_tx_ram_be_reg :  {(GEV_BE_WD){1'b0}};
+	//  -------------------------------------------------------------------------------------
+//	instantiate "tx_bram_w32w8" module
+//  -------------------------------------------------------------------------------------
+generate
+	if(GEV_DATA_WD == 8) begin
+		tx_bram_w32w8 tx_bram_w32w8_inst (
+		.clka		(clk_axi		),
+		.wea		(ram_wr_be		),
+		.addra		(ram_wr_addr	),
+		.dina		(ram_wr_data	),
+		.clkb		(clk		),
+		.addrb		(ram_rd_addr		),
+		.doutb		(ram_rd_data		)
+		);
+	end
+//  -------------------------------------------------------------------------------------
+//	instantiate "tx_bram_w32w16" module
+//  -------------------------------------------------------------------------------------
+	else if(GEV_DATA_WD == 16) begin
+		tx_bram_w32w16 tx_bram_w32w16_inst (
+		.clka		(clk_axi		),
+		.wea		(ram_wr_be		),
+		.addra		(ram_wr_addr	),
+		.dina		(ram_wr_data	),
+		.clkb		(clk			),
+		.addrb		(ram_rd_addr		),
+		.doutb		(ram_rd_data		)
+		);
+	end
+//  -------------------------------------------------------------------------------------
+//	instantiate "tx_bram_w32w32" module
+//  -------------------------------------------------------------------------------------
+	else if(GEV_DATA_WD == 32) begin
+		tx_bram_w32w32 tx_bram_w32w32_inst (
+		.clka		(clk_axi		),
+		.wea		(ram_wr_be		),
+		.addra		(ram_wr_addr	),
+		.dina		(ram_wr_data	),
+		.clkb		(clk			),
+		.addrb		(ram_rd_addr		),
+		.doutb		(ram_rd_data		)
+		);
+	end
+//  -------------------------------------------------------------------------------------
+//	instantiate "tx_bram_w32w64" module
+//  -------------------------------------------------------------------------------------
+	else if(GEV_DATA_WD == 64) begin
+		tx_bram_w32w64 tx_bram_w32w64_inst (
+		.clka		(clk_axi		),
+		.wea		(ram_wr_be		),
+		.addra		(ram_wr_addr	),
+		.dina		(ram_wr_data	),
+		.clkb		(clk		),
+		.addrb		(ram_rd_addr		),
+		.doutb		(ram_rd_data		)
+		);
+	end
+//  -------------------------------------------------------------------------------------
+//	instantiate "tx_bram_w32w128" module
+//  -------------------------------------------------------------------------------------
+	else if(GEV_DATA_WD == 128) begin
+		tx_bram_w32w128 tx_bram_w32w128_inst (
+		.clka		(clk_axi		),
+		.wea		(ram_wr_be		),
+		.addra		(ram_wr_addr	),
+		.dina		(ram_wr_data	),
+		.clkb		(clk		),
+		.addrb		(ram_rd_addr		),
+		.doutb		(ram_rd_data		)
+		);
+	end
+endgenerate
+
+
+
+
+endmodule
