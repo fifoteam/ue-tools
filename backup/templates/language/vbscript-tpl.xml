@@ -1,8 +1,10 @@
 <?xml version="1.0"?>
-<Templates encode="utf8escenc"><Template Name="If" Comments="0" Strings="0">If [+expression+] Then&#xD;
+<Templates encode="utf8escenc"><Template Name="If" Comments="0" Strings="0">Select Case [+expression+]&#xD;
+Case [+statement+]&#xD;
 	^&#xD;
-End If&#xD;
-</Template><Template Name="ElseIf" Comments="0" Strings="0">ElseIf [+evaluation+] Then&#xD;
+Case Else&#xD;
+	' default&#xD;
+End Select</Template><Template Name="ElseIf" Comments="0" Strings="0">ElseIf [+evaluation+] Then&#xD;
 	^&#xD;
 </Template><Template Name="Else" Comments="0" Strings="0">Else&#xD;
 	^&#xD;
