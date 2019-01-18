@@ -1,0 +1,18 @@
+@P:  Worst Slack : -0.133
+@P:  trigger_active|clk - Estimated Frequency : 1125.2 MHz
+@P:  trigger_active|clk - Requested Frequency : 1323.8 MHz
+@P:  trigger_active|clk - Estimated Period : 0.889
+@P:  trigger_active|clk - Requested Period : 0.755
+@P:  trigger_active|clk - Slack : -0.133
+@P:  Worst Slack(min analysis) : 0.518
+@P:  trigger_active|clk - Estimated Frequency(min analysis) : 1125.2 MHz
+@P:  trigger_active|clk - Requested Frequency(min analysis) : 1323.8 MHz
+@P:  trigger_active|clk - Estimated Period(min analysis) : 0.889
+@P:  trigger_active|clk - Requested Period(min analysis) : 0.755
+@P:  trigger_active|clk - Slack(min analysis) : -0.133
+@P: trigger_active Part : xc7a100tfgg484-2
+@P: trigger_active I/O primitives : 9
+@P: trigger_active I/O Register bits : 0
+@P: trigger_active Register bits (Non I/O) : 3 (0%)
+@P: trigger_active Total Luts : 2 (0%)
+@P:  CPU Time : 0h:00m:01s

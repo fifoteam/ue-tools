@@ -1,0 +1,28 @@
+# Synopsys Constraint Checker(syntax only), version maprc, Build 2608R, built Feb 25 2015
+# Copyright (C) 1994-2015, Synopsys, Inc. This software and the associated documentation are proprietary to Synopsys, Inc. This software may only be used in accordance with the terms and conditions of a written license agreement with Synopsys, Inc.  All other use, reproduction, or distribution of this software is strictly prohibited.
+
+# Written on Fri Jan 18 16:14:58 2019
+
+
+##### DESIGN INFO #######################################################
+
+Top View:                "trigger_active"
+Constraint File(s):      (none)
+
+#Run constraint checker to find more issues with constraints.
+#########################################################################
+
+
+
+No issues found in constraint syntax.
+
+
+
+Clock Summary
+*************
+
+Start                  Requested      Requested     Clock        Clock                
+Clock                  Frequency      Period        Type         Group                
+--------------------------------------------------------------------------------------
+trigger_active|clk     1713.8 MHz     0.584         inferred     Autoconstr_clkgroup_0
+======================================================================================

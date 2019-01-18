@@ -1,0 +1,14 @@
+D:\tools\Synopsys\fpga_J-2015.03\bin64\m_xilinx.exe  -prodtype synplify_pro -encrypt  -pro  -rundir  C:\ue\synplify\rev_1  -part XC7A100TFGG484-2   -use_vivado -enable_prepacking -overilog "proj_1.vm" -maxfan 10000  -m1  -pipe  -verification_mode 1   -fixgatedclocks 1 -fixgeneratedclocks 1   -resolveMultipleDriver -summaryfile 1 -RWCheckOnRam 1   -reporting_ctd 0  -preserve_slash_names -oedif  C:\ue\synplify\rev_1\proj_1.edf  -conchk_prepass  C:\ue\synplify\rev_1\proj_1_cck_prepass.rpt  -autoconstraint  -freq 1.000  C:\ue\synplify\rev_1\synwork\proj_1_compiler.srs  -flow prepass  -gcc_prepass  -osrd  C:\ue\synplify\rev_1\synwork\proj_1_premap.srd  -qsap  C:\ue\synplify\rev_1\proj_1.sap  -devicelib  D:\tools\Synopsys\fpga_J-2015.03\lib\xilinx\unisim_m10i.v  -devicelib  D:\tools\Synopsys\fpga_J-2015.03\lib\xilinx\unisim.v  -ologparam  C:\ue\synplify\rev_1\syntmp\proj_1.plg  -osyn  C:\ue\synplify\rev_1\synwork\proj_1_premap.srd  -prjdir  C:\ue\synplify\  -prjname  proj_a7  -log  C:\ue\synplify\rev_1\synlog\proj_1_premap.srr 
+rc:1 success:1
+C:\ue\synplify\rev_1\proj_1.edf|o|0|0
+C:\ue\synplify\rev_1\proj_1_cck_prepass.rpt|o|0|0
+C:\ue\synplify\rev_1\synwork\proj_1_compiler.srs|i|1547799296|2129
+C:\ue\synplify\rev_1\synwork\proj_1_premap.srd|o|1547799298|2967
+C:\ue\synplify\rev_1\proj_1.sap|o|1547799298|822
+D:\tools\Synopsys\fpga_J-2015.03\lib\xilinx\unisim_m10i.v|i|1424800976|948675
+D:\tools\Synopsys\fpga_J-2015.03\lib\xilinx\unisim.v|i|1424800976|1220228
+C:\ue\synplify\rev_1\syntmp\proj_1.plg|o|1547799298|0
+C:\ue\synplify\rev_1\synwork\proj_1_premap.srd|o|1547799298|2967
+C:\ue\synplify\rev_1\synlog\proj_1_premap.srr|o|1547799298|2973
+D:\tools\Synopsys\fpga_J-2015.03\bin64\m_xilinx.exe|i|1424907598|26630144
+D:\tools\Synopsys\fpga_J-2015.03\bin\m_xilinx.exe|i|1424905704|15475200

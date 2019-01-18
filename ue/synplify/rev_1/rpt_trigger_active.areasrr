@@ -1,0 +1,40 @@
+#### START OF AREA REPORT #####[
+
+Part:			XC7A100TFGG484-2 (Xilinx)
+
+------------------------------------------------------------------------------
+########   Utilization report for  Top level view:   trigger_active   ########
+==============================================================================
+
+SEQUENTIAL ELEMENTS
+Name          Total elements     Total area     Utilization     Notes
+---------------------------------------------------------------------
+REGISTERS     3                  3              100 %                
+=====================================================================
+Total SEQUENTIAL ELEMENTS in the block trigger_active:	3 (20.00 % Utilization)
+
+
+COMBINATIONAL LOGIC
+Name     Total elements     Total area     Utilization     Notes
+----------------------------------------------------------------
+LUTS     2                  2              100 %                
+================================================================
+Total COMBINATIONAL LOGIC in the block trigger_active:	2 (13.33 % Utilization)
+
+
+IO PADS
+Name     Total elements     Total area     Utilization     Notes
+----------------------------------------------------------------
+PADS     9                  9              100 %                
+================================================================
+Total IO PADS in the block trigger_active:	9 (60.00 % Utilization)
+
+
+Summary Table
+Name         Total elements     Total area     Utilization     Notes
+--------------------------------------------------------------------
+LUT Site     2                  2                                   
+====================================================================
+
+##### END OF AREA REPORT #####]
+
