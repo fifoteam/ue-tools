@@ -31,4 +31,4 @@
 /L31"X-JTAG" Line Comment = // Block Comment On = /* Block Comment Off = */ File Extensions = xje pdd
 /L32"test" TEST_LANG Line Comment = // Block Comment On = /* Block Comment Off = */ String Chars = " File Extensions = test
 /L33"Makefiles" Line Comment = # String Chars = "' File Extensions = MAK MK
-/L34"xdc" TCL_LANG Line Comment = # String Chars = "' Escape Char = \ DisableMLS File Extensions = XDC SDC
+/L34"xdc" TCL_LANG Line Comment = # String Chars = "' Escape Char = \ DisableMLS File Extensions = XDC SDC PRJ
