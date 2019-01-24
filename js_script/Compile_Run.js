@@ -21,7 +21,9 @@ function compile_Run(){
 	else if (UltraEdit.activeDocument.isExt("py")) {
 		file_ext = "py";
 	}
-
+	else if (UltraEdit.activeDocument.isExt("v")) {
+		file_ext = "v";
+	}
 	//  -------------------------------------------------------------------------------------
 	//	获取文件名
 	//  -------------------------------------------------------------------------------------
@@ -31,7 +33,6 @@ function compile_Run(){
 	//	编译、运行 C 程序
 	//  -------------------------------------------------------------------------------------
 	if ((file_ext=="c") || (file_ext=="cpp")) {
-		UltraEdit.runTool("file extends is  c or  cpp");
 		//编译源文件
 		if (file_ext=="c") {
 			UltraEdit.runTool("gcc");
@@ -80,7 +81,9 @@ function compile_Run(){
 	else if (file_ext=="py") {
 		UltraEdit.runTool("python");
 	}
-
+	else if (file_ext=="v") {
+		SynthesisVerilog();
+	}
 }
 
 

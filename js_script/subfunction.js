@@ -412,3 +412,75 @@ function FindCopy ( DEBUG ) {
 	UltraEdit.activeDocument.top();
 	UltraEdit.activeDocument.findReplace.find(""+str+"");
 }
+
+//编译verilog 并生成报告
+function SynthesisVerilog(){
+
+	var file_ext = "";
+	var file_name = 0 ;
+	var full_path ;
+	var i ;
+
+	UltraEdit.outputWindow.showWindow(true);
+
+	//  -------------------------------------------------------------------------------------
+	//	检查文件扩展名
+	//  -------------------------------------------------------------------------------------
+	if (UltraEdit.activeDocument.isExt("v")) {
+		file_ext = "v";
+	}
+
+
+	//  -------------------------------------------------------------------------------------
+	//	获取文件名
+	//  -------------------------------------------------------------------------------------
+	file_name=getFileName();
+	full_path = UltraEdit.activeDocument.path;
+
+	//	for (i = 0; i < full_path.length; i++) {
+	//		if (full_path[i]=="/") {
+	//			full_path[i]="\"
+	//		}
+	//	}
+	full_path	= full_path.replace(/\\/g,"/");
+
+	//  -------------------------------------------------------------------------------------
+	//	编译、运行 C 程序
+	//  -------------------------------------------------------------------------------------
+	if (file_ext=="v") {
+		//编译源文件
+		//		UltraEdit.runTool("verilog");
+
+		//	//等待源文件编译完
+		//	cnWait(1);
+
+		//打开tcl
+		UltraEdit.open("c:\\ue\\vivado\\synthesis.tcl");
+
+		//改写tcl
+		DeltLine(2);
+		UltraEdit.activeDocument.write("read_verilog      "+full_path+"\r\n");
+		DeltLine(10);
+		UltraEdit.activeDocument.write("synth_design -top "+file_name+" -part xc7a100tfgg484-2\r\n");
+
+
+		//关闭makefile
+		UltraEdit.closeFile("c:\\ue\\vivado\\synthesis.tcl",1);
+
+
+		//	//等待生成exe文件
+		//	cnWait(1);
+
+		//执行文件
+		UltraEdit.runTool("vivado_synthesis_bat");
+
+		//打开报告
+		UltraEdit.open("c:\\ue\\vivado\\timing_summary.rpt");
+		UltraEdit.open("c:\\ue\\vivado\\utilization_summary.rpt");
+
+
+
+	}
+
+}
+
