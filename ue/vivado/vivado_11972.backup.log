@@ -1,0 +1,58 @@
+#-----------------------------------------------------------
+# Vivado v2018.1 (64-bit)
+# SW Build 2188600 on Wed Apr  4 18:40:38 MDT 2018
+# IP Build 2185939 on Wed Apr  4 20:55:05 MDT 2018
+# Start of session at: Thu Jan 24 16:39:58 2019
+# Process ID: 11972
+# Current directory: c:/ue/vivado
+# Command line: vivado.exe -mode tcl -source synthesis.tcl
+# Log file: c:/ue/vivado/vivado.log
+# Journal file: c:/ue/vivado\vivado.jou
+#-----------------------------------------------------------
+source synthesis.tcl
+# read_verilog      F:/DAHENG/hw_mer/branches/u3v_temp/fpga_module/2_ctrl_channel/common/spi_slave/src/ctrl_channel.v
+# read_xdc src/template.xdc
+# synth_design -top ctrl_channel -part xc7a100tfgg484-2
+Command: synth_design -top ctrl_channel -part xc7a100tfgg484-2
+Starting synth_design
+Attempting to get a license for feature 'Synthesis' and/or device 'xc7a100t'
+INFO: [Common 17-349] Got license for feature 'Synthesis' and/or device 'xc7a100t'
+INFO: Launching helper process for spawning children vivado processes
+INFO: Helper process launched with PID 4884 
+---------------------------------------------------------------------------------
+Starting RTL Elaboration : Time (s): cpu = 00:00:09 ; elapsed = 00:00:09 . Memory (MB): peak = 416.273 ; gain = 100.793
+---------------------------------------------------------------------------------
+INFO: [Synth 8-6157] synthesizing module 'ctrl_channel' [F:/DAHENG/hw_mer/branches/u3v_temp/fpga_module/2_ctrl_channel/common/spi_slave/src/ctrl_channel.v:28]
+	Parameter WB_OFFSET_WIDTH bound to: 12 - type: integer 
+	Parameter WB_GAIN_WIDTH bound to: 11 - type: integer 
+	Parameter WB_STATIS_WIDTH bound to: 31 - type: integer 
+	Parameter GREY_OFFSET_WIDTH bound to: 12 - type: integer 
+	Parameter GREY_STATIS_WIDTH bound to: 48 - type: integer 
+	Parameter TRIG_FILTER_WIDTH bound to: 19 - type: integer 
+	Parameter TRIG_DELAY_WIDTH bound to: 28 - type: integer 
+	Parameter LED_CTRL_WIDTH bound to: 5 - type: integer 
+	Parameter SHORT_REG_WD bound to: 16 - type: integer 
+	Parameter REG_WD bound to: 32 - type: integer 
+	Parameter LONG_REG_WD bound to: 64 - type: integer 
+	Parameter BUF_DEPTH_WD bound to: 4 - type: integer 
+	Parameter REG_INIT_VALUE bound to: FALSE - type: string 
+	Parameter SPI_CMD_LENGTH bound to: 8 - type: integer 
+	Parameter SPI_CMD_WR bound to: 8'b10000000 
+	Parameter SPI_CMD_RD bound to: 8'b10000001 
+	Parameter SPI_ADDR_LENGTH bound to: 16 - type: integer 
+ERROR: [Synth 8-439] module 'spi_slave' not found [F:/DAHENG/hw_mer/branches/u3v_temp/fpga_module/2_ctrl_channel/common/spi_slave/src/ctrl_channel.v:241]
+	Parameter SPI_CMD_LENGTH bound to: 8 - type: integer 
+	Parameter SPI_CMD_WR bound to: 8'b10000000 
+	Parameter SPI_CMD_RD bound to: 8'b10000001 
+	Parameter SPI_ADDR_LENGTH bound to: 16 - type: integer 
+	Parameter SPI_DATA_LENGTH bound to: 16 - type: integer 
+ERROR: [Synth 8-6156] failed synthesizing module 'ctrl_channel' [F:/DAHENG/hw_mer/branches/u3v_temp/fpga_module/2_ctrl_channel/common/spi_slave/src/ctrl_channel.v:28]
+---------------------------------------------------------------------------------
+Finished RTL Elaboration : Time (s): cpu = 00:00:10 ; elapsed = 00:00:10 . Memory (MB): peak = 466.754 ; gain = 151.273
+---------------------------------------------------------------------------------
+RTL Elaboration failed
+INFO: [Common 17-83] Releasing license: Synthesis
+3 Infos, 0 Warnings, 0 Critical Warnings and 3 Errors encountered.
+synth_design failed
+ERROR: [Common 17-69] Command failed: Synthesis failed - please see the console or run log file for details
+INFO: [Common 17-206] Exiting Vivado at Thu Jan 24 16:40:20 2019...

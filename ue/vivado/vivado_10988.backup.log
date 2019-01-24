@@ -1,0 +1,359 @@
+#-----------------------------------------------------------
+# Vivado v2018.1 (64-bit)
+# SW Build 2188600 on Wed Apr  4 18:40:38 MDT 2018
+# IP Build 2185939 on Wed Apr  4 20:55:05 MDT 2018
+# Start of session at: Thu Jan 24 14:05:07 2019
+# Process ID: 10988
+# Current directory: c:/ue/vivado
+# Command line: vivado.exe -mode tcl -source synthesis.tcl
+# Log file: c:/ue/vivado/vivado.log
+# Journal file: c:/ue/vivado\vivado.jou
+#-----------------------------------------------------------
+source synthesis.tcl
+# read_verilog      F:/kuaipan/kuaipan/fifoteam/rtl-tools/module/006_serial_protocol/spi/spi_master/testbench/driver/spi_master/spi_master_core.v
+# read_xdc src/template.xdc
+# synth_design -top spi_master_core -part xc7a100tfgg484-2
+Command: synth_design -top spi_master_core -part xc7a100tfgg484-2
+Starting synth_design
+Attempting to get a license for feature 'Synthesis' and/or device 'xc7a100t'
+INFO: [Common 17-349] Got license for feature 'Synthesis' and/or device 'xc7a100t'
+INFO: Launching helper process for spawning children vivado processes
+INFO: Helper process launched with PID 12888 
+WARNING: [Synth 8-2507] parameter declaration becomes local in spi_master_core with formal parameter declaration list [F:/kuaipan/kuaipan/fifoteam/rtl-tools/module/006_serial_protocol/spi/spi_master/testbench/driver/spi_master/spi_master_core.v:42]
+WARNING: [Synth 8-2507] parameter declaration becomes local in spi_master_core with formal parameter declaration list [F:/kuaipan/kuaipan/fifoteam/rtl-tools/module/006_serial_protocol/spi/spi_master/testbench/driver/spi_master/spi_master_core.v:43]
+WARNING: [Synth 8-2507] parameter declaration becomes local in spi_master_core with formal parameter declaration list [F:/kuaipan/kuaipan/fifoteam/rtl-tools/module/006_serial_protocol/spi/spi_master/testbench/driver/spi_master/spi_master_core.v:44]
+WARNING: [Synth 8-2507] parameter declaration becomes local in spi_master_core with formal parameter declaration list [F:/kuaipan/kuaipan/fifoteam/rtl-tools/module/006_serial_protocol/spi/spi_master/testbench/driver/spi_master/spi_master_core.v:45]
+WARNING: [Synth 8-2507] parameter declaration becomes local in spi_master_core with formal parameter declaration list [F:/kuaipan/kuaipan/fifoteam/rtl-tools/module/006_serial_protocol/spi/spi_master/testbench/driver/spi_master/spi_master_core.v:46]
+---------------------------------------------------------------------------------
+Starting RTL Elaboration : Time (s): cpu = 00:00:09 ; elapsed = 00:00:09 . Memory (MB): peak = 427.813 ; gain = 112.430
+---------------------------------------------------------------------------------
+INFO: [Synth 8-6157] synthesizing module 'spi_master_core' [F:/kuaipan/kuaipan/fifoteam/rtl-tools/module/006_serial_protocol/spi/spi_master/testbench/driver/spi_master/spi_master_core.v:17]
+	Parameter SPI_FIRST_DATA bound to: MSB - type: string 
+	Parameter SPI_CS_POL bound to: LOW - type: string 
+	Parameter SPI_LEAD_TIME bound to: 1 - type: integer 
+	Parameter SPI_LAG_TIME bound to: 1 - type: integer 
+	Parameter S_IDLE bound to: 3'b000 
+	Parameter S_CHK_BIT bound to: 3'b001 
+	Parameter S_LEAD_DLY bound to: 3'b010 
+	Parameter S_SHIFT bound to: 3'b011 
+	Parameter S_LAG_DLY bound to: 3'b100 
+INFO: [Synth 8-6157] synthesizing module 'ODDR2' [d:/tools/Xilinx/Vivado/2018.1/scripts/rt/data/unisim_comp.v:30678]
+	Parameter DDR_ALIGNMENT bound to: C0 - type: string 
+	Parameter INIT bound to: 1'b0 
+	Parameter SRTYPE bound to: ASYNC - type: string 
+INFO: [Synth 8-6155] done synthesizing module 'ODDR2' (1#1) [d:/tools/Xilinx/Vivado/2018.1/scripts/rt/data/unisim_comp.v:30678]
+INFO: [Synth 8-6157] synthesizing module 'IDDR2' [d:/tools/Xilinx/Vivado/2018.1/scripts/rt/data/unisim_comp.v:21412]
+	Parameter DDR_ALIGNMENT bound to: C1 - type: string 
+	Parameter INIT_Q0 bound to: 1'b0 
+	Parameter INIT_Q1 bound to: 1'b0 
+	Parameter SRTYPE bound to: SYNC - type: string 
+INFO: [Synth 8-6155] done synthesizing module 'IDDR2' (2#1) [d:/tools/Xilinx/Vivado/2018.1/scripts/rt/data/unisim_comp.v:21412]
+INFO: [Synth 8-6155] done synthesizing module 'spi_master_core' (3#1) [F:/kuaipan/kuaipan/fifoteam/rtl-tools/module/006_serial_protocol/spi/spi_master/testbench/driver/spi_master/spi_master_core.v:17]
+---------------------------------------------------------------------------------
+Finished RTL Elaboration : Time (s): cpu = 00:00:10 ; elapsed = 00:00:10 . Memory (MB): peak = 457.477 ; gain = 142.094
+---------------------------------------------------------------------------------
+
+Report Check Netlist: 
++------+------------------+-------+---------+-------+------------------+
+|      |Item              |Errors |Warnings |Status |Description       |
++------+------------------+-------+---------+-------+------------------+
+|1     |multi_driven_nets |      0|        0|Passed |Multi driven nets |
++------+------------------+-------+---------+-------+------------------+
+---------------------------------------------------------------------------------
+Start Handling Custom Attributes
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Handling Custom Attributes : Time (s): cpu = 00:00:10 ; elapsed = 00:00:11 . Memory (MB): peak = 457.477 ; gain = 142.094
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished RTL Optimization Phase 1 : Time (s): cpu = 00:00:10 ; elapsed = 00:00:11 . Memory (MB): peak = 457.477 ; gain = 142.094
+---------------------------------------------------------------------------------
+INFO: [Netlist 29-17] Analyzing 2 Unisim elements for replacement
+WARNING: [Netlist 29-151] Pin 'C1' on instance 'ODDR2_spi_clk_inst' of cell type 'ODDR2' does not have an equivalent function on the new cell type 'ODDR'. Net 'clk' that is connected to this pin will not be connected to the replacement instance.
+WARNING: [Netlist 29-151] Pin 'C0' on instance 'IDDR2_miso_inst' of cell type 'IDDR2' does not have an equivalent function on the new cell type 'IDDR'. Net 'C00' that is connected to this pin will not be connected to the replacement instance.
+INFO: [Netlist 29-28] Unisim Transformation completed in 0 CPU seconds
+INFO: [Device 21-403] Loading part xc7a100tfgg484-2
+INFO: [Project 1-570] Preparing netlist for logic optimization
+
+Processing XDC Constraints
+Initializing timing engine
+Parsing XDC File [c:/ue/vivado/src/template.xdc]
+Finished Parsing XDC File [c:/ue/vivado/src/template.xdc]
+Completed Processing XDC Constraints
+
+INFO: [Project 1-111] Unisim Transformation Summary:
+  A total of 2 instances were transformed.
+  IDDR2 => IDDR: 1 instances
+  ODDR2 => ODDR: 1 instances
+
+Constraint Validation Runtime : Time (s): cpu = 00:00:00 ; elapsed = 00:00:00.003 . Memory (MB): peak = 800.871 ; gain = 0.000
+---------------------------------------------------------------------------------
+Finished Constraint Validation : Time (s): cpu = 00:00:38 ; elapsed = 00:00:39 . Memory (MB): peak = 800.871 ; gain = 485.488
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Loading Part and Timing Information
+---------------------------------------------------------------------------------
+Loading part: xc7a100tfgg484-2
+---------------------------------------------------------------------------------
+Finished Loading Part and Timing Information : Time (s): cpu = 00:00:38 ; elapsed = 00:00:39 . Memory (MB): peak = 800.871 ; gain = 485.488
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Applying 'set_property' XDC Constraints
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished applying 'set_property' XDC Constraints : Time (s): cpu = 00:00:38 ; elapsed = 00:00:39 . Memory (MB): peak = 800.871 ; gain = 485.488
+---------------------------------------------------------------------------------
+INFO: [Synth 8-802] inferred FSM for state register 'current_state_reg' in module 'spi_master_core'
+INFO: [Synth 8-5544] ROM "spi_cs_reg" won't be mapped to Block RAM because address size (3) smaller than threshold (5)
+INFO: [Synth 8-5544] ROM "mosi_shift_reg" won't be mapped to Block RAM because address size (3) smaller than threshold (5)
+INFO: [Synth 8-5544] ROM "spi_clk_en" won't be mapped to Block RAM because address size (3) smaller than threshold (5)
+INFO: [Synth 8-5544] ROM "cmd_fifo_rd" won't be mapped to Block RAM because address size (3) smaller than threshold (5)
+INFO: [Synth 8-5544] ROM "next_state" won't be mapped to Block RAM because address size (1) smaller than threshold (5)
+INFO: [Synth 8-5544] ROM "next_state" won't be mapped to Block RAM because address size (2) smaller than threshold (5)
+INFO: [Synth 8-5544] ROM "next_state" won't be mapped to Block RAM because address size (2) smaller than threshold (5)
+INFO: [Synth 8-5544] ROM "next_state" won't be mapped to Block RAM because address size (1) smaller than threshold (5)
+---------------------------------------------------------------------------------------------------
+                   State |                     New Encoding |                Previous Encoding 
+---------------------------------------------------------------------------------------------------
+                  S_IDLE |                            00001 |                              000
+               S_CHK_BIT |                            00010 |                              001
+              S_LEAD_DLY |                            00100 |                              010
+                 S_SHIFT |                            01000 |                              011
+               S_LAG_DLY |                            10000 |                              100
+---------------------------------------------------------------------------------------------------
+INFO: [Synth 8-3354] encoded FSM with state register 'current_state_reg' using encoding 'one-hot' in module 'spi_master_core'
+---------------------------------------------------------------------------------
+Finished RTL Optimization Phase 2 : Time (s): cpu = 00:00:38 ; elapsed = 00:00:39 . Memory (MB): peak = 800.871 ; gain = 485.488
+---------------------------------------------------------------------------------
+
+Report RTL Partitions: 
++-+--------------+------------+----------+
+| |RTL Partition |Replication |Instances |
++-+--------------+------------+----------+
++-+--------------+------------+----------+
+---------------------------------------------------------------------------------
+Start RTL Component Statistics 
+---------------------------------------------------------------------------------
+Detailed RTL Component Info : 
++---Adders : 
+	   2 Input      3 Bit       Adders := 1     
+	   2 Input      2 Bit       Adders := 1     
++---Registers : 
+	                8 Bit    Registers := 2     
+	                3 Bit    Registers := 1     
+	                2 Bit    Registers := 1     
+	                1 Bit    Registers := 4     
++---Muxes : 
+	   2 Input      8 Bit        Muxes := 3     
+	   5 Input      5 Bit        Muxes := 1     
+	   2 Input      5 Bit        Muxes := 7     
+	   2 Input      2 Bit        Muxes := 1     
+	   2 Input      1 Bit        Muxes := 5     
+	   3 Input      1 Bit        Muxes := 1     
+---------------------------------------------------------------------------------
+Finished RTL Component Statistics 
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start RTL Hierarchical Component Statistics 
+---------------------------------------------------------------------------------
+Hierarchical RTL Component report 
+Module spi_master_core 
+Detailed RTL Component Info : 
++---Adders : 
+	   2 Input      3 Bit       Adders := 1     
+	   2 Input      2 Bit       Adders := 1     
++---Registers : 
+	                8 Bit    Registers := 2     
+	                3 Bit    Registers := 1     
+	                2 Bit    Registers := 1     
+	                1 Bit    Registers := 4     
++---Muxes : 
+	   2 Input      8 Bit        Muxes := 3     
+	   5 Input      5 Bit        Muxes := 1     
+	   2 Input      5 Bit        Muxes := 7     
+	   2 Input      2 Bit        Muxes := 1     
+	   2 Input      1 Bit        Muxes := 5     
+	   3 Input      1 Bit        Muxes := 1     
+---------------------------------------------------------------------------------
+Finished RTL Hierarchical Component Statistics
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Part Resource Summary
+---------------------------------------------------------------------------------
+Part Resources:
+DSPs: 240 (col length:80)
+BRAMs: 270 (col length: RAMB18 80 RAMB36 40)
+---------------------------------------------------------------------------------
+Finished Part Resource Summary
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Cross Boundary and Area Optimization
+---------------------------------------------------------------------------------
+Warning: Parallel synthesis criteria is not met 
+---------------------------------------------------------------------------------
+Finished Cross Boundary and Area Optimization : Time (s): cpu = 00:00:39 ; elapsed = 00:00:40 . Memory (MB): peak = 800.871 ; gain = 485.488
+---------------------------------------------------------------------------------
+
+Report RTL Partitions: 
++-+--------------+------------+----------+
+| |RTL Partition |Replication |Instances |
++-+--------------+------------+----------+
++-+--------------+------------+----------+
+---------------------------------------------------------------------------------
+Start Applying XDC Timing Constraints
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Applying XDC Timing Constraints : Time (s): cpu = 00:00:53 ; elapsed = 00:00:54 . Memory (MB): peak = 818.758 ; gain = 503.375
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Timing Optimization
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Timing Optimization : Time (s): cpu = 00:00:53 ; elapsed = 00:00:55 . Memory (MB): peak = 838.207 ; gain = 522.824
+---------------------------------------------------------------------------------
+
+Report RTL Partitions: 
++-+--------------+------------+----------+
+| |RTL Partition |Replication |Instances |
++-+--------------+------------+----------+
++-+--------------+------------+----------+
+---------------------------------------------------------------------------------
+Start Technology Mapping
+---------------------------------------------------------------------------------
+WARNING: [Synth 8-3332] Sequential element (cs_delay_cnt_reg[1]) is unused and will be removed from module spi_master_core.
+---------------------------------------------------------------------------------
+Finished Technology Mapping : Time (s): cpu = 00:00:53 ; elapsed = 00:00:55 . Memory (MB): peak = 839.477 ; gain = 524.094
+---------------------------------------------------------------------------------
+
+Report RTL Partitions: 
++-+--------------+------------+----------+
+| |RTL Partition |Replication |Instances |
++-+--------------+------------+----------+
++-+--------------+------------+----------+
+---------------------------------------------------------------------------------
+Start IO Insertion
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Flattening Before IO Insertion
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Flattening Before IO Insertion
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Final Netlist Cleanup
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Final Netlist Cleanup
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished IO Insertion : Time (s): cpu = 00:00:54 ; elapsed = 00:00:56 . Memory (MB): peak = 839.477 ; gain = 524.094
+---------------------------------------------------------------------------------
+
+Report Check Netlist: 
++------+------------------+-------+---------+-------+------------------+
+|      |Item              |Errors |Warnings |Status |Description       |
++------+------------------+-------+---------+-------+------------------+
+|1     |multi_driven_nets |      0|        0|Passed |Multi driven nets |
++------+------------------+-------+---------+-------+------------------+
+---------------------------------------------------------------------------------
+Start Renaming Generated Instances
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Renaming Generated Instances : Time (s): cpu = 00:00:54 ; elapsed = 00:00:56 . Memory (MB): peak = 839.477 ; gain = 524.094
+---------------------------------------------------------------------------------
+
+Report RTL Partitions: 
++-+--------------+------------+----------+
+| |RTL Partition |Replication |Instances |
++-+--------------+------------+----------+
++-+--------------+------------+----------+
+---------------------------------------------------------------------------------
+Start Rebuilding User Hierarchy
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Rebuilding User Hierarchy : Time (s): cpu = 00:00:54 ; elapsed = 00:00:56 . Memory (MB): peak = 839.477 ; gain = 524.094
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Renaming Generated Ports
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Renaming Generated Ports : Time (s): cpu = 00:00:54 ; elapsed = 00:00:56 . Memory (MB): peak = 839.477 ; gain = 524.094
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Handling Custom Attributes
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Handling Custom Attributes : Time (s): cpu = 00:00:54 ; elapsed = 00:00:56 . Memory (MB): peak = 839.477 ; gain = 524.094
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Renaming Generated Nets
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Renaming Generated Nets : Time (s): cpu = 00:00:54 ; elapsed = 00:00:56 . Memory (MB): peak = 839.477 ; gain = 524.094
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Writing Synthesis Report
+---------------------------------------------------------------------------------
+
+Report BlackBoxes: 
++-+--------------+----------+
+| |BlackBox name |Instances |
++-+--------------+----------+
++-+--------------+----------+
+
+Report Cell Usage: 
++------+------+------+
+|      |Cell  |Count |
++------+------+------+
+|1     |BUFG  |     1|
+|2     |IDDR2 |     1|
+|3     |LUT1  |     2|
+|4     |LUT2  |     4|
+|5     |LUT3  |     4|
+|6     |LUT4  |     3|
+|7     |LUT6  |    12|
+|8     |ODDR2 |     1|
+|9     |FDRE  |    28|
+|10    |FDSE  |     1|
+|11    |IBUF  |    12|
+|12    |OBUF  |    13|
++------+------+------+
+
+Report Instance Areas: 
++------+---------+-------+------+
+|      |Instance |Module |Cells |
++------+---------+-------+------+
+|1     |top      |       |    82|
++------+---------+-------+------+
+---------------------------------------------------------------------------------
+Finished Writing Synthesis Report : Time (s): cpu = 00:00:54 ; elapsed = 00:00:56 . Memory (MB): peak = 839.477 ; gain = 524.094
+---------------------------------------------------------------------------------
+Synthesis finished with 0 errors, 0 critical warnings and 1 warnings.
+Synthesis Optimization Runtime : Time (s): cpu = 00:00:25 ; elapsed = 00:00:37 . Memory (MB): peak = 839.477 ; gain = 180.699
+Synthesis Optimization Complete : Time (s): cpu = 00:00:54 ; elapsed = 00:00:56 . Memory (MB): peak = 839.477 ; gain = 524.094
+INFO: [Project 1-571] Translating synthesized netlist
+INFO: [Netlist 29-17] Analyzing 14 Unisim elements for replacement
+WARNING: [Netlist 29-151] Pin 'C1' on instance 'ODDR2_spi_clk_inst' of cell type 'ODDR2' does not have an equivalent function on the new cell type 'ODDR'. Net 'clk_IBUF_BUFG' that is connected to this pin will not be connected to the replacement instance.
+WARNING: [Netlist 29-151] Pin 'C0' on instance 'IDDR2_miso_inst' of cell type 'IDDR2' does not have an equivalent function on the new cell type 'IDDR'. Net 'C00' that is connected to this pin will not be connected to the replacement instance.
+INFO: [Netlist 29-28] Unisim Transformation completed in 0 CPU seconds
+INFO: [Project 1-570] Preparing netlist for logic optimization
+Parsing XDC File [c:/ue/vivado/src/template.xdc]
+Finished Parsing XDC File [c:/ue/vivado/src/template.xdc]
+INFO: [Opt 31-138] Pushed 1 inverter(s) to 1 load pin(s).
+INFO: [Project 1-111] Unisim Transformation Summary:
+  A total of 2 instances were transformed.
+  IDDR2 => IDDR: 1 instances
+  ODDR2 => ODDR (inverted pins: C): 1 instances
+
+INFO: [Common 17-83] Releasing license: Synthesis
+29 Infos, 10 Warnings, 0 Critical Warnings and 0 Errors encountered.
+synth_design completed successfully
+synth_design: Time (s): cpu = 00:00:57 ; elapsed = 00:01:00 . Memory (MB): peak = 854.332 ; gain = 552.164
+# report_utilization -file utilization_summary.rpt
+report_utilization: Time (s): cpu = 00:00:00 ; elapsed = 00:00:00.059 . Memory (MB): peak = 854.332 ; gain = 0.000
+# report_timing_summary -file timing_summary.rpt
+INFO: [Timing 38-35] Done setting XDC timing constraints.
+INFO: [Timing 38-91] UpdateTimingParams: Speed grade: -2, Delay Type: min_max.
+INFO: [Timing 38-191] Multithreading enabled for timing update using a maximum of 2 CPUs
+report_timing_summary: Time (s): cpu = 00:00:06 ; elapsed = 00:00:06 . Memory (MB): peak = 1234.082 ; gain = 379.750
+INFO: [Common 17-206] Exiting Vivado at Thu Jan 24 14:06:23 2019...

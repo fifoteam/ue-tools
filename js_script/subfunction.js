@@ -421,7 +421,7 @@ function SynthesisVerilog(){
 	var full_path ;
 	var i ;
 
-	UltraEdit.outputWindow.showWindow(true);
+//	UltraEdit.outputWindow.showWindow(true);
 
 	//  -------------------------------------------------------------------------------------
 	//	检查文件扩展名
