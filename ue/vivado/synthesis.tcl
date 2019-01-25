@@ -1,5 +1,5 @@
 #Assemble the Design Source files
-read_verilog      F:/linear_lut.v
+read_verilog      F:/DAHENG/hw_mars/mars_platform/TD/Development_Phase/003_develop_phase/fpga_platform/ver10/src/gige_vision/packet_switch.v
 #read_vhdl [glob ../src/*.vhd]
 #read_edif ../netlist/black_blox.edf
 read_xdc src/template.xdc
@@ -7,7 +7,7 @@ read_xdc src/template.xdc
 
 
 #Run Synthesis and Implementation
-synth_design -top linear_lut -part xc7a100tfgg484-2
+synth_design -top packet_switch -part xc7a100tfgg484-2
 
 
 #Generate Reports
