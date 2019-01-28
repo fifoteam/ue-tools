@@ -2,11 +2,11 @@
 # Vivado v2018.1 (64-bit)
 # SW Build 2188600 on Wed Apr  4 18:40:38 MDT 2018
 # IP Build 2185939 on Wed Apr  4 20:55:05 MDT 2018
-# Start of session at: Mon Jan 28 17:45:05 2019
-# Process ID: 10848
-# Current directory: C:/ue/vivado
+# Start of session at: Fri Jan 25 15:52:33 2019
+# Process ID: 15364
+# Current directory: c:/ue/vivado
 # Command line: vivado.exe -mode tcl -source synthesis.tcl
-# Log file: C:/ue/vivado/vivado.log
-# Journal file: C:/ue/vivado\vivado.jou
+# Log file: c:/ue/vivado/vivado.log
+# Journal file: c:/ue/vivado\vivado.jou
 #-----------------------------------------------------------
 source synthesis.tcl
