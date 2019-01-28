@@ -347,17 +347,17 @@ function OpenModuleCore(DEBUG,onlypath,name_ext){
 	//本级目录及子目录
 	path_array[0]	= onlypath;
 
-//	//上级目录的src子目录
-//	path_array[1]	= onlypath;
-//	path_array[1]	= path_array[1].substring(0,path_array[1].lastIndexOf("\\"));
-//	path_array[1]	= path_array[1].substring(0,path_array[1].lastIndexOf("\\")+1);
-//	path_array[1]	= path_array[1]+"src\\";
-//
-//	//上级目录的testbench子目录
-//	path_array[2]	= onlypath;
-//	path_array[2]	= path_array[2].substring(0,path_array[2].lastIndexOf("\\"));
-//	path_array[2]	= path_array[2].substring(0,path_array[2].lastIndexOf("\\")+1);
-//	path_array[2]	= path_array[2]+"testbench\\";
+	//	//上级目录的src子目录
+	//	path_array[1]	= onlypath;
+	//	path_array[1]	= path_array[1].substring(0,path_array[1].lastIndexOf("\\"));
+	//	path_array[1]	= path_array[1].substring(0,path_array[1].lastIndexOf("\\")+1);
+	//	path_array[1]	= path_array[1]+"src\\";
+	//
+	//	//上级目录的testbench子目录
+	//	path_array[2]	= onlypath;
+	//	path_array[2]	= path_array[2].substring(0,path_array[2].lastIndexOf("\\"));
+	//	path_array[2]	= path_array[2].substring(0,path_array[2].lastIndexOf("\\")+1);
+	//	path_array[2]	= path_array[2]+"testbench\\";
 
 	//上1级目录
 	path_array[1]	= onlypath;
@@ -421,7 +421,7 @@ function SynthesisVerilog(){
 	var full_path ;
 	var i ;
 
-//	UltraEdit.outputWindow.showWindow(true);
+	//	UltraEdit.outputWindow.showWindow(true);
 
 	//  -------------------------------------------------------------------------------------
 	//	检查文件扩展名
@@ -486,14 +486,14 @@ function SynthesisVerilog(){
 
 //去掉重复的字符串
 function deleteRepetion(arr){
-    var arrTable = {},arrData = [];
-    for (var i = 0; i < arr.length; i++) {
-        if( !arrTable[ arr[i] ]){
-            arrTable[ arr[i] ] = true;
-            arrData.push(arr[i])
-        }
-    }
-    return arrData;
+	var arrTable = {},arrData = [];
+	for (var i = 0; i < arr.length; i++) {
+		if( !arrTable[ arr[i] ]){
+			arrTable[ arr[i] ] = true;
+			arrData.push(arr[i])
+		}
+	}
+	return arrData;
 }
 
 function OpenFather (DEBUG) {
@@ -508,7 +508,7 @@ function OpenFather (DEBUG) {
 
 	if (DEBUG==1) {
 
-		UltraEdit.outputWindow.write("now in OpenModule");
+		UltraEdit.outputWindow.write("now in OpenFather");
 		UltraEdit.outputWindow.write("name_ext is "+name_ext+"");
 		UltraEdit.outputWindow.write("onlypath is "+onlypath+"");
 	}
@@ -546,7 +546,7 @@ function OpenFatherCore(DEBUG,onlypath,onlyname,star_ext){
 
 
 	inst_array[0]	= onlyname+"_inst";
-	inst_array[1]	= onlyname+"*_inst*";
+//	inst_array[1]	= onlyname+"*_inst*";
 
 
 
@@ -566,12 +566,16 @@ function OpenFatherCore(DEBUG,onlypath,onlyname,star_ext){
 	//	path_array[2]	= path_array[2].substring(0,path_array[2].lastIndexOf("\\"));
 	//	path_array[2]	= path_array[2].substring(0,path_array[2].lastIndexOf("\\")+1);
 
+
+	//2轮查找
+	//第一轮，按照查找目录查找
+	//第二轮，先查找是否存在 "_inst" 的字符串，如果找到，则不再更换字符串
 	for (search_num = 0; search_num < path_array.length; search_num++) {
 		UltraEdit.frInFiles.directoryStart=path_array[search_num];
 
-		//按照匹配优先级，先查找最简单的字符串
 		for (i = 0; i < inst_array.length; i++) {
 			UltraEdit.frInFiles.find(inst_array[i]);
+
 			UltraEdit.activeDocument.bottom();
 			file_max_line_num	= UltraEdit.activeDocument.currentLineNum;
 
@@ -589,7 +593,7 @@ function OpenFatherCore(DEBUG,onlypath,onlyname,star_ext){
 				UltraEdit.closeFile("** 查找结果 ** ",0);
 			}
 
-			//如果在第一轮查找中就找到了字符串，就跳出，不再查找其他的字符串
+			//如果已经找到字符串，那么就不要切换被查找的字符串了
 			if (found===true) {
 				break;
 			}
