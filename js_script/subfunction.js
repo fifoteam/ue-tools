@@ -329,6 +329,7 @@ function OpenModuleCore(DEBUG,onlypath,name_ext){
 		UltraEdit.outputWindow.write("now in OpenModuleCore");
 	}
 
+	//查找的文件类型是  name_ext，即 test_image.v ，这就限定了文件名字
 	UltraEdit.ueReOn();
 	UltraEdit.frInFiles.searchSubs=true;
 	UltraEdit.frInFiles.unicodeSearch=false;
@@ -369,15 +370,14 @@ function OpenModuleCore(DEBUG,onlypath,name_ext){
 	path_array[2]	= path_array[2].substring(0,path_array[2].lastIndexOf("\\")+1);
 
 	//仿真目录里面查找
-//	path_array[3]	= "D:\\Tools\\Xilinx\\14.7\\ISE_DS\\ISE\\verilog\\src\\";
 	path_array[3]	= "D:\\tools\\Xilinx\\Vivado\\2018.1\\data\\verilog\\src\\unisims\\";
 	path_array[4]	= "D:\\tools\\Xilinx\\Vivado\\2018.1\\data\\verilog\\src\\xeclib\\";
 	path_array[5]	= "D:\\tools\\Xilinx\\Vivado\\2018.1\\data\\verilog\\src\\unimacro\\";
 	path_array[6]	= "D:\\tools\\Xilinx\\Vivado\\2018.1\\data\\verilog\\src\\retarget\\";
 	path_array[7]	= "D:\\tools\\Xilinx\\Vivado\\2018.1\\data\\verilog\\src\\unifast\\";
+	path_array[8]	= "D:\\Tools\\Xilinx\\14.7\\ISE_DS\\ISE\\verilog\\src\\";
 
-
-
+	//文件名字是限定的，查找内容是空字符串，即只要有这个文件就可以
 	for (var search_num = 0; search_num < path_array.length; search_num++) {
 		UltraEdit.frInFiles.directoryStart=path_array[search_num];
 		UltraEdit.frInFiles.find("");
@@ -484,3 +484,125 @@ function SynthesisVerilog(){
 
 }
 
+//去掉重复的字符串
+function deleteRepetion(arr){
+    var arrTable = {},arrData = [];
+    for (var i = 0; i < arr.length; i++) {
+        if( !arrTable[ arr[i] ]){
+            arrTable[ arr[i] ] = true;
+            arrData.push(arr[i])
+        }
+    }
+    return arrData;
+}
+
+function OpenFather (DEBUG) {
+	var	onlyname	= getFileName(0);
+	var	onlypath	= getFilePath(0);
+	var	onlyext		= getFileExtend(0);
+	var	star_ext	= "*."+onlyext;
+	var	name_ext	= onlyname+"."+onlyext;
+
+	if (onlypath.match(/\\$/) === null) onlypath += "\\";
+	UltraEdit.outputWindow.showWindow(true);
+
+	if (DEBUG==1) {
+
+		UltraEdit.outputWindow.write("now in OpenModule");
+		UltraEdit.outputWindow.write("name_ext is "+name_ext+"");
+		UltraEdit.outputWindow.write("onlypath is "+onlypath+"");
+	}
+	OpenFatherCore(0,onlypath,onlyname,star_ext);
+}
+
+function OpenFatherCore(DEBUG,onlypath,onlyname,star_ext){
+
+	if (DEBUG==1) {
+		UltraEdit.outputWindow.showWindow(true);
+		UltraEdit.outputWindow.write("now in OpenFatherCore");
+	}
+
+	UltraEdit.ueReOn();
+	UltraEdit.frInFiles.searchSubs=true;
+	UltraEdit.frInFiles.unicodeSearch=false;
+	UltraEdit.frInFiles.useOutputWindow=false;
+	UltraEdit.frInFiles.openMatchingFiles=false;
+	UltraEdit.frInFiles.filesToSearch=0;
+	UltraEdit.frInFiles.matchCase=false;
+	UltraEdit.frInFiles.matchWord=false;
+	UltraEdit.frInFiles.regExp=false;
+	UltraEdit.frInFiles.searchInFilesTypes=star_ext;
+
+	var path_array			= new Array();
+	var inst_array			= new Array();
+	var find_array			= new Array();
+	var repeat_array		= new Array();
+	var found				= false;
+	var i					= 0;
+	var j					= 0;
+	var line_num			= 0;
+	var file_max_line_num	= 0;
+	var search_num			= 0;
+
+
+	inst_array[0]	= onlyname+"_inst";
+	inst_array[1]	= onlyname+"*_inst*";
+
+
+
+
+
+	//本级目录及子目录
+	path_array[0]	= onlypath;
+
+
+	//上1级目录
+	path_array[1]	= onlypath;
+	path_array[1]	= path_array[1].substring(0,path_array[1].lastIndexOf("\\"));
+	path_array[1]	= path_array[1].substring(0,path_array[1].lastIndexOf("\\")+1);
+
+	//	//上2级目录
+	//	path_array[2]	= path_array[1];
+	//	path_array[2]	= path_array[2].substring(0,path_array[2].lastIndexOf("\\"));
+	//	path_array[2]	= path_array[2].substring(0,path_array[2].lastIndexOf("\\")+1);
+
+	for (search_num = 0; search_num < path_array.length; search_num++) {
+		UltraEdit.frInFiles.directoryStart=path_array[search_num];
+
+		//按照匹配优先级，先查找最简单的字符串
+		for (i = 0; i < inst_array.length; i++) {
+			UltraEdit.frInFiles.find(inst_array[i]);
+			UltraEdit.activeDocument.bottom();
+			file_max_line_num	= UltraEdit.activeDocument.currentLineNum;
+
+			//如果在文件中找到了字符串，查找结果会大于2行，将查找结果中有用的字符串提取到数组中
+			if (file_max_line_num > 2) {
+				for (line_num = 3; line_num < file_max_line_num-2; line_num++) {
+					find_array[j]	= StringCopy(line_num);
+					find_array[j]	= TrimEOL(find_array[j]);
+					found	= true;
+					j++;
+				}
+				UltraEdit.closeFile("** 查找结果 ** ",0);
+			}
+			else {
+				UltraEdit.closeFile("** 查找结果 ** ",0);
+			}
+
+			//如果在第一轮查找中就找到了字符串，就跳出，不再查找其他的字符串
+			if (found===true) {
+				break;
+			}
+		}
+	}
+
+	//将找到的字符串，去掉重复的，打印出来
+	if (found===true) {
+		repeat_array	= deleteRepetion(find_array);
+		for (i = 0; i < repeat_array.length; i++) {
+			UltraEdit.outputWindow.write(""+repeat_array[i]+"");
+		}
+	}
+
+	return	found;
+}
