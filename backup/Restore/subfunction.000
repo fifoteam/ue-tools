@@ -307,10 +307,12 @@ function UCFGetLocValue (str) {
 
 function OpenModule (DEBUG) {
 	UltraEdit.activeDocument.selectWord();
-	var	onlyname	= UltraEdit.activeDocument.selection;
-	var	onlypath	= getFilePath(0);
-	var	onlyext		= getFileExtend(0);
-	var	name_ext	= onlyname+"."+onlyext;
+	var	onlyname		= UltraEdit.activeDocument.selection;
+	var	onlypath		= getFilePath(0);
+	var	onlyext			= getFileExtend(0);
+	var	name_ext		= onlyname+"."+onlyext;
+	var	name_stub_ext	= onlyname+"_stub."+onlyext;
+	var	name_bb_ext		= onlyname+"_bb."+onlyext;
 
 	if (onlypath.match(/\\$/) === null) onlypath += "\\";
 	if (DEBUG==1) {
@@ -319,16 +321,17 @@ function OpenModule (DEBUG) {
 		UltraEdit.outputWindow.write("name_ext is "+name_ext+"");
 		UltraEdit.outputWindow.write("onlypath is "+onlypath+"");
 	}
-	OpenModuleCore(0,onlypath,name_ext);
+	OpenModuleCore(0,onlypath,name_ext,name_stub_ext,name_bb_ext);
 }
 
-function OpenModuleCore(DEBUG,onlypath,name_ext){
+function OpenModuleCore(DEBUG,onlypath,name_ext,name_stub_ext,name_bb_ext){
 
 	if (DEBUG==1) {
 		UltraEdit.outputWindow.showWindow(true);
 		UltraEdit.outputWindow.write("now in OpenModuleCore");
 	}
 
+	//查找的文件类型是  name_ext，即 test_image.v ，这就限定了文件名字
 	UltraEdit.ueReOn();
 	UltraEdit.frInFiles.searchSubs=true;
 	UltraEdit.frInFiles.unicodeSearch=false;
@@ -338,25 +341,37 @@ function OpenModuleCore(DEBUG,onlypath,name_ext){
 	UltraEdit.frInFiles.matchCase=false;
 	UltraEdit.frInFiles.matchWord=false;
 	UltraEdit.frInFiles.regExp=false;
-	UltraEdit.frInFiles.searchInFilesTypes=name_ext;
+
 
 	var path_array=new Array();
+	var str_array=new Array();
 	var found	= false;
+	var i		= 0;
+
+
+	str_array[0]	= name_ext;
+	str_array[1]	= name_stub_ext;
+	str_array[2]	= name_bb_ext;
+
+	//	for (i = 0; i < str_array.length; i++) {
+	//		UltraEdit.outputWindow.write(""+str_array[i]+"");
+	//	}
+
 
 	//本级目录及子目录
 	path_array[0]	= onlypath;
 
-//	//上级目录的src子目录
-//	path_array[1]	= onlypath;
-//	path_array[1]	= path_array[1].substring(0,path_array[1].lastIndexOf("\\"));
-//	path_array[1]	= path_array[1].substring(0,path_array[1].lastIndexOf("\\")+1);
-//	path_array[1]	= path_array[1]+"src\\";
-//
-//	//上级目录的testbench子目录
-//	path_array[2]	= onlypath;
-//	path_array[2]	= path_array[2].substring(0,path_array[2].lastIndexOf("\\"));
-//	path_array[2]	= path_array[2].substring(0,path_array[2].lastIndexOf("\\")+1);
-//	path_array[2]	= path_array[2]+"testbench\\";
+	//	//上级目录的src子目录
+	//	path_array[1]	= onlypath;
+	//	path_array[1]	= path_array[1].substring(0,path_array[1].lastIndexOf("\\"));
+	//	path_array[1]	= path_array[1].substring(0,path_array[1].lastIndexOf("\\")+1);
+	//	path_array[1]	= path_array[1]+"src\\";
+	//
+	//	//上级目录的testbench子目录
+	//	path_array[2]	= onlypath;
+	//	path_array[2]	= path_array[2].substring(0,path_array[2].lastIndexOf("\\"));
+	//	path_array[2]	= path_array[2].substring(0,path_array[2].lastIndexOf("\\")+1);
+	//	path_array[2]	= path_array[2]+"testbench\\";
 
 	//上1级目录
 	path_array[1]	= onlypath;
@@ -369,29 +384,45 @@ function OpenModuleCore(DEBUG,onlypath,name_ext){
 	path_array[2]	= path_array[2].substring(0,path_array[2].lastIndexOf("\\")+1);
 
 	//仿真目录里面查找
-//	path_array[3]	= "D:\\Tools\\Xilinx\\14.7\\ISE_DS\\ISE\\verilog\\src\\";
 	path_array[3]	= "D:\\tools\\Xilinx\\Vivado\\2018.1\\data\\verilog\\src\\unisims\\";
 	path_array[4]	= "D:\\tools\\Xilinx\\Vivado\\2018.1\\data\\verilog\\src\\xeclib\\";
 	path_array[5]	= "D:\\tools\\Xilinx\\Vivado\\2018.1\\data\\verilog\\src\\unimacro\\";
 	path_array[6]	= "D:\\tools\\Xilinx\\Vivado\\2018.1\\data\\verilog\\src\\retarget\\";
 	path_array[7]	= "D:\\tools\\Xilinx\\Vivado\\2018.1\\data\\verilog\\src\\unifast\\";
+	path_array[8]	= "D:\\Tools\\Xilinx\\14.7\\ISE_DS\\ISE\\verilog\\src\\";
 
 
 
+
+
+	//文件名字是限定的，查找内容是空字符串，即只要有这个文件就可以
+	//外层循环，按照路径循环
 	for (var search_num = 0; search_num < path_array.length; search_num++) {
 		UltraEdit.frInFiles.directoryStart=path_array[search_num];
-		UltraEdit.frInFiles.find("");
-		UltraEdit.activeDocument.bottom();
-		if (UltraEdit.activeDocument.currentLineNum > 2) {
-			file_path	= StringCopy(1);
-			file_path	= TrimEOL(file_path);
-			UltraEdit.closeFile("** 查找结果 ** ",0);
-			UltraEdit.open(file_path);
-			found	= true;
-			break;
+		//内层循环，按照文件名字，后缀可能加上 _stub   _bb
+		for (i = 0; i < str_array.length; i++) {
+			UltraEdit.frInFiles.searchInFilesTypes=str_array[i];
+			UltraEdit.frInFiles.find("");
+			UltraEdit.activeDocument.bottom();
+			if (UltraEdit.activeDocument.currentLineNum > 2) {
+				file_path	= StringCopy(1);
+				file_path	= TrimEOL(file_path);
+				UltraEdit.closeFile("** 查找结果 ** ",0);
+				UltraEdit.open(file_path);
+				found	= true;
+				break;
+			}
+			else {
+				UltraEdit.closeFile("** 查找结果 ** ",0);
+			}
+			//如果已经找到文件，那么就不要切换文件名了，_stub和_bb不重要
+			if (found===true) {
+				break;
+			}
 		}
-		else {
-			UltraEdit.closeFile("** 查找结果 ** ",0);
+		//如果已经找到文件，那么就不要切换路径了，直接返回
+		if (found===true) {
+			break;
 		}
 	}
 	return	found;
@@ -411,4 +442,202 @@ function FindCopy ( DEBUG ) {
 	UltraEdit.activeDocument.findReplace.matchWord = true;
 	UltraEdit.activeDocument.top();
 	UltraEdit.activeDocument.findReplace.find(""+str+"");
+}
+
+//编译verilog 并生成报告
+function SynthesisVerilog(){
+
+	var file_ext = "";
+	var file_name = 0 ;
+	var full_path ;
+	var i ;
+
+	//	UltraEdit.outputWindow.showWindow(true);
+
+	//  -------------------------------------------------------------------------------------
+	//	检查文件扩展名
+	//  -------------------------------------------------------------------------------------
+	if (UltraEdit.activeDocument.isExt("v")) {
+		file_ext = "v";
+	}
+
+
+	//  -------------------------------------------------------------------------------------
+	//	获取文件名
+	//  -------------------------------------------------------------------------------------
+	file_name=getFileName();
+	full_path = UltraEdit.activeDocument.path;
+
+	//	for (i = 0; i < full_path.length; i++) {
+	//		if (full_path[i]=="/") {
+	//			full_path[i]="\"
+	//		}
+	//	}
+	full_path	= full_path.replace(/\\/g,"/");
+
+	//  -------------------------------------------------------------------------------------
+	//	编译、运行 C 程序
+	//  -------------------------------------------------------------------------------------
+	if (file_ext=="v") {
+		//编译源文件
+		//		UltraEdit.runTool("verilog");
+
+		//	//等待源文件编译完
+		//	cnWait(1);
+
+		//打开tcl
+		UltraEdit.open("c:\\ue\\vivado\\synthesis.tcl");
+
+		//改写tcl
+		DeltLine(2);
+		UltraEdit.activeDocument.write("read_verilog      "+full_path+"\r\n");
+		DeltLine(10);
+		UltraEdit.activeDocument.write("synth_design -top "+file_name+" -part xc7a100tfgg484-2\r\n");
+
+
+		//关闭makefile
+		UltraEdit.closeFile("c:\\ue\\vivado\\synthesis.tcl",1);
+
+
+		//	//等待生成exe文件
+		//	cnWait(1);
+
+		//执行文件
+		UltraEdit.runTool("vivado_synthesis_bat");
+
+		//打开报告
+		UltraEdit.open("c:\\ue\\vivado\\timing_summary.rpt");
+		UltraEdit.open("c:\\ue\\vivado\\utilization_summary.rpt");
+
+
+
+	}
+
+}
+
+//去掉重复的字符串
+function deleteRepetion(arr){
+	var arrTable = {},arrData = [];
+	for (var i = 0; i < arr.length; i++) {
+		if( !arrTable[ arr[i] ]){
+			arrTable[ arr[i] ] = true;
+			arrData.push(arr[i])
+		}
+	}
+	return arrData;
+}
+
+function OpenFather (DEBUG) {
+	var	onlyname	= getFileName(0);
+	var	onlypath	= getFilePath(0);
+	var	onlyext		= getFileExtend(0);
+	var	star_ext	= "*."+onlyext;
+	var	name_ext	= onlyname+"."+onlyext;
+
+	if (onlypath.match(/\\$/) === null) onlypath += "\\";
+	UltraEdit.outputWindow.showWindow(true);
+
+	if (DEBUG==1) {
+
+		UltraEdit.outputWindow.write("now in OpenFather");
+		UltraEdit.outputWindow.write("name_ext is "+name_ext+"");
+		UltraEdit.outputWindow.write("onlypath is "+onlypath+"");
+	}
+	OpenFatherCore(0,onlypath,onlyname,star_ext);
+}
+
+function OpenFatherCore(DEBUG,onlypath,onlyname,star_ext){
+
+	if (DEBUG==1) {
+		UltraEdit.outputWindow.showWindow(true);
+		UltraEdit.outputWindow.write("now in OpenFatherCore");
+	}
+
+	UltraEdit.ueReOn();
+	UltraEdit.frInFiles.searchSubs=true;
+	UltraEdit.frInFiles.unicodeSearch=false;
+	UltraEdit.frInFiles.useOutputWindow=false;
+	UltraEdit.frInFiles.openMatchingFiles=false;
+	UltraEdit.frInFiles.filesToSearch=0;
+	UltraEdit.frInFiles.matchCase=false;
+	UltraEdit.frInFiles.matchWord=false;
+	UltraEdit.frInFiles.regExp=false;
+	UltraEdit.frInFiles.searchInFilesTypes=star_ext;
+
+	var path_array			= new Array();
+	var inst_array			= new Array();
+	var find_array			= new Array();
+	var repeat_array		= new Array();
+	var found				= false;
+	var i					= 0;
+	var j					= 0;
+	var line_num			= 0;
+	var file_max_line_num	= 0;
+	var search_num			= 0;
+
+
+	inst_array[0]	= onlyname+"_inst";
+	//	inst_array[1]	= onlyname+"*_inst*";
+
+
+
+
+
+	//本级目录及子目录
+	path_array[0]	= onlypath;
+
+
+	//上1级目录
+	path_array[1]	= onlypath;
+	path_array[1]	= path_array[1].substring(0,path_array[1].lastIndexOf("\\"));
+	path_array[1]	= path_array[1].substring(0,path_array[1].lastIndexOf("\\")+1);
+
+	//	//上2级目录
+	//	path_array[2]	= path_array[1];
+	//	path_array[2]	= path_array[2].substring(0,path_array[2].lastIndexOf("\\"));
+	//	path_array[2]	= path_array[2].substring(0,path_array[2].lastIndexOf("\\")+1);
+
+
+	//2轮查找
+	//第一轮，按照查找目录查找
+	//第二轮，先查找是否存在 "_inst" 的字符串，如果找到，则不再更换字符串
+	for (search_num = 0; search_num < path_array.length; search_num++) {
+		UltraEdit.frInFiles.directoryStart=path_array[search_num];
+
+		for (i = 0; i < inst_array.length; i++) {
+			UltraEdit.frInFiles.find(inst_array[i]);
+
+			UltraEdit.activeDocument.bottom();
+			file_max_line_num	= UltraEdit.activeDocument.currentLineNum;
+
+			//如果在文件中找到了字符串，查找结果会大于2行，将查找结果中有用的字符串提取到数组中
+			if (file_max_line_num > 2) {
+				for (line_num = 3; line_num < file_max_line_num-2; line_num++) {
+					find_array[j]	= StringCopy(line_num);
+					find_array[j]	= TrimEOL(find_array[j]);
+					found	= true;
+					j++;
+				}
+				UltraEdit.closeFile("** 查找结果 ** ",0);
+			}
+			else {
+				UltraEdit.closeFile("** 查找结果 ** ",0);
+			}
+
+			//如果已经找到字符串，那么就不要切换被查找的字符串了
+			if (found===true) {
+				break;
+			}
+		}
+	}
+
+	//将找到的字符串，去掉重复的，打印出来
+	if (found===true) {
+		repeat_array	= deleteRepetion(find_array);
+		for (i = 0; i < repeat_array.length; i++) {
+			UltraEdit.outputWindow.write(""+repeat_array[i]+"");
+		}
+	}
+
+	return	found;
 }

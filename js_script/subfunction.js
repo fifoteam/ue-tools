@@ -307,10 +307,12 @@ function UCFGetLocValue (str) {
 
 function OpenModule (DEBUG) {
 	UltraEdit.activeDocument.selectWord();
-	var	onlyname	= UltraEdit.activeDocument.selection;
-	var	onlypath	= getFilePath(0);
-	var	onlyext		= getFileExtend(0);
-	var	name_ext	= onlyname+"."+onlyext;
+	var	onlyname		= UltraEdit.activeDocument.selection;
+	var	onlypath		= getFilePath(0);
+	var	onlyext			= getFileExtend(0);
+	var	name_ext		= onlyname+"."+onlyext;
+	var	name_stub_ext	= onlyname+"_stub."+onlyext;
+	var	name_bb_ext		= onlyname+"_bb."+onlyext;
 
 	if (onlypath.match(/\\$/) === null) onlypath += "\\";
 	if (DEBUG==1) {
@@ -319,10 +321,10 @@ function OpenModule (DEBUG) {
 		UltraEdit.outputWindow.write("name_ext is "+name_ext+"");
 		UltraEdit.outputWindow.write("onlypath is "+onlypath+"");
 	}
-	OpenModuleCore(0,onlypath,name_ext);
+	OpenModuleCore(0,onlypath,name_ext,name_stub_ext,name_bb_ext);
 }
 
-function OpenModuleCore(DEBUG,onlypath,name_ext){
+function OpenModuleCore(DEBUG,onlypath,name_ext,name_stub_ext,name_bb_ext){
 
 	if (DEBUG==1) {
 		UltraEdit.outputWindow.showWindow(true);
@@ -339,10 +341,22 @@ function OpenModuleCore(DEBUG,onlypath,name_ext){
 	UltraEdit.frInFiles.matchCase=false;
 	UltraEdit.frInFiles.matchWord=false;
 	UltraEdit.frInFiles.regExp=false;
-	UltraEdit.frInFiles.searchInFilesTypes=name_ext;
+
 
 	var path_array=new Array();
+	var str_array=new Array();
 	var found	= false;
+	var i		= 0;
+
+
+	str_array[0]	= name_ext;
+	str_array[1]	= name_stub_ext;
+	str_array[2]	= name_bb_ext;
+
+	//	for (i = 0; i < str_array.length; i++) {
+	//		UltraEdit.outputWindow.write(""+str_array[i]+"");
+	//	}
+
 
 	//本级目录及子目录
 	path_array[0]	= onlypath;
@@ -377,21 +391,38 @@ function OpenModuleCore(DEBUG,onlypath,name_ext){
 	path_array[7]	= "D:\\tools\\Xilinx\\Vivado\\2018.1\\data\\verilog\\src\\unifast\\";
 	path_array[8]	= "D:\\Tools\\Xilinx\\14.7\\ISE_DS\\ISE\\verilog\\src\\";
 
+
+
+
+
 	//文件名字是限定的，查找内容是空字符串，即只要有这个文件就可以
+	//外层循环，按照路径循环
 	for (var search_num = 0; search_num < path_array.length; search_num++) {
 		UltraEdit.frInFiles.directoryStart=path_array[search_num];
-		UltraEdit.frInFiles.find("");
-		UltraEdit.activeDocument.bottom();
-		if (UltraEdit.activeDocument.currentLineNum > 2) {
-			file_path	= StringCopy(1);
-			file_path	= TrimEOL(file_path);
-			UltraEdit.closeFile("** 查找结果 ** ",0);
-			UltraEdit.open(file_path);
-			found	= true;
-			break;
+		//内层循环，按照文件名字，后缀可能加上 _stub   _bb
+		for (i = 0; i < str_array.length; i++) {
+			UltraEdit.frInFiles.searchInFilesTypes=str_array[i];
+			UltraEdit.frInFiles.find("");
+			UltraEdit.activeDocument.bottom();
+			if (UltraEdit.activeDocument.currentLineNum > 2) {
+				file_path	= StringCopy(1);
+				file_path	= TrimEOL(file_path);
+				UltraEdit.closeFile("** 查找结果 ** ",0);
+				UltraEdit.open(file_path);
+				found	= true;
+				break;
+			}
+			else {
+				UltraEdit.closeFile("** 查找结果 ** ",0);
+			}
+			//如果已经找到文件，那么就不要切换文件名了，_stub和_bb不重要
+			if (found===true) {
+				break;
+			}
 		}
-		else {
-			UltraEdit.closeFile("** 查找结果 ** ",0);
+		//如果已经找到文件，那么就不要切换路径了，直接返回
+		if (found===true) {
+			break;
 		}
 	}
 	return	found;
@@ -504,8 +535,6 @@ function OpenFather (DEBUG) {
 	var	name_ext	= onlyname+"."+onlyext;
 
 	if (onlypath.match(/\\$/) === null) onlypath += "\\";
-	UltraEdit.outputWindow.showWindow(true);
-
 	if (DEBUG==1) {
 
 		UltraEdit.outputWindow.write("now in OpenFather");
@@ -546,7 +575,7 @@ function OpenFatherCore(DEBUG,onlypath,onlyname,star_ext){
 
 
 	inst_array[0]	= onlyname+"_inst";
-//	inst_array[1]	= onlyname+"*_inst*";
+	//	inst_array[1]	= onlyname+"*_inst*";
 
 
 
@@ -603,6 +632,7 @@ function OpenFatherCore(DEBUG,onlypath,onlyname,star_ext){
 	//将找到的字符串，去掉重复的，打印出来
 	if (found===true) {
 		repeat_array	= deleteRepetion(find_array);
+		UltraEdit.outputWindow.showWindow(true);
 		for (i = 0; i < repeat_array.length; i++) {
 			UltraEdit.outputWindow.write(""+repeat_array[i]+"");
 		}

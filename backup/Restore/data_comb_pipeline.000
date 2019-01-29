@@ -278,7 +278,21 @@ module data_comb_pipeline # (
 	reg		[2*DATA_WD-1:0]	data_shift=0;
 	reg		[1:0]			done_step ;
 	reg		[BE_WD-1:0]		be_dly = {BE_WD{1'b0}};
-	wire	[DATA_WD-1:0]	wv_data							;
+	wire	[DATA_WD-1:0]	wv_data_01	;
+	wire	[BE_WD-1:0]		wv_be_01	;
+	wire					w_valid_01	;
+	wire					w_done_01	;
+	wire	[DATA_WD-1:0]	wv_data_buffer	;
+	wire	[BE_WD-1:0]		wv_be_buffer	;
+	wire					w_valid_buffer	;
+	wire					w_done_buffer	;
+	wire					buffer_empty	;
+	wire					buffer_full		;
+	wire					buffer_prog_full		;
+	wire					buffer_rd		;
+	wire					buffer_wr		;
+	wire	[73:0]			buffer_din		;
+	wire	[73:0]			buffer_dout		;
 	//	===============================================================================================
 	//	ref ARCHITECTURE
 	//	===============================================================================================
@@ -289,8 +303,11 @@ module data_comb_pipeline # (
 		if(reset_gev) begin
 			ptr_wr <= 'b0;
 		end
-		else if(i_valid) begin//当i_valid为1时数据写入移位寄存器，同时ptr_wr要累加有效字节数
-			ptr_wr <=ptr_rd + be2cnt(iv_be);
+		else if(i_stop) begin
+			ptr_wr <= ptr_wr;
+		end
+		else if(w_valid_buffer) begin//当i_valid为1时数据写入移位寄存器，同时ptr_wr要累加有效字节数
+			ptr_wr <=ptr_rd + be2cnt(wv_be_buffer);
 		end
 		else if(done_step == 2 || done_step == 3) begin//done_step第二步，读出移位寄存器中的全部数据，同时清空指针
 			ptr_wr <= 'b0;
@@ -328,8 +345,8 @@ module data_comb_pipeline # (
 		if(reset_gev) begin
 			done_step <= 'd0;
 		end
-		if(i_done) begin
-			if(i_valid) begin
+		if(w_done_buffer) begin
+			if(w_valid_buffer) begin
 				done_step <= 'd1;
 			end
 			else begin
@@ -378,13 +395,16 @@ module data_comb_pipeline # (
 	//	当i_valid时，把iv_data右移位进data_shift
 	//	当o_valid时，从data_shift移出ov_data
 	//	-------------------------------------------------------------------------------------
-//	assign	data_wr = i_valid ? right_shift(data_shift,wv_data,ptr_reg) : data_shift;
+
 	always @ (posedge clk_gev) begin
 		if(reset_gev) begin
 			data_wr <= 'b0;
 		end
-		else if(i_valid) begin
-			data_wr <= right_shift(data_rd,wv_data,ptr_rd);
+		else if(i_stop) begin
+			data_wr <= data_wr;
+		end
+		else if(w_valid_buffer) begin
+			data_wr <= right_shift(data_rd,wv_data_buffer,ptr_rd);
 		end
 		else if(done_step==2 && o_valid) begin//当o_valid=1时才说明数据已经被读出，才可以执行清空
 			data_wr <= 'b0;
@@ -424,11 +444,10 @@ module data_comb_pipeline # (
 					done_step==3 ? {BE_WD{1'b0}} :
 					o_valid ? {BE_WD{1'b1}} : {BE_WD{1'b0}};
 	//	-------------------------------------------------------------------------------------
-	//	o_stop:o_stop为1时i_valid必须为0
-	//	1.当i_stop为1时o_stop为1
-	//	2.done_step不为0时输出o_stop为1，此时需要清空data_shift和添加尾端全0标志
+	//	o_stop:buffer编程满（10）时需要告诉前端暂停
 	//	-------------------------------------------------------------------------------------
-	assign	o_stop = i_stop || (done_step != 0);
+	assign	o_stop = buffer_prog_full;
+
 	//	-------------------------------------------------------------------------------------
 	//	o_done
 	//	-------------------------------------------------------------------------------------
@@ -442,9 +461,36 @@ module data_comb_pipeline # (
 	.PTR_WD		(PTR_WD		)
 	)
 	data10to01_inst (
+	.clk_gev	(clk_gev	),
+	.reset_gev	(reset_gev	),
+	.i_valid	(i_valid	),
+	.i_done		(i_done		),
 	.iv_data	(iv_data	),
 	.iv_be		(iv_be		),
-	.ov_data	(wv_data	)
-//	.ov_be		(wv_be		)//使用wv_be或者iv_be在最后效果上是一样的，但使用iv_be时序性能好
+	.o_valid	(w_valid_01	),
+	.o_done		(w_done_01	),
+	.ov_data	(wv_data_01	),
+	.ov_be		(wv_be_01	)//使用wv_be或者iv_be在最后效果上是一样的，但使用iv_be时序性能好
 	);
+	//	-------------------------------------------------------------------------------------
+	//	instantiate "buffer" module
+	//	-------------------------------------------------------------------------------------
+	//	1.后端fifo满时(i_stop=1)不能从buffer读数 2.程序进入done_step流程时同样不能从buffer中读数
+	assign buffer_rd = ~i_stop && done_step == 0 && ~buffer_empty;
+	//	1.当前端valid为1时可以写 2.当前端done为1时也要写
+	assign buffer_wr = ~buffer_full && (w_valid_01 || w_done_01) ;
+	assign buffer_din= {wv_data_01,wv_be_01,w_valid_01,w_done_01};
+	assign {wv_data_buffer,wv_be_buffer,w_valid_buffer,w_done_buffer}=buffer_rd ? buffer_dout : 'b0;
+	dfifo_w74d16 dfifo_w74d16_inst (
+	.clk			(clk_gev			),
+	.srst			(reset_gev			),
+	.din			(buffer_din			),
+	.wr_en			(buffer_wr			),
+	.rd_en			(buffer_rd			),
+	.dout			(buffer_dout		),
+	.empty			(buffer_empty		),
+	.full			(buffer_full		),
+	.prog_full		(buffer_prog_full	)
+	);
+
 endmodule

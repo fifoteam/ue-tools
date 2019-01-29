@@ -56,6 +56,7 @@ module gvcp_tx_ram # (
 	//  -------------------------------------------------------------------------------------
 	//  packet switch 交互
 	//  -------------------------------------------------------------------------------------
+	input							i_tx_axis_tvalid					,
 	input							i_gvcp_tx_ram_rd					,	//clk时钟域，gvcp tx ram 读信号，高有效
 	output	[GEV_BE_WD-1:0]			ov_gvcp_tx_ram_be					,	//clk时钟域，gvcp数据字节有效信号，高有效
 	output	[GEV_DATA_WD-1:0]		ov_gvcp_tx_ram_data						//clk时钟域，gvcp数据
@@ -105,6 +106,8 @@ module gvcp_tx_ram # (
 	wire	[31:0]				ram_wr_data				;	//ram写数据
 	wire	[3:0]				ram_wr_be				;	//ram写字节使能
 	reg		[15:0]				byte_cnt	=	GEV_BE_WD;	//字节计数器，表示从ram中读出数据的字节数
+	reg		[15:0]				byte_cnt_latch	=	GEV_BE_WD;
+	wire	[15:0]				byte_cnt2				;
 	reg		[SHORT_REG_WD-1:0]	gvcp_length_latch		;
 	wire	[10-TX_BE_LOG:0]	ram_rd_addr				;	//ram读地址,深度随TX_BE_WD增加依次递减
 	wire	[GEV_DATA_WD-1:0]	ram_rd_data				;	//ram读出的数据
@@ -125,7 +128,10 @@ module gvcp_tx_ram # (
 	//	当ram_wr_en有效时：截取iv_axi_lite_wr_addr[9:2]位作为ram_wr_addr的地位，高位补0
 	//	当ram_wr_en无效时，为0
 	//	-------------------------------------------------------------------------------------
-	assign		ram_wr_be		=	ram_wr_en ? iv_axi_lite_be	: 4'b0	;
+	assign		ram_wr_be[0]		=	ram_wr_en ? iv_axi_lite_be[3]	: 4'b0	;
+	assign		ram_wr_be[1]		=	ram_wr_en ? iv_axi_lite_be[2]	: 4'b0	;
+	assign		ram_wr_be[2]		=	ram_wr_en ? iv_axi_lite_be[1]	: 4'b0	;
+	assign		ram_wr_be[3]		=	ram_wr_en ? iv_axi_lite_be[0]	: 4'b0	;
 	//	-------------------------------------------------------------------------------------
 	//	-ref ram_wr_data
 	//	当ram_wr_en有效时：与iv_axi_lite_wr_data同步
@@ -162,10 +168,16 @@ module gvcp_tx_ram # (
 				byte_cnt <= byte_cnt + GEV_BE_WD	;
 			end
 		end
-		else begin
+		else if(~i_tx_axis_tvalid)begin
 			byte_cnt <= GEV_BE_WD	;
 		end
 	end
+	always @ (posedge clk) begin
+		if(i_gvcp_tx_ram_rd) begin
+			byte_cnt_latch <= byte_cnt;
+		end
+	end
+	assign byte_cnt2 = i_gvcp_tx_ram_rd ? byte_cnt : byte_cnt_latch;
 	//	-------------------------------------------------------------------------------------
 	//	-ref ram_rd_addr
 	//	当i_gvcp_tx_ram_rd为1时，由byte_cnt右移N位得到ram_rd_addr
@@ -176,11 +188,17 @@ module gvcp_tx_ram # (
 	//	--当TX_BE_WD为16时，N等于4
 	//	当i_gvcp_tx_ram_rd为0时，ram_rd_addr为0
 	//	-------------------------------------------------------------------------------------
-	assign ram_rd_addr = i_gvcp_tx_ram_rd ? byte_cnt[15:TX_BE_LOG] : 0;
+	assign ram_rd_addr = (i_tx_axis_tvalid || i_gvcp_tx_ram_rd) ? byte_cnt2[15:TX_BE_LOG] : 0;
 	//	-------------------------------------------------------------------------------------
 	//	-ref	ov_gvcp_tx_ram_data
 	//	-------------------------------------------------------------------------------------
-	assign ov_gvcp_tx_ram_data = i_gvcp_tx_ram_rd ? {ram_rd_data[6*8+:8],ram_rd_data[7*8+:8],ram_rd_data[4*8+:8],ram_rd_data[5*8+:8],ram_rd_data[2*8+:8],ram_rd_data[3*8+:8],ram_rd_data[0*8+:8],ram_rd_data[1*8+:8]} : 0 ;
+//	assign ov_gvcp_tx_ram_data = i_gvcp_tx_ram_rd ? {ram_rd_data[6*8+:8],ram_rd_data[7*8+:8],ram_rd_data[4*8+:8],ram_rd_data[5*8+:8],ram_rd_data[2*8+:8],ram_rd_data[3*8+:8],ram_rd_data[0*8+:8],ram_rd_data[1*8+:8]} : 0 ;
+
+
+//	assign	ov_gvcp_tx_ram_data	= {ram_rd_data[63:32],ram_rd_data[31:0]};
+	assign	ov_gvcp_tx_ram_data	= {ram_rd_data[39:32],ram_rd_data[47:40],ram_rd_data[55:48],ram_rd_data[63:56],ram_rd_data[7:0],ram_rd_data[15:8],ram_rd_data[23:16],ram_rd_data[31:24]};
+
+
 	//	-------------------------------------------------------------------------------------
 	//	-ref	ov_gvcp_tx_ram_be
 	//	1.当i_gvcp_tx_ram_rd为0时，为0（组合逻辑）
@@ -201,7 +219,7 @@ module gvcp_tx_ram # (
 	generate
 		if(GEV_BE_WD==1) begin //当TX_BE_WD==1时，gvcp_tx_ram_be_reg非1即0
 			always @ (posedge clk) begin
-				if(byte_cnt >= gvcp_length_latch) begin
+				if(byte_cnt2 >= gvcp_length_latch) begin
 					gvcp_tx_ram_be_reg <= 1'b0;
 				end
 				else begin
@@ -211,10 +229,10 @@ module gvcp_tx_ram # (
 		end
 		else begin
 			always @ (posedge clk) begin
-				if(byte_cnt >= gvcp_length_latch) begin
+				if(byte_cnt2 >= gvcp_length_latch) begin
 					gvcp_tx_ram_be_reg <= {(GEV_BE_WD){1'b0}};
 				end
-				else if(byte_cnt <= gvcp_length_latch-GEV_BE_WD) begin
+				else if(byte_cnt2 <= gvcp_length_latch-GEV_BE_WD) begin
 					gvcp_tx_ram_be_reg <= {(GEV_BE_WD){1'b1}};
 				end
 				else begin
@@ -225,7 +243,7 @@ module gvcp_tx_ram # (
 	endgenerate
 
 
-	assign ov_gvcp_tx_ram_be = i_gvcp_tx_ram_rd ? gvcp_tx_ram_be_reg :  {(GEV_BE_WD){1'b0}};
+	assign ov_gvcp_tx_ram_be = (i_tx_axis_tvalid || i_gvcp_tx_ram_rd) ? gvcp_tx_ram_be_reg :  {(GEV_BE_WD){1'b0}};
 	//  -------------------------------------------------------------------------------------
 //	instantiate "tx_bram_w32w8" module
 //  -------------------------------------------------------------------------------------

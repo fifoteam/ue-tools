@@ -44,3 +44,11 @@
 ##	±¾µØ¾§Õñ 40MHz
 ##	-------------------------------------------------------------------------------------
 create_clock -period 25.000 [get_ports clk]
+create_clock -period 25.000 [get_ports clk_gev]
+create_clock -period 25.000 [get_ports clk_pix]
+create_clock -period 25.000 [get_ports clk_osc]
+create_clock -period 25.000 [get_ports clk_gtx]
+create_clock -period 25.000 [get_ports clk_grx]
+create_clock -period 25.000 [get_ports clk_fb]
+create_clock -period 25.000 [get_ports clk_sensor]
+create_clock -period 25.000 [get_ports clk_axi]

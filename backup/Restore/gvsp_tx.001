@@ -57,7 +57,6 @@ module gvsp_tx # (
 	//  -------------------------------------------------------------------------------------
 	output							o_fb_rd								,	//clk_gev时钟域，帧存后端fifo读出使能信号，高有效
 	input							i_fb_empty							,	//clk_gev时钟域，帧存后端fifo空信号，高有效
-	input							i_fb_busy							,	//clk_gev时钟域，帧存后端fifo busy信号，高有效
 	input	[GEV_DE_WD-1:0]			iv_data_is_cmd						,	//clk_gev时钟域，帧存后端fifo输出数据是命令数据，单bit代表4byte，1-表示是命令数据，0-表示是图像数据
 	input	[GEV_DE_WD-1:0]			iv_dval								,	//clk_gev时钟域，帧存后端fifo输出数据有效信号，单bit代表4byte，1-表示数据有效，0-表示数据无效
 	input	[GEV_DATA_WD-1:0]		iv_data								,	//clk_gev时钟域，帧存后端fifo输出数据，支持32、64、128
@@ -67,7 +66,7 @@ module gvsp_tx # (
 	//	-------------------------------------------------------------------------------------
 	input							i_test_pkt_enable					,	//clk_gev时钟域，测试包发送使能
 	output							o_test_pkt_over						,	//clk_gev时钟域，测试包发送完成，1个clk的高脉冲，寄存器模块接收到该信号后清i_test_pkt_enable
-	input	[31:0]					iv_pc_ip							,	//clk_gev时钟域，ip pc address
+	input	[31:0]					iv_pc_ip_sc							,	//clk_gev时钟域，流通道ip pc address
 	input	[31:0]					iv_camera_ip						,	//clk_gev时钟域，ip camera address
 	input	[15:0]					iv_pc_port_sc						,	//clk_gev时钟域，stream channel gvsp包pc端口号
 	input	[15:0]					iv_camera_port						,	//clk_gev时钟域，相机udp端口号
@@ -81,12 +80,10 @@ module gvsp_tx # (
 	input							reset_gtx							,	//gtx工作时钟域的复位信号，高有效
 	input							i_pb_rd_en							,	//clk_gtx时钟域，packet buffer读使能，高有效
 	output							o_pb_empty							,	//clk_gtx时钟域，packet buffer空信号，高有效,高时不能读packet_buffer
-	output							o_pb_busy							,	//clk_gtx时钟域，packet buffer忙信号，高有效,高时不能读packet_buffer
 	output	[GEV_BE_WD-1:0]			ov_be_switch						,	//clk_gtx时钟域，输出数据的字节使能信号，高有效
 	output	[GEV_DATA_WD-1:0]		ov_data_switch						,	//clk_gtx时钟域，输出数据的位宽，支持32、64、128
 	input							i_pcb_rd_en							,	//clk_gtx时钟域，packet cmd buffer读使能，高有效
-	output							o_pcb_empty							,	//clk_gtx时钟域，packet cmd buffer空信号，高有效，高时不能读packet_cmd buffer
-	output							o_pcb_busy								//clk_gtx时钟域，packet cmd buffer忙信号，高有效，高时不能读packet_cmd buffer
+	output							o_pcb_empty								//clk_gtx时钟域，packet cmd buffer空信号，高有效，高时不能读packet_cmd buffer
 	);
 	//	===============================================================================================
 	//	ref functions
@@ -101,6 +98,7 @@ module gvsp_tx # (
 	//	===============================================================================================
 	//	ref signals
 	//	===============================================================================================
+	wire							i_fb_busy = 1'b0	;
 	//	fifo_latch
 	wire	[GEV_DE_WD-1:0]			wv_data_is_cmd_latch;
 	wire	[GEV_DE_WD-1:0]			wv_dval_latch		;
@@ -163,6 +161,7 @@ module gvsp_tx # (
 	//	packet_image
 	wire							w_fb_rd_image		;
 	wire							w_image_done		;
+	wire							w_image_again		;
 	wire							w_image_start		;
 	wire	[GEV_DATA_WD-1:0]		wv_data_image		;
 	wire	[GEV_BE_WD-1:0]			wv_be_image			;
@@ -202,7 +201,7 @@ module gvsp_tx # (
 	//	instantiate "gvsp_ctrl_core" module
 	//  -------------------------------------------------------------------------------------
 	assign w_all_done = w_ip_done || w_gev_done || w_resend_done || w_analysis_done || w_image_done ;
-	assign w_all_again = w_gev_again ;
+	assign w_all_again = w_gev_again || w_image_again ;
 	assign w_all_not_exist = w_ip_not_exist;
 	assign w_fb_rd_data= w_fb_rd_analysis || w_fb_rd_resend ||  w_fb_rd_image;//目前可以从fb fifo中读数据的模块
 	assign o_fb_rd = w_fb_rd_cmd || w_fb_rd_data;//读命令和读数据共同组成了fb fifo的读信号
@@ -277,60 +276,48 @@ module gvsp_tx # (
 	//  -------------------------------------------------------------------------------------
 	//	instantiate "frame_info_analysis" module
 	//  -------------------------------------------------------------------------------------
-	frame_info_analysis_ctrl # (
-	.GEV_DE_WD			(GEV_DE_WD			),
-	.GEV_BE_WD			(GEV_BE_WD			),
-	.GEV_DATA_WD		(GEV_DATA_WD		)
+	frame_info_analysis_wrap # (
+	.INFO_SIZE						(INFO_SIZE						),
+	.STATIS_SIZE					(STATIS_SIZE					),
+	.SHORT_REG_WD					(SHORT_REG_WD					),
+	.REG_WD							(REG_WD							),
+	.LONG_REG_WD					(LONG_REG_WD					),
+	.GEV_DE_WD						(GEV_DE_WD						),
+	.GEV_BE_WD						(GEV_BE_WD						),
+	.GEV_DATA_WD					(GEV_DATA_WD					)
 	)
-	frame_info_analysis_ctrl_inst (
-	.clk_gev			(clk_gev			),
-	.reset_gev			(reset_gev			),
-	.o_fb_rd			(w_fb_rd_analysis	),
-	.i_fb_empty			(i_fb_empty			),
-	.i_fb_busy			(i_fb_busy			),
-	.iv_data_is_cmd		(wv_data_is_cmd_latch),
-	.iv_dval			(wv_dval_latch		),
-	.iv_data			(wv_data_latch		),
-	.i_start			(w_analysis_start	),
-	.o_done				(w_analysis_done	),
-	.ov_data			(wv_data_analysis_ctrl),
-	.ov_dval			(wv_dval_analysis_ctrl)
-	);
-
-	frame_info_analysis # (
-	.INFO_SIZE					(INFO_SIZE					),
-	.STATIS_SIZE				(STATIS_SIZE				),
-	.SHORT_REG_WD				(SHORT_REG_WD				),
-	.REG_WD						(REG_WD						),
-	.LONG_REG_WD				(LONG_REG_WD				),
-	.GEV_DE_WD					(GEV_DE_WD					),
-	.GEV_DATA_WD				(GEV_DATA_WD				)
-	)
-	frame_info_analysis_inst (
-	.clk						(clk_gev					),
-	.reset						(reset_gev					),
-	.i_info_flag				(w_info_flag				),
-	.i_statis_flag				(w_statis_flag				),
-	.iv_dval					(wv_dval_analysis_ctrl		),
-	.iv_cmd_data				(wv_data_analysis_ctrl		),
-	.ov_block_id				(wv_bid_normal				),
-	.ov_timestamp				(wv_timestamp				),
-	.ov_pixel_format			(wv_pixel_format			),
-	.ov_offset_x				(wv_offset_x				),
-	.ov_offset_y				(wv_offset_y				),
-	.ov_width					(wv_width					),
-	.ov_height					(wv_height					),
-	.ov_image_size				(wv_imagesize				),
-	.ov_payload_size			(wv_payloadsize				),
-	.ov_frame_interval			(wv_frame_interval			),
-	.o_chunk_mode_active		(w_chunk_mode_active		),
-	.o_chunkid_en_img			(			),
-	.o_chunkid_en_fid			(			),
-	.o_chunkid_en_ts			(			),
-	.o_chunkid_en_fint			(			),
-	.ov_status					(					),
-	.ov_expect_payload_size		(		),
-	.ov_valid_payload_size		(		)
+	frame_info_analysis_wrap_inst (
+	.clk_gev						(clk_gev						),
+	.reset_gev						(reset_gev						),
+	.i_stream_enable				(i_stream_enable				),
+	.o_fb_rd						(w_fb_rd_analysis				),
+	.i_fb_empty						(i_fb_empty						),
+	.iv_data_is_cmd					(wv_data_is_cmd_latch			),
+	.iv_dval						(wv_dval_latch					),
+	.iv_data						(wv_data_latch					),
+	.i_start						(w_analysis_start				),
+	.o_done							(w_analysis_done				),
+	.i_info_flag					(w_info_flag					),
+	.i_statis_flag					(w_statis_flag					),
+	.i_resending_flag				(w_resending_flag				),
+	.ov_block_id_normal				(wv_bid_normal					),
+	.ov_timestamp					(wv_timestamp					),
+	.ov_pixel_format				(wv_pixel_format				),
+	.ov_offset_x					(wv_offset_x					),
+	.ov_offset_y					(wv_offset_y					),
+	.ov_width						(wv_width						),
+	.ov_height						(wv_height						),
+	.ov_image_size					(wv_imagesize					),
+	.ov_payload_size				(wv_payloadsize					),
+	.ov_frame_interval				(wv_frame_interval				),
+	.o_chunk_mode_active_normal		(w_chunk_mode_active			),
+	.o_chunkid_en_img_normal		(								),
+	.o_chunkid_en_fid_normal		(								),
+	.o_chunkid_en_ts_normal			(								),
+	.o_chunkid_en_fint_normal		(								),
+	.ov_status						(								),
+	.ov_expect_payload_size			(								),
+	.ov_valid_payload_size			(								)
 	);
 	//  -------------------------------------------------------------------------------------
 	//	instantiate "ip_udp_gvsp_format" module
@@ -351,7 +338,7 @@ module gvsp_tx # (
 	.i_stop						(w_stop						),
 	.ov_data					(wv_data_ip					),
 	.ov_be						(wv_be_ip					),
-	.iv_pc_ip					(iv_pc_ip					),
+	.iv_pc_ip					(iv_pc_ip_sc				),
 	.iv_camera_ip				(iv_camera_ip				),
 	.iv_pc_port_sc				(iv_pc_port_sc				),
 	.iv_camera_port				(iv_camera_port				),
@@ -429,12 +416,14 @@ module gvsp_tx # (
 	packet_image # (
 	.GEV_DE_WD			(GEV_DE_WD			),
 	.GEV_BE_WD			(GEV_BE_WD			),
-	.GEV_DATA_WD		(GEV_DATA_WD		)
+	.GEV_DATA_WD		(GEV_DATA_WD		),
+	.PKT_LENGTH_WD		(PKT_LENGTH_WD		)
 	)
 	packet_image_inst (
 	.clk_gev			(clk_gev			),
 	.reset_gev			(reset_gev			),
 	.i_stream_enable	(i_stream_enable	),
+	.iv_pkt_length		(iv_pkt_length		),
 	.o_fb_rd			(w_fb_rd_image		),
 	.i_fb_empty			(i_fb_empty			),
 	.i_fb_busy			(i_fb_busy			),
@@ -446,7 +435,8 @@ module gvsp_tx # (
 	.ov_be				(wv_be_image		),
 	.o_packet_over		(w_packet_over_image),
 	.i_start			(w_image_start		),
-	.o_done				(w_image_done		)
+	.o_done				(w_image_done		),
+	.o_again			(w_image_again		)
 	);
 	//  -------------------------------------------------------------------------------------
 	//	instantiate "packet_comb" module
@@ -473,12 +463,12 @@ module gvsp_tx # (
 	.reset_gtx			(reset_gtx			),
 	.i_pb_rd_en			(i_pb_rd_en			),
 	.o_pb_empty			(o_pb_empty			),
-	.o_pb_busy			(o_pb_busy			),
+	.o_pb_busy			(			),
 	.ov_be_switch		(ov_be_switch		),
 	.ov_data_switch		(ov_data_switch		),
 	.i_pcb_rd_en		(i_pcb_rd_en		),
 	.o_pcb_empty		(o_pcb_empty		),
-	.o_pcb_busy			(o_pcb_busy			)
+	.o_pcb_busy			(			)
 	);
 
 endmodule
