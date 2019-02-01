@@ -2,86 +2,39 @@
 # Vivado v2018.1 (64-bit)
 # SW Build 2188600 on Wed Apr  4 18:40:38 MDT 2018
 # IP Build 2185939 on Wed Apr  4 20:55:05 MDT 2018
-# Start of session at: Fri Feb  1 14:31:51 2019
-# Process ID: 11480
+# Start of session at: Tue Jan 29 19:07:31 2019
+# Process ID: 1068
 # Current directory: c:/ue/vivado
 # Command line: vivado.exe -mode tcl -source synthesis.tcl
 # Log file: c:/ue/vivado/vivado.log
 # Journal file: c:/ue/vivado\vivado.jou
 #-----------------------------------------------------------
 source synthesis.tcl
-# read_verilog      F:/grey_statis/src/grey_aoi_sel.v
+# read_verilog      F:/DAHENG/hw_mars/mars_platform/TD/Development_Phase/003_develop_phase/fpga_platform/ver10/src/gige_vision/gvsp_tx/packet_image.v
 # read_xdc src/template.xdc
-# synth_design -top grey_aoi_sel -part xc7a100tfgg484-2
-Command: synth_design -top grey_aoi_sel -part xc7a100tfgg484-2
+# synth_design -top packet_image -part xc7a100tfgg484-2
+Command: synth_design -top packet_image -part xc7a100tfgg484-2
 Starting synth_design
 Attempting to get a license for feature 'Synthesis' and/or device 'xc7a100t'
 INFO: [Common 17-349] Got license for feature 'Synthesis' and/or device 'xc7a100t'
 INFO: Launching helper process for spawning children vivado processes
-INFO: Helper process launched with PID 10696 
+INFO: Helper process launched with PID 5784 
 ---------------------------------------------------------------------------------
-Starting RTL Elaboration : Time (s): cpu = 00:00:09 ; elapsed = 00:00:09 . Memory (MB): peak = 416.375 ; gain = 101.094
+Starting RTL Elaboration : Time (s): cpu = 00:00:09 ; elapsed = 00:00:09 . Memory (MB): peak = 416.426 ; gain = 100.777
 ---------------------------------------------------------------------------------
-INFO: [Synth 8-6157] synthesizing module 'grey_aoi_sel' [F:/grey_statis/src/grey_aoi_sel.v:31]
-	Parameter SENSOR_DAT_WIDTH bound to: 10 - type: integer 
-	Parameter CHANNEL_NUM bound to: 4 - type: integer 
-	Parameter GREY_OFFSET_WIDTH bound to: 12 - type: integer 
-	Parameter IS_GIGE bound to: TRUE - type: string 
-WARNING: [Synth 8-6014] Unused sequential element interrupt_pin_dly_reg was removed.  [F:/grey_statis/src/grey_aoi_sel.v:133]
-WARNING: [Synth 8-6014] Unused sequential element interrupt_en_reg was removed.  [F:/grey_statis/src/grey_aoi_sel.v:145]
-INFO: [Synth 8-6155] done synthesizing module 'grey_aoi_sel' (1#1) [F:/grey_statis/src/grey_aoi_sel.v:31]
-WARNING: [Synth 8-3917] design grey_aoi_sel has port ov_grey_offset_width[11] driven by constant 0
-WARNING: [Synth 8-3917] design grey_aoi_sel has port ov_grey_offset_width[10] driven by constant 0
-WARNING: [Synth 8-3917] design grey_aoi_sel has port ov_grey_offset_width[9] driven by constant 0
-WARNING: [Synth 8-3917] design grey_aoi_sel has port ov_grey_offset_width[8] driven by constant 0
-WARNING: [Synth 8-3917] design grey_aoi_sel has port ov_grey_offset_width[7] driven by constant 0
-WARNING: [Synth 8-3917] design grey_aoi_sel has port ov_grey_offset_width[6] driven by constant 0
-WARNING: [Synth 8-3917] design grey_aoi_sel has port ov_grey_offset_width[5] driven by constant 0
-WARNING: [Synth 8-3917] design grey_aoi_sel has port ov_grey_offset_width[4] driven by constant 0
-WARNING: [Synth 8-3917] design grey_aoi_sel has port ov_grey_offset_width[3] driven by constant 0
-WARNING: [Synth 8-3917] design grey_aoi_sel has port ov_grey_offset_width[2] driven by constant 0
-WARNING: [Synth 8-3917] design grey_aoi_sel has port ov_grey_offset_width[1] driven by constant 0
-WARNING: [Synth 8-3917] design grey_aoi_sel has port ov_grey_offset_width[0] driven by constant 0
-WARNING: [Synth 8-3917] design grey_aoi_sel has port ov_grey_offset_height[11] driven by constant 0
-WARNING: [Synth 8-3917] design grey_aoi_sel has port ov_grey_offset_height[10] driven by constant 0
-WARNING: [Synth 8-3917] design grey_aoi_sel has port ov_grey_offset_height[9] driven by constant 0
-WARNING: [Synth 8-3917] design grey_aoi_sel has port ov_grey_offset_height[8] driven by constant 0
-WARNING: [Synth 8-3917] design grey_aoi_sel has port ov_grey_offset_height[7] driven by constant 0
-WARNING: [Synth 8-3917] design grey_aoi_sel has port ov_grey_offset_height[6] driven by constant 0
-WARNING: [Synth 8-3917] design grey_aoi_sel has port ov_grey_offset_height[5] driven by constant 0
-WARNING: [Synth 8-3917] design grey_aoi_sel has port ov_grey_offset_height[4] driven by constant 0
-WARNING: [Synth 8-3917] design grey_aoi_sel has port ov_grey_offset_height[3] driven by constant 0
-WARNING: [Synth 8-3917] design grey_aoi_sel has port ov_grey_offset_height[2] driven by constant 0
-WARNING: [Synth 8-3917] design grey_aoi_sel has port ov_grey_offset_height[1] driven by constant 0
-WARNING: [Synth 8-3917] design grey_aoi_sel has port ov_grey_offset_height[0] driven by constant 0
-WARNING: [Synth 8-3331] design grey_aoi_sel has unconnected port i_interrupt_en
-WARNING: [Synth 8-3331] design grey_aoi_sel has unconnected port iv_grey_offset_width[11]
-WARNING: [Synth 8-3331] design grey_aoi_sel has unconnected port iv_grey_offset_width[10]
-WARNING: [Synth 8-3331] design grey_aoi_sel has unconnected port iv_grey_offset_width[9]
-WARNING: [Synth 8-3331] design grey_aoi_sel has unconnected port iv_grey_offset_width[8]
-WARNING: [Synth 8-3331] design grey_aoi_sel has unconnected port iv_grey_offset_width[7]
-WARNING: [Synth 8-3331] design grey_aoi_sel has unconnected port iv_grey_offset_width[6]
-WARNING: [Synth 8-3331] design grey_aoi_sel has unconnected port iv_grey_offset_width[5]
-WARNING: [Synth 8-3331] design grey_aoi_sel has unconnected port iv_grey_offset_width[4]
-WARNING: [Synth 8-3331] design grey_aoi_sel has unconnected port iv_grey_offset_width[3]
-WARNING: [Synth 8-3331] design grey_aoi_sel has unconnected port iv_grey_offset_width[2]
-WARNING: [Synth 8-3331] design grey_aoi_sel has unconnected port iv_grey_offset_width[1]
-WARNING: [Synth 8-3331] design grey_aoi_sel has unconnected port iv_grey_offset_width[0]
-WARNING: [Synth 8-3331] design grey_aoi_sel has unconnected port iv_grey_offset_height[11]
-WARNING: [Synth 8-3331] design grey_aoi_sel has unconnected port iv_grey_offset_height[10]
-WARNING: [Synth 8-3331] design grey_aoi_sel has unconnected port iv_grey_offset_height[9]
-WARNING: [Synth 8-3331] design grey_aoi_sel has unconnected port iv_grey_offset_height[8]
-WARNING: [Synth 8-3331] design grey_aoi_sel has unconnected port iv_grey_offset_height[7]
-WARNING: [Synth 8-3331] design grey_aoi_sel has unconnected port iv_grey_offset_height[6]
-WARNING: [Synth 8-3331] design grey_aoi_sel has unconnected port iv_grey_offset_height[5]
-WARNING: [Synth 8-3331] design grey_aoi_sel has unconnected port iv_grey_offset_height[4]
-WARNING: [Synth 8-3331] design grey_aoi_sel has unconnected port iv_grey_offset_height[3]
-WARNING: [Synth 8-3331] design grey_aoi_sel has unconnected port iv_grey_offset_height[2]
-WARNING: [Synth 8-3331] design grey_aoi_sel has unconnected port iv_grey_offset_height[1]
-WARNING: [Synth 8-3331] design grey_aoi_sel has unconnected port iv_grey_offset_height[0]
-WARNING: [Synth 8-3331] design grey_aoi_sel has unconnected port i_interrupt_pin
+INFO: [Synth 8-6157] synthesizing module 'packet_image' [F:/DAHENG/hw_mars/mars_platform/TD/Development_Phase/003_develop_phase/fpga_platform/ver10/src/gige_vision/gvsp_tx/packet_image.v:29]
+	Parameter GEV_DE_WD bound to: 2 - type: integer 
+	Parameter GEV_BE_WD bound to: 8 - type: integer 
+	Parameter GEV_DATA_WD bound to: 64 - type: integer 
+	Parameter PKT_LENGTH_WD bound to: 13 - type: integer 
+	Parameter PTR_WD bound to: 4 - type: integer 
+	Parameter NORMAL_END bound to: 8'b00000001 
+	Parameter RESEND_END bound to: 8'b00000011 
+	Parameter STATIS_START bound to: 8'b00000110 
+INFO: [Synth 8-6155] done synthesizing module 'packet_image' (1#1) [F:/DAHENG/hw_mars/mars_platform/TD/Development_Phase/003_develop_phase/fpga_platform/ver10/src/gige_vision/gvsp_tx/packet_image.v:29]
+WARNING: [Synth 8-3331] design packet_image has unconnected port i_fb_busy
 ---------------------------------------------------------------------------------
-Finished RTL Elaboration : Time (s): cpu = 00:00:11 ; elapsed = 00:00:10 . Memory (MB): peak = 466.539 ; gain = 151.258
+Finished RTL Elaboration : Time (s): cpu = 00:00:10 ; elapsed = 00:00:10 . Memory (MB): peak = 466.676 ; gain = 151.027
 ---------------------------------------------------------------------------------
 
 Report Check Netlist: 
@@ -94,10 +47,10 @@ Report Check Netlist:
 Start Handling Custom Attributes
 ---------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------
-Finished Handling Custom Attributes : Time (s): cpu = 00:00:11 ; elapsed = 00:00:11 . Memory (MB): peak = 466.539 ; gain = 151.258
+Finished Handling Custom Attributes : Time (s): cpu = 00:00:11 ; elapsed = 00:00:11 . Memory (MB): peak = 466.676 ; gain = 151.027
 ---------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------
-Finished RTL Optimization Phase 1 : Time (s): cpu = 00:00:11 ; elapsed = 00:00:11 . Memory (MB): peak = 466.539 ; gain = 151.258
+Finished RTL Optimization Phase 1 : Time (s): cpu = 00:00:11 ; elapsed = 00:00:11 . Memory (MB): peak = 466.676 ; gain = 151.027
 ---------------------------------------------------------------------------------
 INFO: [Device 21-403] Loading part xc7a100tfgg484-2
 INFO: [Project 1-570] Preparing netlist for logic optimization
@@ -105,8 +58,8 @@ INFO: [Project 1-570] Preparing netlist for logic optimization
 Processing XDC Constraints
 Initializing timing engine
 Parsing XDC File [c:/ue/vivado/src/template.xdc]
-WARNING: [Vivado 12-584] No ports matched 'clk_gev'. [c:/ue/vivado/src/template.xdc:47]
-CRITICAL WARNING: [Vivado 12-4739] create_clock:No valid object(s) found for '-objects [get_ports clk_gev]'. [c:/ue/vivado/src/template.xdc:47]
+WARNING: [Vivado 12-584] No ports matched 'clk'. [c:/ue/vivado/src/template.xdc:46]
+CRITICAL WARNING: [Vivado 12-4739] create_clock:No valid object(s) found for '-objects [get_ports clk]'. [c:/ue/vivado/src/template.xdc:46]
 Resolution: Check if the specified object(s) exists in the current design. If it does, ensure that the correct design hierarchy was specified for the object. If you are working with clocks, make sure create_clock was used to create the clock object before it is referenced.
 WARNING: [Vivado 12-584] No ports matched 'clk_pix'. [c:/ue/vivado/src/template.xdc:48]
 CRITICAL WARNING: [Vivado 12-4739] create_clock:No valid object(s) found for '-objects [get_ports clk_pix]'. [c:/ue/vivado/src/template.xdc:48]
@@ -135,26 +88,25 @@ Completed Processing XDC Constraints
 INFO: [Project 1-111] Unisim Transformation Summary:
 No Unisim elements were transformed.
 
-Constraint Validation Runtime : Time (s): cpu = 00:00:00 ; elapsed = 00:00:00.005 . Memory (MB): peak = 828.930 ; gain = 0.000
+Constraint Validation Runtime : Time (s): cpu = 00:00:00 ; elapsed = 00:00:00.004 . Memory (MB): peak = 810.559 ; gain = 0.000
 ---------------------------------------------------------------------------------
-Finished Constraint Validation : Time (s): cpu = 00:00:38 ; elapsed = 00:00:39 . Memory (MB): peak = 828.930 ; gain = 513.648
+Finished Constraint Validation : Time (s): cpu = 00:00:38 ; elapsed = 00:00:39 . Memory (MB): peak = 810.559 ; gain = 494.910
 ---------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------
 Start Loading Part and Timing Information
 ---------------------------------------------------------------------------------
 Loading part: xc7a100tfgg484-2
 ---------------------------------------------------------------------------------
-Finished Loading Part and Timing Information : Time (s): cpu = 00:00:38 ; elapsed = 00:00:39 . Memory (MB): peak = 828.930 ; gain = 513.648
+Finished Loading Part and Timing Information : Time (s): cpu = 00:00:38 ; elapsed = 00:00:39 . Memory (MB): peak = 810.559 ; gain = 494.910
 ---------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------
 Start Applying 'set_property' XDC Constraints
 ---------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------
-Finished applying 'set_property' XDC Constraints : Time (s): cpu = 00:00:38 ; elapsed = 00:00:39 . Memory (MB): peak = 828.930 ; gain = 513.648
+Finished applying 'set_property' XDC Constraints : Time (s): cpu = 00:00:38 ; elapsed = 00:00:39 . Memory (MB): peak = 810.559 ; gain = 494.910
 ---------------------------------------------------------------------------------
-INFO: [Synth 8-5544] ROM "gige_u3v_en" won't be mapped to Block RAM because address size (3) smaller than threshold (5)
 ---------------------------------------------------------------------------------
-Finished RTL Optimization Phase 2 : Time (s): cpu = 00:00:38 ; elapsed = 00:00:39 . Memory (MB): peak = 828.930 ; gain = 513.648
+Finished RTL Optimization Phase 2 : Time (s): cpu = 00:00:38 ; elapsed = 00:00:39 . Memory (MB): peak = 810.559 ; gain = 494.910
 ---------------------------------------------------------------------------------
 
 Report RTL Partitions: 
@@ -166,12 +118,16 @@ Report RTL Partitions:
 Start RTL Component Statistics 
 ---------------------------------------------------------------------------------
 Detailed RTL Component Info : 
++---Adders : 
+	   2 Input     13 Bit       Adders := 1     
+	   8 Input      4 Bit       Adders := 1     
 +---Registers : 
-	               40 Bit    Registers := 2     
-	               12 Bit    Registers := 4     
-	                1 Bit    Registers := 7     
+	               13 Bit    Registers := 1     
+	                1 Bit    Registers := 3     
 +---Muxes : 
-	   2 Input      1 Bit        Muxes := 7     
+	   2 Input     64 Bit        Muxes := 1     
+	   2 Input      4 Bit        Muxes := 2     
+	   2 Input      1 Bit        Muxes := 3     
 ---------------------------------------------------------------------------------
 Finished RTL Component Statistics 
 ---------------------------------------------------------------------------------
@@ -179,14 +135,18 @@ Finished RTL Component Statistics
 Start RTL Hierarchical Component Statistics 
 ---------------------------------------------------------------------------------
 Hierarchical RTL Component report 
-Module grey_aoi_sel 
+Module packet_image 
 Detailed RTL Component Info : 
++---Adders : 
+	   2 Input     13 Bit       Adders := 1     
+	   8 Input      4 Bit       Adders := 1     
 +---Registers : 
-	               40 Bit    Registers := 2     
-	               12 Bit    Registers := 4     
-	                1 Bit    Registers := 7     
+	               13 Bit    Registers := 1     
+	                1 Bit    Registers := 3     
 +---Muxes : 
-	   2 Input      1 Bit        Muxes := 7     
+	   2 Input     64 Bit        Muxes := 1     
+	   2 Input      4 Bit        Muxes := 2     
+	   2 Input      1 Bit        Muxes := 3     
 ---------------------------------------------------------------------------------
 Finished RTL Hierarchical Component Statistics
 ---------------------------------------------------------------------------------
@@ -203,60 +163,11 @@ Finished Part Resource Summary
 Start Cross Boundary and Area Optimization
 ---------------------------------------------------------------------------------
 Warning: Parallel synthesis criteria is not met 
-WARNING: [Synth 8-3917] design grey_aoi_sel has port ov_grey_offset_width[11] driven by constant 0
-WARNING: [Synth 8-3917] design grey_aoi_sel has port ov_grey_offset_width[10] driven by constant 0
-WARNING: [Synth 8-3917] design grey_aoi_sel has port ov_grey_offset_width[9] driven by constant 0
-WARNING: [Synth 8-3917] design grey_aoi_sel has port ov_grey_offset_width[8] driven by constant 0
-WARNING: [Synth 8-3917] design grey_aoi_sel has port ov_grey_offset_width[7] driven by constant 0
-WARNING: [Synth 8-3917] design grey_aoi_sel has port ov_grey_offset_width[6] driven by constant 0
-WARNING: [Synth 8-3917] design grey_aoi_sel has port ov_grey_offset_width[5] driven by constant 0
-WARNING: [Synth 8-3917] design grey_aoi_sel has port ov_grey_offset_width[4] driven by constant 0
-WARNING: [Synth 8-3917] design grey_aoi_sel has port ov_grey_offset_width[3] driven by constant 0
-WARNING: [Synth 8-3917] design grey_aoi_sel has port ov_grey_offset_width[2] driven by constant 0
-WARNING: [Synth 8-3917] design grey_aoi_sel has port ov_grey_offset_width[1] driven by constant 0
-WARNING: [Synth 8-3917] design grey_aoi_sel has port ov_grey_offset_width[0] driven by constant 0
-WARNING: [Synth 8-3917] design grey_aoi_sel has port ov_grey_offset_height[11] driven by constant 0
-WARNING: [Synth 8-3917] design grey_aoi_sel has port ov_grey_offset_height[10] driven by constant 0
-WARNING: [Synth 8-3917] design grey_aoi_sel has port ov_grey_offset_height[9] driven by constant 0
-WARNING: [Synth 8-3917] design grey_aoi_sel has port ov_grey_offset_height[8] driven by constant 0
-WARNING: [Synth 8-3917] design grey_aoi_sel has port ov_grey_offset_height[7] driven by constant 0
-WARNING: [Synth 8-3917] design grey_aoi_sel has port ov_grey_offset_height[6] driven by constant 0
-WARNING: [Synth 8-3917] design grey_aoi_sel has port ov_grey_offset_height[5] driven by constant 0
-WARNING: [Synth 8-3917] design grey_aoi_sel has port ov_grey_offset_height[4] driven by constant 0
-WARNING: [Synth 8-3917] design grey_aoi_sel has port ov_grey_offset_height[3] driven by constant 0
-WARNING: [Synth 8-3917] design grey_aoi_sel has port ov_grey_offset_height[2] driven by constant 0
-WARNING: [Synth 8-3917] design grey_aoi_sel has port ov_grey_offset_height[1] driven by constant 0
-WARNING: [Synth 8-3917] design grey_aoi_sel has port ov_grey_offset_height[0] driven by constant 0
-WARNING: [Synth 8-3331] design grey_aoi_sel has unconnected port i_interrupt_en
-WARNING: [Synth 8-3331] design grey_aoi_sel has unconnected port iv_grey_offset_width[11]
-WARNING: [Synth 8-3331] design grey_aoi_sel has unconnected port iv_grey_offset_width[10]
-WARNING: [Synth 8-3331] design grey_aoi_sel has unconnected port iv_grey_offset_width[9]
-WARNING: [Synth 8-3331] design grey_aoi_sel has unconnected port iv_grey_offset_width[8]
-WARNING: [Synth 8-3331] design grey_aoi_sel has unconnected port iv_grey_offset_width[7]
-WARNING: [Synth 8-3331] design grey_aoi_sel has unconnected port iv_grey_offset_width[6]
-WARNING: [Synth 8-3331] design grey_aoi_sel has unconnected port iv_grey_offset_width[5]
-WARNING: [Synth 8-3331] design grey_aoi_sel has unconnected port iv_grey_offset_width[4]
-WARNING: [Synth 8-3331] design grey_aoi_sel has unconnected port iv_grey_offset_width[3]
-WARNING: [Synth 8-3331] design grey_aoi_sel has unconnected port iv_grey_offset_width[2]
-WARNING: [Synth 8-3331] design grey_aoi_sel has unconnected port iv_grey_offset_width[1]
-WARNING: [Synth 8-3331] design grey_aoi_sel has unconnected port iv_grey_offset_width[0]
-WARNING: [Synth 8-3331] design grey_aoi_sel has unconnected port iv_grey_offset_height[11]
-WARNING: [Synth 8-3331] design grey_aoi_sel has unconnected port iv_grey_offset_height[10]
-WARNING: [Synth 8-3331] design grey_aoi_sel has unconnected port iv_grey_offset_height[9]
-WARNING: [Synth 8-3331] design grey_aoi_sel has unconnected port iv_grey_offset_height[8]
-WARNING: [Synth 8-3331] design grey_aoi_sel has unconnected port iv_grey_offset_height[7]
-WARNING: [Synth 8-3331] design grey_aoi_sel has unconnected port iv_grey_offset_height[6]
-WARNING: [Synth 8-3331] design grey_aoi_sel has unconnected port iv_grey_offset_height[5]
-WARNING: [Synth 8-3331] design grey_aoi_sel has unconnected port iv_grey_offset_height[4]
-WARNING: [Synth 8-3331] design grey_aoi_sel has unconnected port iv_grey_offset_height[3]
-WARNING: [Synth 8-3331] design grey_aoi_sel has unconnected port iv_grey_offset_height[2]
-WARNING: [Synth 8-3331] design grey_aoi_sel has unconnected port iv_grey_offset_height[1]
-WARNING: [Synth 8-3331] design grey_aoi_sel has unconnected port iv_grey_offset_height[0]
-WARNING: [Synth 8-3331] design grey_aoi_sel has unconnected port i_interrupt_pin
-INFO: [Synth 8-3333] propagating constant 0 across sequential element (i_3/\line_pixel_cnt_reg[0] )
-INFO: [Synth 8-3333] propagating constant 0 across sequential element (i_3/\line_pixel_cnt_reg[1] )
+WARNING: [Synth 8-3331] design packet_image has unconnected port i_fb_busy
+INFO: [Synth 8-3333] propagating constant 0 across sequential element (\cnt_reg_reg[1] )
+WARNING: [Synth 8-3332] Sequential element (cnt_reg_reg[1]) is unused and will be removed from module packet_image.
 ---------------------------------------------------------------------------------
-Finished Cross Boundary and Area Optimization : Time (s): cpu = 00:00:39 ; elapsed = 00:00:40 . Memory (MB): peak = 828.930 ; gain = 513.648
+Finished Cross Boundary and Area Optimization : Time (s): cpu = 00:00:39 ; elapsed = 00:00:40 . Memory (MB): peak = 810.559 ; gain = 494.910
 ---------------------------------------------------------------------------------
 
 Report RTL Partitions: 
@@ -268,13 +179,15 @@ Report RTL Partitions:
 Start Applying XDC Timing Constraints
 ---------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------
-Finished Applying XDC Timing Constraints : Time (s): cpu = 00:00:53 ; elapsed = 00:00:55 . Memory (MB): peak = 828.930 ; gain = 513.648
+Finished Applying XDC Timing Constraints : Time (s): cpu = 00:00:53 ; elapsed = 00:00:55 . Memory (MB): peak = 822.242 ; gain = 506.594
 ---------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------
 Start Timing Optimization
 ---------------------------------------------------------------------------------
+INFO: [Synth 8-3333] propagating constant 0 across sequential element (\cnt_reg_reg[0] )
+WARNING: [Synth 8-3332] Sequential element (cnt_reg_reg[0]) is unused and will be removed from module packet_image.
 ---------------------------------------------------------------------------------
-Finished Timing Optimization : Time (s): cpu = 00:00:53 ; elapsed = 00:00:55 . Memory (MB): peak = 835.180 ; gain = 519.898
+Finished Timing Optimization : Time (s): cpu = 00:00:53 ; elapsed = 00:00:55 . Memory (MB): peak = 843.031 ; gain = 527.383
 ---------------------------------------------------------------------------------
 
 Report RTL Partitions: 
@@ -286,7 +199,7 @@ Report RTL Partitions:
 Start Technology Mapping
 ---------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------
-Finished Technology Mapping : Time (s): cpu = 00:00:53 ; elapsed = 00:00:55 . Memory (MB): peak = 845.082 ; gain = 529.801
+Finished Technology Mapping : Time (s): cpu = 00:00:53 ; elapsed = 00:00:55 . Memory (MB): peak = 843.031 ; gain = 527.383
 ---------------------------------------------------------------------------------
 
 Report RTL Partitions: 
@@ -310,7 +223,7 @@ Start Final Netlist Cleanup
 Finished Final Netlist Cleanup
 ---------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------
-Finished IO Insertion : Time (s): cpu = 00:00:55 ; elapsed = 00:00:56 . Memory (MB): peak = 845.082 ; gain = 529.801
+Finished IO Insertion : Time (s): cpu = 00:00:55 ; elapsed = 00:00:56 . Memory (MB): peak = 843.031 ; gain = 527.383
 ---------------------------------------------------------------------------------
 
 Report Check Netlist: 
@@ -323,7 +236,7 @@ Report Check Netlist:
 Start Renaming Generated Instances
 ---------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------
-Finished Renaming Generated Instances : Time (s): cpu = 00:00:55 ; elapsed = 00:00:56 . Memory (MB): peak = 845.082 ; gain = 529.801
+Finished Renaming Generated Instances : Time (s): cpu = 00:00:55 ; elapsed = 00:00:56 . Memory (MB): peak = 843.031 ; gain = 527.383
 ---------------------------------------------------------------------------------
 
 Report RTL Partitions: 
@@ -335,25 +248,25 @@ Report RTL Partitions:
 Start Rebuilding User Hierarchy
 ---------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------
-Finished Rebuilding User Hierarchy : Time (s): cpu = 00:00:55 ; elapsed = 00:00:56 . Memory (MB): peak = 845.082 ; gain = 529.801
+Finished Rebuilding User Hierarchy : Time (s): cpu = 00:00:55 ; elapsed = 00:00:56 . Memory (MB): peak = 843.031 ; gain = 527.383
 ---------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------
 Start Renaming Generated Ports
 ---------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------
-Finished Renaming Generated Ports : Time (s): cpu = 00:00:55 ; elapsed = 00:00:56 . Memory (MB): peak = 845.082 ; gain = 529.801
+Finished Renaming Generated Ports : Time (s): cpu = 00:00:55 ; elapsed = 00:00:56 . Memory (MB): peak = 843.031 ; gain = 527.383
 ---------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------
 Start Handling Custom Attributes
 ---------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------
-Finished Handling Custom Attributes : Time (s): cpu = 00:00:55 ; elapsed = 00:00:56 . Memory (MB): peak = 845.082 ; gain = 529.801
+Finished Handling Custom Attributes : Time (s): cpu = 00:00:55 ; elapsed = 00:00:56 . Memory (MB): peak = 843.031 ; gain = 527.383
 ---------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------
 Start Renaming Generated Nets
 ---------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------
-Finished Renaming Generated Nets : Time (s): cpu = 00:00:55 ; elapsed = 00:00:56 . Memory (MB): peak = 845.082 ; gain = 529.801
+Finished Renaming Generated Nets : Time (s): cpu = 00:00:55 ; elapsed = 00:00:56 . Memory (MB): peak = 843.031 ; gain = 527.383
 ---------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------
 Start Writing Synthesis Report
@@ -370,37 +283,36 @@ Report Cell Usage:
 |      |Cell   |Count |
 +------+-------+------+
 |1     |BUFG   |     1|
-|2     |CARRY4 |    36|
-|3     |LUT1   |     7|
-|4     |LUT2   |     5|
-|5     |LUT3   |    38|
-|6     |LUT4   |     2|
-|7     |LUT5   |     1|
-|8     |LUT6   |    15|
-|9     |FDRE   |   213|
-|10    |IBUF   |    94|
-|11    |OBUF   |    67|
+|2     |CARRY4 |     5|
+|3     |LUT2   |    70|
+|4     |LUT3   |     4|
+|5     |LUT4   |    13|
+|6     |LUT5   |     2|
+|7     |LUT6   |     9|
+|8     |FDRE   |    14|
+|9     |IBUF   |    87|
+|10    |OBUF   |    76|
 +------+-------+------+
 
 Report Instance Areas: 
 +------+---------+-------+------+
 |      |Instance |Module |Cells |
 +------+---------+-------+------+
-|1     |top      |       |   479|
+|1     |top      |       |   281|
 +------+---------+-------+------+
 ---------------------------------------------------------------------------------
-Finished Writing Synthesis Report : Time (s): cpu = 00:00:55 ; elapsed = 00:00:56 . Memory (MB): peak = 845.082 ; gain = 529.801
+Finished Writing Synthesis Report : Time (s): cpu = 00:00:55 ; elapsed = 00:00:56 . Memory (MB): peak = 843.031 ; gain = 527.383
 ---------------------------------------------------------------------------------
-Synthesis finished with 0 errors, 0 critical warnings and 50 warnings.
-Synthesis Optimization Runtime : Time (s): cpu = 00:00:26 ; elapsed = 00:00:37 . Memory (MB): peak = 845.082 ; gain = 167.410
-Synthesis Optimization Complete : Time (s): cpu = 00:00:55 ; elapsed = 00:00:56 . Memory (MB): peak = 845.082 ; gain = 529.801
+Synthesis finished with 0 errors, 0 critical warnings and 3 warnings.
+Synthesis Optimization Runtime : Time (s): cpu = 00:00:26 ; elapsed = 00:00:37 . Memory (MB): peak = 843.031 ; gain = 183.500
+Synthesis Optimization Complete : Time (s): cpu = 00:00:55 ; elapsed = 00:00:56 . Memory (MB): peak = 843.031 ; gain = 527.383
 INFO: [Project 1-571] Translating synthesized netlist
-INFO: [Netlist 29-17] Analyzing 130 Unisim elements for replacement
+INFO: [Netlist 29-17] Analyzing 92 Unisim elements for replacement
 INFO: [Netlist 29-28] Unisim Transformation completed in 0 CPU seconds
 INFO: [Project 1-570] Preparing netlist for logic optimization
 Parsing XDC File [c:/ue/vivado/src/template.xdc]
-WARNING: [Vivado 12-584] No ports matched 'clk_gev'. [c:/ue/vivado/src/template.xdc:47]
-CRITICAL WARNING: [Vivado 12-4739] create_clock:No valid object(s) found for '-objects [get_ports clk_gev]'. [c:/ue/vivado/src/template.xdc:47]
+WARNING: [Vivado 12-584] No ports matched 'clk'. [c:/ue/vivado/src/template.xdc:46]
+CRITICAL WARNING: [Vivado 12-4739] create_clock:No valid object(s) found for '-objects [get_ports clk]'. [c:/ue/vivado/src/template.xdc:46]
 Resolution: Check if the specified object(s) exists in the current design. If it does, ensure that the correct design hierarchy was specified for the object. If you are working with clocks, make sure create_clock was used to create the clock object before it is referenced.
 WARNING: [Vivado 12-584] No ports matched 'clk_pix'. [c:/ue/vivado/src/template.xdc:48]
 CRITICAL WARNING: [Vivado 12-4739] create_clock:No valid object(s) found for '-objects [get_ports clk_pix]'. [c:/ue/vivado/src/template.xdc:48]
@@ -429,14 +341,14 @@ INFO: [Project 1-111] Unisim Transformation Summary:
 No Unisim elements were transformed.
 
 INFO: [Common 17-83] Releasing license: Synthesis
-16 Infos, 118 Warnings, 16 Critical Warnings and 0 Errors encountered.
+15 Infos, 20 Warnings, 16 Critical Warnings and 0 Errors encountered.
 synth_design completed successfully
-synth_design: Time (s): cpu = 00:00:58 ; elapsed = 00:01:00 . Memory (MB): peak = 861.883 ; gain = 559.195
-# report_utilization -hierarchical -verbose  -file utilization_summary.rpt
-report_utilization: Time (s): cpu = 00:00:00 ; elapsed = 00:00:00.112 . Memory (MB): peak = 861.883 ; gain = 0.000
+synth_design: Time (s): cpu = 00:00:58 ; elapsed = 00:01:01 . Memory (MB): peak = 858.180 ; gain = 555.688
+# report_utilization -file utilization_summary.rpt
+report_utilization: Time (s): cpu = 00:00:00 ; elapsed = 00:00:00.061 . Memory (MB): peak = 858.180 ; gain = 0.000
 # report_timing_summary -file timing_summary.rpt
 INFO: [Timing 38-35] Done setting XDC timing constraints.
 INFO: [Timing 38-91] UpdateTimingParams: Speed grade: -2, Delay Type: min_max.
 INFO: [Timing 38-191] Multithreading enabled for timing update using a maximum of 2 CPUs
-report_timing_summary: Time (s): cpu = 00:00:06 ; elapsed = 00:00:06 . Memory (MB): peak = 1261.137 ; gain = 399.254
-INFO: [Common 17-206] Exiting Vivado at Fri Feb  1 14:33:08 2019...
+report_timing_summary: Time (s): cpu = 00:00:05 ; elapsed = 00:00:06 . Memory (MB): peak = 1249.805 ; gain = 391.625
+INFO: [Common 17-206] Exiting Vivado at Tue Jan 29 19:08:47 2019...
