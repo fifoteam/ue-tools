@@ -3,8 +3,8 @@
 
 function testdd(){
 
-	UltraEdit.activeDocument.write("ÄãºÃ");
-
+	UltraEdit.outputWindow.write("No found module word");
+	var dict = new UltraEdit.ActiveXObject("Scripting.Dictionary");
 
 }
 

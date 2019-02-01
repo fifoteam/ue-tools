@@ -11,5 +11,5 @@ synth_design -top packet_image -part xc7a100tfgg484-2
 
 
 #Generate Reports
-report_utilization -file utilization_summary.rpt
+report_utilization -hierarchical -verbose  -file utilization_summary.rpt
 report_timing_summary -file timing_summary.rpt
