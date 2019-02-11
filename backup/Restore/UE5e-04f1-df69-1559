@@ -1,0 +1,402 @@
+
+c:\ue\vivado>C:\Windows\system32\cmd.exe /k d:\tools\Xilinx\Vivado\2018.1\bin\vivado.bat -mode tcl -source synthesis.tcl 
+
+****** Vivado v2018.1 (64-bit)
+  **** SW Build 2188600 on Wed Apr  4 18:40:38 MDT 2018
+  **** IP Build 2185939 on Wed Apr  4 20:55:05 MDT 2018
+    ** Copyright 1986-2018 Xilinx, Inc. All Rights Reserved.
+
+source synthesis.tcl
+# read_verilog  F:/DAHENG/hw_mars/mars_platform/TD/Development_Phase/003_develop_phase/fpga_platform/ver10/src/frame_info/data_align.v
+# read_xdc src/template.xdc 
+# synth_design -top data_align -part xc7a100tfgg484-2 
+Command: synth_design -top data_align -part xc7a100tfgg484-2
+Starting synth_design
+Attempting to get a license for feature 'Synthesis' and/or device 'xc7a100t'
+INFO: [Common 17-349] Got license for feature 'Synthesis' and/or device 'xc7a100t'
+INFO: Launching helper process for spawning children vivado processes
+INFO: Helper process launched with PID 10808 
+---------------------------------------------------------------------------------
+Starting RTL Elaboration : Time (s): cpu = 00:00:09 ; elapsed = 00:00:09 . Memory (MB): peak = 416.445 ; gain = 101.078
+---------------------------------------------------------------------------------
+INFO: [Synth 8-6157] synthesizing module 'data_align' [F:/DAHENG/hw_mars/mars_platform/TD/Development_Phase/003_develop_phase/fpga_platform/ver10/src/frame_info/data_align.v:32]
+	Parameter END_STYLE_PIX bound to: BIG - type: string 
+	Parameter SENSOR_DAT_WIDTH bound to: 10 - type: integer 
+	Parameter CHANNEL_NUM bound to: 8 - type: integer 
+	Parameter REG_WD bound to: 32 - type: integer 
+	Parameter DATA_WD bound to: 128 - type: integer 
+	Parameter REMAINDER_BIT bound to: 0 - type: integer 
+	Parameter BYTE_NUM bound to: 16 - type: integer 
+	Parameter DATAEN_8B bound to: 2 - type: integer 
+	Parameter REDUCE_8B bound to: 1 - type: integer 
+	Parameter DATAEN_10B bound to: 1 - type: integer 
+	Parameter REDUCE_10B bound to: 0 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'data_align' (1#1) [F:/DAHENG/hw_mars/mars_platform/TD/Development_Phase/003_develop_phase/fpga_platform/ver10/src/frame_info/data_align.v:32]
+WARNING: [Synth 8-3331] design data_align has unconnected port iv_pixel_format[31]
+WARNING: [Synth 8-3331] design data_align has unconnected port iv_pixel_format[30]
+WARNING: [Synth 8-3331] design data_align has unconnected port iv_pixel_format[29]
+WARNING: [Synth 8-3331] design data_align has unconnected port iv_pixel_format[28]
+WARNING: [Synth 8-3331] design data_align has unconnected port iv_pixel_format[27]
+WARNING: [Synth 8-3331] design data_align has unconnected port iv_pixel_format[26]
+WARNING: [Synth 8-3331] design data_align has unconnected port iv_pixel_format[25]
+WARNING: [Synth 8-3331] design data_align has unconnected port iv_pixel_format[24]
+WARNING: [Synth 8-3331] design data_align has unconnected port iv_pixel_format[23]
+WARNING: [Synth 8-3331] design data_align has unconnected port iv_pixel_format[22]
+WARNING: [Synth 8-3331] design data_align has unconnected port iv_pixel_format[21]
+WARNING: [Synth 8-3331] design data_align has unconnected port iv_pixel_format[20]
+WARNING: [Synth 8-3331] design data_align has unconnected port iv_pixel_format[19]
+WARNING: [Synth 8-3331] design data_align has unconnected port iv_pixel_format[18]
+WARNING: [Synth 8-3331] design data_align has unconnected port iv_pixel_format[17]
+WARNING: [Synth 8-3331] design data_align has unconnected port iv_pixel_format[16]
+WARNING: [Synth 8-3331] design data_align has unconnected port iv_pixel_format[15]
+WARNING: [Synth 8-3331] design data_align has unconnected port iv_pixel_format[14]
+WARNING: [Synth 8-3331] design data_align has unconnected port iv_pixel_format[13]
+WARNING: [Synth 8-3331] design data_align has unconnected port iv_pixel_format[12]
+WARNING: [Synth 8-3331] design data_align has unconnected port iv_pixel_format[11]
+WARNING: [Synth 8-3331] design data_align has unconnected port iv_pixel_format[10]
+WARNING: [Synth 8-3331] design data_align has unconnected port iv_pixel_format[9]
+WARNING: [Synth 8-3331] design data_align has unconnected port iv_pixel_format[8]
+WARNING: [Synth 8-3331] design data_align has unconnected port iv_pixel_format[7]
+---------------------------------------------------------------------------------
+Finished RTL Elaboration : Time (s): cpu = 00:00:11 ; elapsed = 00:00:11 . Memory (MB): peak = 466.707 ; gain = 151.340
+---------------------------------------------------------------------------------
+
+Report Check Netlist: 
++------+------------------+-------+---------+-------+------------------+
+|      |Item              |Errors |Warnings |Status |Description       |
++------+------------------+-------+---------+-------+------------------+
+|1     |multi_driven_nets |      0|        0|Passed |Multi driven nets |
++------+------------------+-------+---------+-------+------------------+
+---------------------------------------------------------------------------------
+Start Handling Custom Attributes
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Handling Custom Attributes : Time (s): cpu = 00:00:11 ; elapsed = 00:00:11 . Memory (MB): peak = 466.707 ; gain = 151.340
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished RTL Optimization Phase 1 : Time (s): cpu = 00:00:11 ; elapsed = 00:00:11 . Memory (MB): peak = 466.707 ; gain = 151.340
+---------------------------------------------------------------------------------
+INFO: [Device 21-403] Loading part xc7a100tfgg484-2
+INFO: [Project 1-570] Preparing netlist for logic optimization
+
+Processing XDC Constraints
+Initializing timing engine
+Parsing XDC File [c:/ue/vivado/src/template.xdc]
+WARNING: [Vivado 12-584] No ports matched 'clk_gev'. [c:/ue/vivado/src/template.xdc:47]
+CRITICAL WARNING: [Vivado 12-4739] create_clock:No valid object(s) found for '-objects [get_ports clk_gev]'. [c:/ue/vivado/src/template.xdc:47]
+Resolution: Check if the specified object(s) exists in the current design. If it does, ensure that the correct design hierarchy was specified for the object. If you are working with clocks, make sure create_clock was used to create the clock object before it is referenced.
+WARNING: [Vivado 12-584] No ports matched 'clk_pix'. [c:/ue/vivado/src/template.xdc:48]
+CRITICAL WARNING: [Vivado 12-4739] create_clock:No valid object(s) found for '-objects [get_ports clk_pix]'. [c:/ue/vivado/src/template.xdc:48]
+Resolution: Check if the specified object(s) exists in the current design. If it does, ensure that the correct design hierarchy was specified for the object. If you are working with clocks, make sure create_clock was used to create the clock object before it is referenced.
+WARNING: [Vivado 12-584] No ports matched 'clk_osc'. [c:/ue/vivado/src/template.xdc:49]
+CRITICAL WARNING: [Vivado 12-4739] create_clock:No valid object(s) found for '-objects [get_ports clk_osc]'. [c:/ue/vivado/src/template.xdc:49]
+Resolution: Check if the specified object(s) exists in the current design. If it does, ensure that the correct design hierarchy was specified for the object. If you are working with clocks, make sure create_clock was used to create the clock object before it is referenced.
+WARNING: [Vivado 12-584] No ports matched 'clk_gtx'. [c:/ue/vivado/src/template.xdc:50]
+CRITICAL WARNING: [Vivado 12-4739] create_clock:No valid object(s) found for '-objects [get_ports clk_gtx]'. [c:/ue/vivado/src/template.xdc:50]
+Resolution: Check if the specified object(s) exists in the current design. If it does, ensure that the correct design hierarchy was specified for the object. If you are working with clocks, make sure create_clock was used to create the clock object before it is referenced.
+WARNING: [Vivado 12-584] No ports matched 'clk_grx'. [c:/ue/vivado/src/template.xdc:51]
+CRITICAL WARNING: [Vivado 12-4739] create_clock:No valid object(s) found for '-objects [get_ports clk_grx]'. [c:/ue/vivado/src/template.xdc:51]
+Resolution: Check if the specified object(s) exists in the current design. If it does, ensure that the correct design hierarchy was specified for the object. If you are working with clocks, make sure create_clock was used to create the clock object before it is referenced.
+WARNING: [Vivado 12-584] No ports matched 'clk_fb'. [c:/ue/vivado/src/template.xdc:52]
+CRITICAL WARNING: [Vivado 12-4739] create_clock:No valid object(s) found for '-objects [get_ports clk_fb]'. [c:/ue/vivado/src/template.xdc:52]
+Resolution: Check if the specified object(s) exists in the current design. If it does, ensure that the correct design hierarchy was specified for the object. If you are working with clocks, make sure create_clock was used to create the clock object before it is referenced.
+WARNING: [Vivado 12-584] No ports matched 'clk_sensor'. [c:/ue/vivado/src/template.xdc:53]
+CRITICAL WARNING: [Vivado 12-4739] create_clock:No valid object(s) found for '-objects [get_ports clk_sensor]'. [c:/ue/vivado/src/template.xdc:53]
+Resolution: Check if the specified object(s) exists in the current design. If it does, ensure that the correct design hierarchy was specified for the object. If you are working with clocks, make sure create_clock was used to create the clock object before it is referenced.
+WARNING: [Vivado 12-584] No ports matched 'clk_axi'. [c:/ue/vivado/src/template.xdc:54]
+CRITICAL WARNING: [Vivado 12-4739] create_clock:No valid object(s) found for '-objects [get_ports clk_axi]'. [c:/ue/vivado/src/template.xdc:54]
+Resolution: Check if the specified object(s) exists in the current design. If it does, ensure that the correct design hierarchy was specified for the object. If you are working with clocks, make sure create_clock was used to create the clock object before it is referenced.
+Finished Parsing XDC File [c:/ue/vivado/src/template.xdc]
+Completed Processing XDC Constraints
+
+INFO: [Project 1-111] Unisim Transformation Summary:
+No Unisim elements were transformed.
+
+Constraint Validation Runtime : Time (s): cpu = 00:00:00 ; elapsed = 00:00:00.006 . Memory (MB): peak = 828.500 ; gain = 0.000
+---------------------------------------------------------------------------------
+Finished Constraint Validation : Time (s): cpu = 00:00:38 ; elapsed = 00:00:40 . Memory (MB): peak = 828.500 ; gain = 513.133
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Loading Part and Timing Information
+---------------------------------------------------------------------------------
+Loading part: xc7a100tfgg484-2
+---------------------------------------------------------------------------------
+Finished Loading Part and Timing Information : Time (s): cpu = 00:00:38 ; elapsed = 00:00:40 . Memory (MB): peak = 828.500 ; gain = 513.133
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Applying 'set_property' XDC Constraints
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished applying 'set_property' XDC Constraints : Time (s): cpu = 00:00:38 ; elapsed = 00:00:40 . Memory (MB): peak = 828.500 ; gain = 513.133
+---------------------------------------------------------------------------------
+INFO: [Synth 8-5546] ROM "format8_sel" won't be mapped to RAM because it is too sparse
+---------------------------------------------------------------------------------
+Finished RTL Optimization Phase 2 : Time (s): cpu = 00:00:38 ; elapsed = 00:00:41 . Memory (MB): peak = 828.500 ; gain = 513.133
+---------------------------------------------------------------------------------
+
+Report RTL Partitions: 
++-+--------------+------------+----------+
+| |RTL Partition |Replication |Instances |
++-+--------------+------------+----------+
++-+--------------+------------+----------+
+---------------------------------------------------------------------------------
+Start RTL Component Statistics 
+---------------------------------------------------------------------------------
+Detailed RTL Component Info : 
++---Adders : 
+	   2 Input      4 Bit       Adders := 1     
++---Registers : 
+	              128 Bit    Registers := 2     
+	                4 Bit    Registers := 1     
+	                1 Bit    Registers := 5     
++---Muxes : 
+	   2 Input    128 Bit        Muxes := 1     
+	  11 Input      1 Bit        Muxes := 1     
+	   2 Input      1 Bit        Muxes := 1     
+---------------------------------------------------------------------------------
+Finished RTL Component Statistics 
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start RTL Hierarchical Component Statistics 
+---------------------------------------------------------------------------------
+Hierarchical RTL Component report 
+Module data_align 
+Detailed RTL Component Info : 
++---Adders : 
+	   2 Input      4 Bit       Adders := 1     
++---Registers : 
+	              128 Bit    Registers := 2     
+	                4 Bit    Registers := 1     
+	                1 Bit    Registers := 5     
++---Muxes : 
+	   2 Input    128 Bit        Muxes := 1     
+	  11 Input      1 Bit        Muxes := 1     
+	   2 Input      1 Bit        Muxes := 1     
+---------------------------------------------------------------------------------
+Finished RTL Hierarchical Component Statistics
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Part Resource Summary
+---------------------------------------------------------------------------------
+Part Resources:
+DSPs: 240 (col length:80)
+BRAMs: 270 (col length: RAMB18 80 RAMB36 40)
+---------------------------------------------------------------------------------
+Finished Part Resource Summary
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Cross Boundary and Area Optimization
+---------------------------------------------------------------------------------
+Warning: Parallel synthesis criteria is not met 
+INFO: [Synth 8-5546] ROM "format8_sel" won't be mapped to RAM because it is too sparse
+WARNING: [Synth 8-3331] design data_align has unconnected port iv_pixel_format[31]
+WARNING: [Synth 8-3331] design data_align has unconnected port iv_pixel_format[30]
+WARNING: [Synth 8-3331] design data_align has unconnected port iv_pixel_format[29]
+WARNING: [Synth 8-3331] design data_align has unconnected port iv_pixel_format[28]
+WARNING: [Synth 8-3331] design data_align has unconnected port iv_pixel_format[27]
+WARNING: [Synth 8-3331] design data_align has unconnected port iv_pixel_format[26]
+WARNING: [Synth 8-3331] design data_align has unconnected port iv_pixel_format[25]
+WARNING: [Synth 8-3331] design data_align has unconnected port iv_pixel_format[24]
+WARNING: [Synth 8-3331] design data_align has unconnected port iv_pixel_format[23]
+WARNING: [Synth 8-3331] design data_align has unconnected port iv_pixel_format[22]
+WARNING: [Synth 8-3331] design data_align has unconnected port iv_pixel_format[21]
+WARNING: [Synth 8-3331] design data_align has unconnected port iv_pixel_format[20]
+WARNING: [Synth 8-3331] design data_align has unconnected port iv_pixel_format[19]
+WARNING: [Synth 8-3331] design data_align has unconnected port iv_pixel_format[18]
+WARNING: [Synth 8-3331] design data_align has unconnected port iv_pixel_format[17]
+WARNING: [Synth 8-3331] design data_align has unconnected port iv_pixel_format[16]
+WARNING: [Synth 8-3331] design data_align has unconnected port iv_pixel_format[15]
+WARNING: [Synth 8-3331] design data_align has unconnected port iv_pixel_format[14]
+WARNING: [Synth 8-3331] design data_align has unconnected port iv_pixel_format[13]
+WARNING: [Synth 8-3331] design data_align has unconnected port iv_pixel_format[12]
+WARNING: [Synth 8-3331] design data_align has unconnected port iv_pixel_format[11]
+WARNING: [Synth 8-3331] design data_align has unconnected port iv_pixel_format[10]
+WARNING: [Synth 8-3331] design data_align has unconnected port iv_pixel_format[9]
+WARNING: [Synth 8-3331] design data_align has unconnected port iv_pixel_format[8]
+WARNING: [Synth 8-3331] design data_align has unconnected port iv_pixel_format[7]
+---------------------------------------------------------------------------------
+Finished Cross Boundary and Area Optimization : Time (s): cpu = 00:00:39 ; elapsed = 00:00:42 . Memory (MB): peak = 828.500 ; gain = 513.133
+---------------------------------------------------------------------------------
+
+Report RTL Partitions: 
++-+--------------+------------+----------+
+| |RTL Partition |Replication |Instances |
++-+--------------+------------+----------+
++-+--------------+------------+----------+
+---------------------------------------------------------------------------------
+Start Applying XDC Timing Constraints
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Applying XDC Timing Constraints : Time (s): cpu = 00:00:53 ; elapsed = 00:00:56 . Memory (MB): peak = 828.500 ; gain = 513.133
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Timing Optimization
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Timing Optimization : Time (s): cpu = 00:00:53 ; elapsed = 00:00:56 . Memory (MB): peak = 833.375 ; gain = 518.008
+---------------------------------------------------------------------------------
+
+Report RTL Partitions: 
++-+--------------+------------+----------+
+| |RTL Partition |Replication |Instances |
++-+--------------+------------+----------+
++-+--------------+------------+----------+
+---------------------------------------------------------------------------------
+Start Technology Mapping
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Technology Mapping : Time (s): cpu = 00:00:54 ; elapsed = 00:00:56 . Memory (MB): peak = 834.152 ; gain = 518.785
+---------------------------------------------------------------------------------
+
+Report RTL Partitions: 
++-+--------------+------------+----------+
+| |RTL Partition |Replication |Instances |
++-+--------------+------------+----------+
++-+--------------+------------+----------+
+---------------------------------------------------------------------------------
+Start IO Insertion
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Flattening Before IO Insertion
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Flattening Before IO Insertion
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Final Netlist Cleanup
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Final Netlist Cleanup
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished IO Insertion : Time (s): cpu = 00:00:55 ; elapsed = 00:00:57 . Memory (MB): peak = 834.152 ; gain = 518.785
+---------------------------------------------------------------------------------
+
+Report Check Netlist: 
++------+------------------+-------+---------+-------+------------------+
+|      |Item              |Errors |Warnings |Status |Description       |
++------+------------------+-------+---------+-------+------------------+
+|1     |multi_driven_nets |      0|        0|Passed |Multi driven nets |
++------+------------------+-------+---------+-------+------------------+
+---------------------------------------------------------------------------------
+Start Renaming Generated Instances
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Renaming Generated Instances : Time (s): cpu = 00:00:55 ; elapsed = 00:00:57 . Memory (MB): peak = 834.152 ; gain = 518.785
+---------------------------------------------------------------------------------
+
+Report RTL Partitions: 
++-+--------------+------------+----------+
+| |RTL Partition |Replication |Instances |
++-+--------------+------------+----------+
++-+--------------+------------+----------+
+---------------------------------------------------------------------------------
+Start Rebuilding User Hierarchy
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Rebuilding User Hierarchy : Time (s): cpu = 00:00:55 ; elapsed = 00:00:58 . Memory (MB): peak = 834.152 ; gain = 518.785
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Renaming Generated Ports
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Renaming Generated Ports : Time (s): cpu = 00:00:55 ; elapsed = 00:00:58 . Memory (MB): peak = 834.152 ; gain = 518.785
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Handling Custom Attributes
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Handling Custom Attributes : Time (s): cpu = 00:00:55 ; elapsed = 00:00:58 . Memory (MB): peak = 834.152 ; gain = 518.785
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Renaming Generated Nets
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Renaming Generated Nets : Time (s): cpu = 00:00:55 ; elapsed = 00:00:58 . Memory (MB): peak = 834.152 ; gain = 518.785
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Writing Synthesis Report
+---------------------------------------------------------------------------------
+
+Report BlackBoxes: 
++-+--------------+----------+
+| |BlackBox name |Instances |
++-+--------------+----------+
++-+--------------+----------+
+
+Report Cell Usage: 
++------+------+------+
+|      |Cell  |Count |
++------+------+------+
+|1     |BUFG  |     1|
+|2     |LUT1  |     2|
+|3     |LUT3  |    81|
+|4     |LUT4  |     1|
+|5     |LUT5  |     1|
+|6     |LUT6  |     1|
+|7     |MUXF7 |     1|
+|8     |FDRE  |   262|
+|9     |IBUF  |    90|
+|10    |OBUF  |   130|
++------+------+------+
+
+Report Instance Areas: 
++------+---------+-------+------+
+|      |Instance |Module |Cells |
++------+---------+-------+------+
+|1     |top      |       |   570|
++------+---------+-------+------+
+---------------------------------------------------------------------------------
+Finished Writing Synthesis Report : Time (s): cpu = 00:00:55 ; elapsed = 00:00:58 . Memory (MB): peak = 834.152 ; gain = 518.785
+---------------------------------------------------------------------------------
+Synthesis finished with 0 errors, 0 critical warnings and 25 warnings.
+Synthesis Optimization Runtime : Time (s): cpu = 00:00:26 ; elapsed = 00:00:38 . Memory (MB): peak = 834.152 ; gain = 156.992
+Synthesis Optimization Complete : Time (s): cpu = 00:00:55 ; elapsed = 00:00:58 . Memory (MB): peak = 834.152 ; gain = 518.785
+INFO: [Project 1-571] Translating synthesized netlist
+INFO: [Netlist 29-17] Analyzing 91 Unisim elements for replacement
+INFO: [Netlist 29-28] Unisim Transformation completed in 0 CPU seconds
+INFO: [Project 1-570] Preparing netlist for logic optimization
+Parsing XDC File [c:/ue/vivado/src/template.xdc]
+WARNING: [Vivado 12-584] No ports matched 'clk_gev'. [c:/ue/vivado/src/template.xdc:47]
+CRITICAL WARNING: [Vivado 12-4739] create_clock:No valid object(s) found for '-objects [get_ports clk_gev]'. [c:/ue/vivado/src/template.xdc:47]
+Resolution: Check if the specified object(s) exists in the current design. If it does, ensure that the correct design hierarchy was specified for the object. If you are working with clocks, make sure create_clock was used to create the clock object before it is referenced.
+WARNING: [Vivado 12-584] No ports matched 'clk_pix'. [c:/ue/vivado/src/template.xdc:48]
+CRITICAL WARNING: [Vivado 12-4739] create_clock:No valid object(s) found for '-objects [get_ports clk_pix]'. [c:/ue/vivado/src/template.xdc:48]
+Resolution: Check if the specified object(s) exists in the current design. If it does, ensure that the correct design hierarchy was specified for the object. If you are working with clocks, make sure create_clock was used to create the clock object before it is referenced.
+WARNING: [Vivado 12-584] No ports matched 'clk_osc'. [c:/ue/vivado/src/template.xdc:49]
+CRITICAL WARNING: [Vivado 12-4739] create_clock:No valid object(s) found for '-objects [get_ports clk_osc]'. [c:/ue/vivado/src/template.xdc:49]
+Resolution: Check if the specified object(s) exists in the current design. If it does, ensure that the correct design hierarchy was specified for the object. If you are working with clocks, make sure create_clock was used to create the clock object before it is referenced.
+WARNING: [Vivado 12-584] No ports matched 'clk_gtx'. [c:/ue/vivado/src/template.xdc:50]
+CRITICAL WARNING: [Vivado 12-4739] create_clock:No valid object(s) found for '-objects [get_ports clk_gtx]'. [c:/ue/vivado/src/template.xdc:50]
+Resolution: Check if the specified object(s) exists in the current design. If it does, ensure that the correct design hierarchy was specified for the object. If you are working with clocks, make sure create_clock was used to create the clock object before it is referenced.
+WARNING: [Vivado 12-584] No ports matched 'clk_grx'. [c:/ue/vivado/src/template.xdc:51]
+CRITICAL WARNING: [Vivado 12-4739] create_clock:No valid object(s) found for '-objects [get_ports clk_grx]'. [c:/ue/vivado/src/template.xdc:51]
+Resolution: Check if the specified object(s) exists in the current design. If it does, ensure that the correct design hierarchy was specified for the object. If you are working with clocks, make sure create_clock was used to create the clock object before it is referenced.
+WARNING: [Vivado 12-584] No ports matched 'clk_fb'. [c:/ue/vivado/src/template.xdc:52]
+CRITICAL WARNING: [Vivado 12-4739] create_clock:No valid object(s) found for '-objects [get_ports clk_fb]'. [c:/ue/vivado/src/template.xdc:52]
+Resolution: Check if the specified object(s) exists in the current design. If it does, ensure that the correct design hierarchy was specified for the object. If you are working with clocks, make sure create_clock was used to create the clock object before it is referenced.
+WARNING: [Vivado 12-584] No ports matched 'clk_sensor'. [c:/ue/vivado/src/template.xdc:53]
+CRITICAL WARNING: [Vivado 12-4739] create_clock:No valid object(s) found for '-objects [get_ports clk_sensor]'. [c:/ue/vivado/src/template.xdc:53]
+Resolution: Check if the specified object(s) exists in the current design. If it does, ensure that the correct design hierarchy was specified for the object. If you are working with clocks, make sure create_clock was used to create the clock object before it is referenced.
+WARNING: [Vivado 12-584] No ports matched 'clk_axi'. [c:/ue/vivado/src/template.xdc:54]
+CRITICAL WARNING: [Vivado 12-4739] create_clock:No valid object(s) found for '-objects [get_ports clk_axi]'. [c:/ue/vivado/src/template.xdc:54]
+Resolution: Check if the specified object(s) exists in the current design. If it does, ensure that the correct design hierarchy was specified for the object. If you are working with clocks, make sure create_clock was used to create the clock object before it is referenced.
+Finished Parsing XDC File [c:/ue/vivado/src/template.xdc]
+INFO: [Opt 31-138] Pushed 0 inverter(s) to 0 load pin(s).
+INFO: [Project 1-111] Unisim Transformation Summary:
+No Unisim elements were transformed.
+
+INFO: [Common 17-83] Releasing license: Synthesis
+15 Infos, 66 Warnings, 16 Critical Warnings and 0 Errors encountered.
+synth_design completed successfully
+synth_design: Time (s): cpu = 00:00:58 ; elapsed = 00:01:02 . Memory (MB): peak = 861.527 ; gain = 559.129
+# report_utilization -file utilization_summary.rpt 
+report_utilization: Time (s): cpu = 00:00:00 ; elapsed = 00:00:00.067 . Memory (MB): peak = 861.527 ; gain = 0.000
+# report_timing_summary -file timing_summary.rpt 
+INFO: [Timing 38-35] Done setting XDC timing constraints.
+INFO: [Timing 38-91] UpdateTimingParams: Speed grade: -2, Delay Type: min_max.
+INFO: [Timing 38-191] Multithreading enabled for timing update using a maximum of 2 CPUs
+report_timing_summary: Time (s): cpu = 00:00:06 ; elapsed = 00:00:07 . Memory (MB): peak = 1260.809 ; gain = 399.281
+INFO: [Common 17-206] Exiting Vivado at Mon Feb 11 10:52:58 2019...
+
+c:\ue\vivado>

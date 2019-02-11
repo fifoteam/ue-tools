@@ -1,0 +1,5 @@
+read_verilog  C:/ue/vivado/synthesis.py
+read_xdc src/template.xdc 
+synth_design -top synthesis -part xc7a100tfgg484-2 
+report_utilization -file utilization_summary.rpt 
+report_timing_summary -file timing_summary.rpt 

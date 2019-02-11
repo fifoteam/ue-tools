@@ -36,8 +36,8 @@ module frame_info_add # (
 	parameter	STATIS_SIZE									= 256		,	//STATIS段数据量，以byte为单位
 	parameter	MROI_MAX_NUM 								= 4			,	//Multi-ROI的最大个数,最大支持32
 	parameter	DATA_WD										= 256		,	//数据位宽，支持64、128、256、512
-	parameter	MROI_OFFSET_WD								= 96		,	//Multi-ROI模式下所有roi偏移位宽之和
-	parameter	MROI_IMAGE_SIZE_WD							= 96		,	//Multi-ROI模式下所有roi image size位宽之和
+	parameter	MROI_OFFSET_WD								= 64		,	//Multi-ROI模式下所有roi偏移位宽之和
+	parameter	MROI_IMAGE_SIZE_WD							= 128		,	//Multi-ROI模式下所有roi image size位宽之和
 	parameter	SHORT_REG_WD   								= 16		,	//短寄存器位宽
 	parameter	REG_WD  						 			= 32		,	//寄存器位宽
 	parameter	LONG_REG_WD  						 		= 64			//长寄存器位宽
@@ -72,7 +72,7 @@ module frame_info_add # (
 	//  -------------------------------------------------------------------------------------
 	//  打包信息输入
 	//  -------------------------------------------------------------------------------------
-	//	input	[LONG_REG_WD-1:0]		iv_block_id							,	//clk时钟域，block id，本模块自己生成
+	//	input	[LONG_REG_WD-1:0]		iv_block_id						,	//clk时钟域，block id，本模块自己生成
 	input	[LONG_REG_WD-1:0]		iv_timestamp						,	//未知时钟域，time stamp，保证在添加的时候已经准备好，通过时钟约束的方法保证数据采集正确
 	input	[LONG_REG_WD-1:0]		iv_frame_interval					,	//未知时钟域，frame interval，保证在添加的时候已经准备好，通过时钟约束的方法保证数据采集正确
 	input	[REG_WD-1:0]			iv_pixel_format						,	//clk时钟域，pixel format
@@ -87,7 +87,7 @@ module frame_info_add # (
 	input							i_chunkid_en_fid					,	//clk时钟域，frame id开关寄存器
 	input							i_chunkid_en_ts						,	//clk时钟域，时间戳开关寄存器
 	input							i_chunkid_en_fint					,	//clk时钟域，frame interval开关寄存器
-	input	[REG_WD-1:0]			iv_except_payload_size					//clk时钟域，要写入到帧存的image size
+	input	[REG_WD-1:0]			iv_expect_payload_size					//clk时钟域，要写入到帧存的image size
 	);
 
 
@@ -179,7 +179,7 @@ module frame_info_add # (
 	wire									fval_rise			;			//fval上升沿
 	wire									fval_fall			;			//fval下降沿
 	reg										se_reg				= 1'b0;		//se信号
-	reg										se_reg_dly			= 1'b0;		//se延迟信号
+	reg										se_reg_dly			= 1'b1;		//se延迟信号，初始化值为1，目的是保证上电之后有一个下降沿的脉冲用于adder操作
 	wire									se_reg_fall			;			//se下降沿
 	wire	[63:0]							blockid				;			//blockid，实际上就是adder_a，8byte位宽
 	wire	[46:0]							adder_a				;			//adder输入，作为blockid
@@ -198,8 +198,8 @@ module frame_info_add # (
 	wire	[SHORT_REG_WD-1:0]				wv_height_lane			[MROI_MAX_NUM-1:0];		//height分通道
 	wire	[SHORT_REG_WD-1:0]				wv_offset_x_lane		[MROI_MAX_NUM-1:0];		//offset_x分通道
 	wire	[SHORT_REG_WD-1:0]				wv_offset_y_lane		[MROI_MAX_NUM-1:0];		//offset_y分通道
-	wire	[SHORT_REG_WD-1:0]				wv_image_size_lane		[MROI_MAX_NUM-1:0];		//image_size分通道
-	wire	[SHORT_REG_WD-1:0]				wv_payload_size_lane	[MROI_MAX_NUM-1:0];		//payload_size分通道
+	wire	[REG_WD-1:0]					wv_image_size_lane		[MROI_MAX_NUM-1:0];		//image_size分通道
+	wire	[REG_WD-1:0]					wv_payload_size_lane	[MROI_MAX_NUM-1:0];		//payload_size分通道
 	wire	[SHORT_REG_WD-1:0]				wv_chunk_en			;			//chunk_en
 	reg		[DATA_WD-1:0]					add_data			;			//info statis中添加的数据
 	reg										fval_reg			= 1'b0;		//输出的o_fval
@@ -233,7 +233,7 @@ module frame_info_add # (
 	//	2.当se=1且fval_rise=1，se_reg=1
 	//	-------------------------------------------------------------------------------------
 	always @ (posedge clk) begin
-		if(i_stream_enable==1'b0) begin
+		if(reset==1'b1 || i_stream_enable==1'b0) begin
 			se_reg	<= 1'b0;
 		end
 		else begin
@@ -245,9 +245,15 @@ module frame_info_add # (
 
 	//	-------------------------------------------------------------------------------------
 	//	提取se_reg的下降沿
+	//	在 reset 复位结束之后，才能再提取边沿，因为在reset复位期间，adder被复位，此时无法传递adder_a到adder_sum
 	//	-------------------------------------------------------------------------------------
 	always @ (posedge clk) begin
-		se_reg_dly	<= se_reg;
+		if(reset==1'b1) begin
+			se_reg_dly	<= 1'b1;
+		end
+		else begin
+			se_reg_dly	<= se_reg;
+		end
 	end
 	assign	se_reg_fall	= (se_reg_dly==1'b1 && se_reg==1'b0) ? 1'b1 : 1'b0;
 
@@ -352,7 +358,7 @@ module frame_info_add # (
 	//	ref status
 	//	该计数器属于statis专有，STATIS_VALID=="FALSE"时，该寄存器不会被例化
 	//	-------------------------------------------------------------------------------------
-	assign	status	= (valid_payload_cnt>iv_except_payload_size) ? 16'ha101 : 16'h0;
+	assign	status	= (valid_payload_cnt>iv_expect_payload_size) ? 16'ha101 : 16'h0;
 
 	//	-------------------------------------------------------------------------------------
 	//	ref	flag_cnt
@@ -465,8 +471,8 @@ module frame_info_add # (
 			assign	wv_height_lane[i]		= iv_single_roi_height[SHORT_REG_WD*(i+1)-1:SHORT_REG_WD*i];
 			assign	wv_offset_x_lane[i]		= iv_single_roi_offset_x[SHORT_REG_WD*(i+1)-1:SHORT_REG_WD*i];
 			assign	wv_offset_y_lane[i]		= iv_single_roi_offset_y[SHORT_REG_WD*(i+1)-1:SHORT_REG_WD*i];
-			assign	wv_image_size_lane[i]	= iv_single_roi_image_size[SHORT_REG_WD*(i+1)-1:SHORT_REG_WD*i];
-			assign	wv_payload_size_lane[i]	= iv_single_roi_payload_size[SHORT_REG_WD*(i+1)-1:SHORT_REG_WD*i];
+			assign	wv_image_size_lane[i]	= iv_single_roi_image_size[REG_WD*(i+1)-1:REG_WD*i];
+			assign	wv_payload_size_lane[i]	= iv_single_roi_payload_size[REG_WD*(i+1)-1:REG_WD*i];
 		end
 	endgenerate
 
@@ -492,7 +498,7 @@ module frame_info_add # (
 				end
 				else if(current_state==S_FLAG && flag_cnt==2) begin
 					case(byte_cnt)
-						0		: add_data		= {{64'b0},{64'b0},{{32'b0},{{16'b0},status}},{valid_payload_cnt,iv_except_payload_size}};
+						0		: add_data		= {{64'b0},{64'b0},{{32'b0},{{16'b0},status}},{valid_payload_cnt,iv_expect_payload_size}};
 						default	: add_data		= 'b0;
 					endcase
 				end
@@ -551,8 +557,8 @@ module frame_info_add # (
 			if(flag_cnt==0 && mroi_single_en_reg[roi_cnt]==1'b1) begin
 				dval_reg	<= 1'b1;
 			end
-			else if(flag_cnt==1 && i_dval==1'b1) begin
-				dval_reg	<= 1'b1;
+			else if(flag_cnt==1) begin
+				dval_reg	<= i_dval;
 			end
 			else if(flag_cnt==2) begin
 				dval_reg	<= 1'b1;
