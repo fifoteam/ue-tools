@@ -1,0 +1,477 @@
+//-------------------------------------------------------------------------------------------------
+//  -- 版权所有者   : 中国大恒（集团）有限公司北京图像视觉技术分公司, 2010 -2018.
+//  -- 保密级别     ：绝密.
+//  -- 部门         : 硬件部，FPGA工作组
+//  -- 模块名       : packet_switch
+//  -- 设计者       : 张少强
+//-------------------------------------------------------------------------------------------------
+//
+//  -- 版本记录 :
+//
+//  -- 作者         :| 版本号	:| 修改日期				:|  修改说明
+//-------------------------------------------------------------------------------------------------
+//  -- 张少强       :| V1.0		:| 2018/08/17 09:33:49	:|  初始版本
+//-------------------------------------------------------------------------------------------------
+//
+//  -- 模块描述     :
+//              1)  :
+//
+//              2)  :
+//
+//              3)  :
+//
+//-------------------------------------------------------------------------------------------------
+//`include			"packet_switch_def.v"
+//仿真单位/精度
+`timescale 1ns/1ps
+//-------------------------------------------------------------------------------------------------
+
+module packet_switch # (
+	parameter	SHORT_REG_WD   								= 16		,	//短寄存器位宽
+	parameter	REG_WD  						 			= 32		,	//寄存器位宽
+	parameter	LONG_REG_WD  						 		= 64		,	//长寄存器位宽
+	parameter	TX_DATA_WD									= 64		,	//本模块输入数据位宽，gvcp流和gvsp流的数据位宽
+	parameter	TX_BE_WD									= 8			,	//本模块输入字节使能标志位位宽
+	parameter	MAC_BE_WD									= 8			,	//帧存输出数据使能位宽，1byte数据使用一个使能位
+	parameter	MAC_DATA_WD									= 64			//帧存输出数据位宽，支持32、64、128...，最小是32。每32位数据，有3个使能信号。
+	)
+	(
+	//  -------------------------------------------------------------------------------------
+	//  时钟和复位信号
+	//  -------------------------------------------------------------------------------------
+	input							clk									,	//工作时钟
+	input							reset								,	//工作时钟域的复位信号，高有效
+	//	-------------------------------------------------------------------------------------
+	//	流控信号
+	//	-------------------------------------------------------------------------------------
+	input							i_stream_enable						,	//clk时钟域，i_stream_enable=0时表示停流，需要打断当前gvsp包和包间隔
+	//	===============================================================================================
+	//	与 gvsp gvcp 交互
+	//	===============================================================================================
+	//  -------------------------------------------------------------------------------------
+	//  gvsp flow 交互
+	//  -------------------------------------------------------------------------------------
+	input							i_pb_empty							,	//clk时钟域，packet buffer空信号，高有效,空时表明前端停流
+	output							o_pb_rd_en							,	//clk时钟域，packet buffer读使能，高有效
+	input	[TX_BE_WD-1:0]			iv_gvsp_be							,	//clk时钟域，packet buffer输出数据的字节使能信号，高有效
+	input	[TX_DATA_WD-1:0]		iv_gvsp_data						,	//clk时钟域，packet buffer输出数据，10G时位宽是64bit，1G时位宽可以选择64 32 16
+	output							o_pcb_rd_en							,	//clk时钟域，packet cmd buffer读使能，高有效
+	input							i_pcb_empty							,	//clk时钟域，packet cmd buffer空信号，高有效
+	//  -------------------------------------------------------------------------------------
+	//  控制寄存器输入
+	//  -------------------------------------------------------------------------------------
+	input	[47:0]					iv_pc_mac							,	//clk时钟域，mac pc address
+	input	[47:0]					iv_camera_mac						,	//clk时钟域，mac camera address
+	input	[REG_WD-1:0]			iv_packet_gap						,	//clk时钟域，包间隔,单位1byte,理论最小值为12，但此处必须设置为8的整数倍，所以最小值为16
+	input							i_gvcp_ack_txen						,	//clk时钟域，gvcp发送使能，高有效，固件置位，fpga清0
+	output							o_gvcp_ack_tx_start					,	//clk时钟域，gvcp开始发送信号，单脉冲信号，高有效，当该信号为1时，将gvcp_ack_txen清0
+	//  -------------------------------------------------------------------------------------
+	//  gvcp flow 交互
+	//  -------------------------------------------------------------------------------------
+	output							o_gvcp_tx_ram_rd					,	//clk时钟域，gvcp tx ram 读信号，高有效
+	input	[TX_BE_WD-1:0]			iv_gvcp_tx_ram_be					,	//clk时钟域，gvcp数据字节有效信号，高有效
+	input	[TX_DATA_WD-1:0]		iv_gvcp_tx_ram_data					,	//clk时钟域，gvcp数据
+	//	===============================================================================================
+	//	与 mac 交互
+	//	===============================================================================================
+	//  -------------------------------------------------------------------------------------
+	//	axi stream 信号
+	//  -------------------------------------------------------------------------------------
+	output	[7:0]					ov_tx_ifg_delay						,	//clk时钟域，mac控制包间隔输入端口，本设计中设置为0，使用状态机控制包间隔
+	output							o_tx_axis_aresetn					,	//clk时钟域，mac发送端复位信号
+	output	[MAC_DATA_WD-1:0]		ov_tx_axis_tdata					,	//clk时钟域，
+	output	[MAC_BE_WD-1:0]			ov_tx_axis_tkeep					,	//clk时钟域，
+	output							o_tx_axis_tvalid					,	//clk时钟域，
+	output							o_tx_axis_tlast						,	//clk时钟域，
+	output							o_tx_axis_tuser						,	//clk时钟域，
+	input							i_tx_axis_tready						//clk时钟域，
+	);
+	//	===============================================================================================
+	//	ref functions
+	//	===============================================================================================
+	//	-------------------------------------------------------------------------------------
+	//	计算位宽
+	//	-------------------------------------------------------------------------------------
+	function integer log2 (input integer xx);
+		integer x;
+		begin
+			x	= xx-1 ;
+			for (log2=0;x>0;log2=log2+1) begin
+				x	= x >> 1;
+			end
+		end
+	endfunction
+	//	-------------------------------------------------------------------------------------
+	//	向上取整函数
+	//	-------------------------------------------------------------------------------------
+//	function integer intup;
+//		input integer a;
+//		input integer b;
+//		intup = a % b == 0 ? a / b : a / b + 1;
+//	endfunction
+	//	-------------------------------------------------------------------------------------
+	//	取最大值
+	//	-------------------------------------------------------------------------------------
+	function integer max(input integer n1, input integer n2);
+		max = (n1 > n2) ? n1 : n2;
+	endfunction
+
+	//	===============================================================================================
+	//	ref paramters
+	//	===============================================================================================
+	//	状态机状态
+	localparam			S_IDLE			= 3'd0	;	//空闲状态，此时既没有发送gvsp包，也没有发送gvcp包
+	localparam			S_GVCP			= 3'd1	;	//GVCP发包状态，将tx_ram的gvcp包数据（包括Ethernet、IP、UDP、GVCP）发送给mac端口
+	localparam			S_MAC			= 3'd2	;	//将Ethernet协议的14byte和IP协议的2byte发送给mac端口
+	localparam			S_GVSP			= 3'd3	;	//发送IP协议的剩余字段和IP、UDP、GVSP部分
+	localparam			S_GAP			= 3'd4	;	//每个GVSP包发完后添加包间隔
+	//
+	localparam			PROTOCOL_BYTES	= 14+2	;	//本模块需要添加的协议包括14bytes的Ethernet协议和2bytes的IP协议
+	localparam			SMAC_NUM		= PROTOCOL_BYTES / MAC_BE_WD ;	//状态机在SMAC_NUM状态停留的时间
+	localparam			DATA_CNT_WD		= max(log2(TX_DATA_WD/MAC_DATA_WD),1);//DATA_CNT_WD最小为1，否则在例化寄存器时会出现负值
+	parameter			TYPE_IP			= 16'h800;	//Ethernet协议中，类型为IP
+	parameter			TYPE_IPV4		= 4'h4	;	//IP协议中，版本为ipv4
+	parameter			IHL				= 4'h5	;	//ip_leader_length,IP协议中，ip头长度为20byte,此处单位为4byte
+	//	===============================================================================================
+	//	ref signals
+	//	===============================================================================================
+	reg		[2:0]				current_state	= S_IDLE;	//状态机当前状态
+	reg		[2:0]				next_state		= S_IDLE;	//状态机下一个状态
+	wire						current_idle			;	//指示当前状态为S_IDLE
+	wire						current_gvcp			;	//指示当前状态为S_GVCP
+	reg							current_gvcp_dly		;
+	wire						jump_in_gvcp			;	//指示跳入S_GVCP状态的第一个clk
+	wire						current_mac				;	//指示当前状态为S_MAC
+	reg							current_mac_dly			;
+	wire						jump_in_mac				;	//指示跳入S_MAC状态的第一个clk
+	wire						current_gvsp			;	//指示当前状态为S_GVSP
+	wire						current_gap				;	//指示当前状态为S_GAP
+	reg		[REG_WD-1:0]		fsm_cnt			= 0		;	//状态机计数器
+	reg		[REG_WD-1:0]		sgap_num			= 1		;	//状态机在S_GAP状态停留的时间,最少为1
+	wire	[REG_WD-1:0]		total_gaps				;	//包间隔+4bytes fcs校验字+7bytes前导码+1byte起始位,最小值为24
+	reg		[MAC_DATA_WD-1:0]	tx_tdata		= 0		;
+	reg		[MAC_BE_WD-1:0]		tx_tkeep		= 0		;
+	reg							tx_tvalid		= 0		;
+	reg							tuser			= 0		;
+	reg		[DATA_CNT_WD-1:0]	data_cnt		= 0		;	//当输入数据比输出数据宽时，需要计数data_cnt个周期才可以输出一个clk的输入
+	reg		[TX_BE_WD-1:0]		gvcp_be_shift	= 0		;
+	reg		[TX_BE_WD-1:0]		gvsp_be_shift	= 0		;
+	reg		[TX_DATA_WD-1:0]	gvcp_data_shift	= 0		;
+	reg		[TX_DATA_WD-1:0]	gvsp_data_shift	= 0		;
+	wire	[16*8-1:0]			mac_data				;	//目的mac、源mac、长度\类型字段和IP协议中的版本\首部长度和服务类型字段,共16字节
+	reg		[16*8-1:0]			mac_data_shift	= 0		;
+	wire	[6*8-1:0]			dst_mac					;	//以太网协议中的目的mac
+	wire	[6*8-1:0]			src_mac					;	//以太网协议中的源mac
+	wire	[2*8-1:0]			len_type				;	//以太网协议中的长度类型
+	wire	[1*8-1:0]			ver_ihl					;	//IP协议中的版本、首部长度
+	wire	[1*8-1:0]			tos						;	//(TYPE OF SERVICE)IP协议中的服务类型
+	//	===============================================================================================
+	//	ref ARCHITECTURE
+	//	===============================================================================================
+	//  -------------------------------------------------------------------------------------
+	//	edge
+	//  -------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		current_gvcp_dly <= current_gvcp	;
+		current_mac_dly	<=	current_mac		;
+	end
+	assign jump_in_gvcp = {current_gvcp_dly,current_gvcp} == 2'b01 ? 1'b1 : 1'b0;
+	assign jump_in_mac  = {current_mac_dly,current_mac} == 2'b01 ? 1'b1 : 1'b0;
+
+	assign	total_gaps		=	iv_packet_gap + 4 + 7 + 1	;//包间隔+4bytes fcs校验字+7bytes前导码+1byte起始位
+	//	总冗余clk=S_IDLE(1clk)+sgap_num=总冗余byte数/MAC_BE_WD
+	//	必须保证sgap_num至少为1，否则状态机跳转异常
+	always @ (posedge clk) begin
+		if(current_state == S_IDLE) begin
+			sgap_num <= max((total_gaps >> log2(MAC_BE_WD)) - 3,0)	;
+		end
+	end
+	//	-------------------------------------------------------------------------------------
+	//	FSM Sequential Logic
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		if(reset) begin
+			current_state	<= S_IDLE;
+		end
+		else begin
+			current_state	<= next_state;
+		end
+	end
+
+	//	-------------------------------------------------------------------------------------
+	//	FSM Conbinatial Logic
+	//	-------------------------------------------------------------------------------------
+	always @ ( * ) begin
+		next_state = S_IDLE	;
+		case(current_state)
+			S_IDLE	:
+				//当i_gvcp_ack_txen为高时，说明tx_ram中的gvcp包已经准备就绪，状态机跳转到S_GVCP状态
+				if(i_gvcp_ack_txen) begin
+					next_state = S_GVCP	;
+				end
+				//当i_pcb_empty为0时，说明packet_buffer中gvsp已经准备就绪，状态机跳转到S_MAC状态
+				else if(i_stream_enable && (!i_pcb_empty)) begin
+					next_state = S_MAC	;
+				end
+				else begin
+					next_state = S_IDLE	;
+				end
+			S_GVCP	:
+				//当iv_gvcp_tx_ram_be全0时，说明已经到gvcp包尾，状态机跳转到S_GVCP状态
+				if(|iv_gvcp_tx_ram_be == 0 && i_tx_axis_tready == 1) begin
+					next_state = S_IDLE	;
+				end
+				else begin
+					next_state = S_GVCP	;
+				end
+			S_MAC	:
+				//在S_MAC状态需要发送Ethernet协议和部分ip协议内容
+				if(i_tx_axis_tready && fsm_cnt == SMAC_NUM - 1) begin
+					next_state = S_GVSP ;
+				end
+				else begin
+					next_state = S_MAC	;
+				end
+			S_GVSP	:
+				//当i_stream_enable变为0时，说明前端停流，跳转到S_IDLE状态
+				if(!i_stream_enable && i_tx_axis_tready == 1) begin
+					next_state = S_IDLE	;
+				end
+				//如果读出iv_gvsp_be全0，说明已经到包尾，跳转到S_GAP状态
+				else if(|iv_gvsp_be == 0 && i_tx_axis_tready == 1) begin
+					//如果计算得到sgap_num为0，就要跳过S_GAP状态直接进S_IDLE
+					if(|sgap_num == 0) begin
+						next_state = S_IDLE	;
+					end
+					else begin
+						next_state = S_GAP	;
+					end
+				end
+				else begin
+					next_state = S_GVSP	;
+				end
+			S_GAP	:
+				if(!i_stream_enable) begin
+					next_state = S_IDLE	;
+				end
+				//包间隔时间由S_GAP状态和S_IDLE状态共同贡献，其中S_IDLE最少贡献1clk
+				else if(fsm_cnt == sgap_num - 1) begin
+					next_state = S_IDLE	;
+				end
+				else begin
+					next_state = S_GAP	;
+				end
+			default	:
+				next_state	= S_IDLE;
+		endcase
+	end
+	// 做一些当前状态的标志位，这样在以后使用时可以减少逻辑
+	assign	current_idle = current_state == S_IDLE	;
+	assign	current_gvcp = current_state == S_GVCP	;
+	assign	current_mac	 = current_state == S_MAC	;
+	assign	current_gvsp = current_state == S_GVSP	;
+	assign	current_gap	 = current_state == S_GAP	;
+	//	-------------------------------------------------------------------------------------
+	//	FSM cnt
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		if(current_mac) begin
+			if(i_tx_axis_tready) begin
+				if(fsm_cnt == SMAC_NUM - 1) begin
+					fsm_cnt <= 0 ;
+				end
+				else begin
+					fsm_cnt <= fsm_cnt + 1'b1;
+				end
+			end
+		end
+		else if(current_gap) begin
+			if(fsm_cnt == sgap_num - 1) begin
+				fsm_cnt <= 0 ;
+			end
+			else begin
+				fsm_cnt <= fsm_cnt + 1'b1 ;
+			end
+		end
+		else begin
+			fsm_cnt <= 'b0	;
+		end
+	end
+	//	-------------------------------------------------------------------------------------
+	//	FSM Output Logic
+	//	-------------------------------------------------------------------------------------
+	//	data_cnt:
+	generate
+		if(TX_DATA_WD == MAC_DATA_WD) begin
+			always @ (posedge clk) begin
+				data_cnt <= 'b0;
+			end
+		end
+		//	1.在S_GVCP S_MAC S_GVSP状态
+		//	2.每当tready为1时，cnt累加，说明当前数据被成功发送给mac
+		else begin
+			always @ (posedge clk) begin
+				if(current_gvcp || current_mac || current_gvsp) begin
+					if(i_tx_axis_tready) begin
+						data_cnt <= data_cnt + 1'b1;
+					end
+				end
+				else begin
+					data_cnt <= 'b0;
+				end
+			end
+		end
+	endgenerate
+
+	//	o_gvcp_tx_ram_rd:在S_GVCP状态下，当data_cnt为0且i_tx_axis_tready为1时o_gvcp_tx_ram_rd为1，否则为0
+	assign o_gvcp_tx_ram_rd = current_gvcp && (data_cnt == 0) && i_tx_axis_tready;
+	//	o_pb_rd_en:在S_GVSP状态下
+	//	1.当i_pb_empty为1时，o_pb_rd_en为0，否则
+	//	2.当cnt为0（图 中4-1）且i_tx_axis_tready为1（图中4-2）时o_pb_rd_en为1
+	//	3.其它为0
+	assign o_pb_rd_en = (!i_pb_empty) && current_gvsp && (data_cnt==0) && i_tx_axis_tready;
+	assign o_pcb_rd_en = jump_in_mac;
+	assign o_gvcp_ack_tx_start = jump_in_gvcp;
+	//	-------------------------------------------------------------------------------------
+	//	ov_tx_axis_tkeep
+	//	-------------------------------------------------------------------------------------
+	//	S_GVCP状态输出：
+	//	1.data_cnt为0时，从tx_ram中取一个数
+	//	2.mac准备好时，依次将数据发出去
+	always @ (posedge clk) begin
+		if(current_gvcp) begin
+			if(i_tx_axis_tready) begin
+				if(data_cnt==0) begin
+					gvcp_be_shift <= iv_gvcp_tx_ram_be;
+				end
+				else begin
+					gvcp_be_shift <= gvcp_be_shift >> MAC_BE_WD;
+				end
+			end
+		end
+	end
+	//	S_MAC状态输出:总是输出全1
+
+	//	S_GVSP状态输出：
+	//	1.data_cnt为0时，从iv_gvsp_be中取一个数
+	//	2.mac准备好时，依次将数据发出去
+	//	3.需要注意的是gvsp_be_shift进入S_GVSP时应该为全1，这样在第一个周期可以将S_MAC状态的最后一组数据发出去
+	always @ (posedge clk) begin
+		if(current_gvsp) begin
+			if(i_tx_axis_tready)begin
+				if(data_cnt==0) begin
+					gvsp_be_shift <= iv_gvsp_be;
+				end
+				else begin
+					gvsp_be_shift <= gvsp_be_shift >> MAC_BE_WD;
+				end
+			end
+		end
+		else begin
+			gvsp_be_shift <= {(TX_BE_WD){1'b1}};
+		end
+	end
+	//	选择输出
+	assign ov_tx_axis_tkeep = current_gvcp 		?	gvcp_be_shift[MAC_BE_WD-1:0]
+								:current_mac  	?	{(MAC_BE_WD){1'b1}}
+								:current_gvsp 	?	gvsp_be_shift[MAC_BE_WD-1:0] : 0;
+	//	-------------------------------------------------------------------------------------
+	//	ov_tx_axis_tdata
+	//	-------------------------------------------------------------------------------------
+	//	S_GVCP状态输出：
+	//	1.data_cnt为0时，从tx_ram中取一个数
+	//	2.mac准备好时，依次将数据发出去
+	always @ (posedge clk) begin
+		if(current_gvcp) begin
+			if(i_tx_axis_tready) begin
+				if(data_cnt==0) begin
+					gvcp_data_shift <= iv_gvcp_tx_ram_data;
+				end
+				else begin
+					gvcp_data_shift <= gvcp_data_shift >> MAC_DATA_WD;
+				end
+			end
+		end
+	end
+	//	S_MAC状态输出
+	assign dst_mac	= {iv_pc_mac[0*8+:8],iv_pc_mac[1*8+:8],iv_pc_mac[2*8+:8],iv_pc_mac[3*8+:8],iv_pc_mac[4*8+:8],iv_pc_mac[5*8+:8]};//1.目的mac是pc端的mac地址 2.改变字节顺序，按照以太网协议的大端排列
+	assign src_mac	= {iv_camera_mac[0*8+:8],iv_camera_mac[1*8+:8],iv_camera_mac[2*8+:8],iv_camera_mac[3*8+:8],iv_camera_mac[4*8+:8],iv_camera_mac[5*8+:8]};//1.源mac是相机端的mac地址 2.改变字节顺序，按照以太网协议的大端排列
+	assign len_type	= {TYPE_IP[0*8+:8],TYPE_IP[1*8+:8]};//使用ip协议；大端排列
+	assign ver_ihl	= {TYPE_IPV4[3:0],IHL[3:0]};//版本为iPv4（4）,首部长度为20字节（5）;按照以太网大端需要将版本放在高bit段
+	assign tos		= 0;//这个字段不使用，默认为0
+	assign mac_data = {tos[1*8-1:0],ver_ihl[1*8-1:0],len_type[2*8-1:0],src_mac[6*8-1:0],dst_mac[6*8-1:0]};
+
+	always @ (posedge clk) begin
+		if(current_idle) begin
+			mac_data_shift <= mac_data;
+		end
+		else if(current_mac && i_tx_axis_tready  && o_tx_axis_tvalid) begin
+			mac_data_shift <= mac_data_shift >> MAC_DATA_WD;
+		end
+	end
+	//	S_GVSP状态输出
+	//	1.data_cnt为0时，从iv_gvsp_data中取一个数
+	//	2.mac准备好时，依次将数据发出去
+	//	3.需要注意的是gvsp_data_shift进入S_GVSP时低位应该保存mac_data_shift最后一组待发送的数据，这样在第一个周期可以将S_MAC状态的最后一组数据发出去
+	always @ (posedge clk) begin
+		if(current_gvsp) begin
+			if(i_tx_axis_tready) begin
+				if(data_cnt==0) begin
+					gvsp_data_shift <= iv_gvsp_data;
+				end
+				else begin
+					gvsp_data_shift <= gvsp_data_shift >> MAC_DATA_WD;
+				end
+			end
+		end
+		else begin
+			gvsp_data_shift[0+:MAC_DATA_WD] <= mac_data[16*8-1-:MAC_DATA_WD];
+		end
+	end
+	//	选择输出
+	assign	ov_tx_axis_tdata = current_gvcp		?	gvcp_data_shift[MAC_DATA_WD-1:0]
+								: current_mac	?	mac_data_shift[MAC_DATA_WD-1:0]
+								: current_gvsp	?	gvsp_data_shift[MAC_DATA_WD-1:0] : 0;
+	//	-------------------------------------------------------------------------------------
+	//	o_tx_axis_tvalid仅在S_GVCP S_MAC S_GVSP状态有输出，具体时序可以参考详细设计时序图
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		if(current_gvcp || current_mac || current_gvsp) begin
+			if(i_tx_axis_tready) begin
+				tx_tvalid <= 1'b1	;
+			end
+		end
+		else begin
+			tx_tvalid <= 1'b0	;
+		end
+	end
+	assign o_tx_axis_tvalid = tx_tvalid && (current_gvcp || current_mac || current_gvsp);
+
+	//	-------------------------------------------------------------------------------------
+	//	tlast为1的条件有：
+	//	1.S_GVCP状态,iv_gvcp_tx_ram_be全0时，或
+	//	2.S_GVSP状态
+	//	--iv_gvsp_be全0时，或
+	//	--i_stream_enable为0时
+	//	-------------------------------------------------------------------------------------
+	assign o_tx_axis_tlast 	= (current_gvcp && (|iv_gvcp_tx_ram_be == 0) && i_tx_axis_tready == 1)
+								||(current_gvsp && (|iv_gvsp_be == 0) && i_tx_axis_tready == 1)
+								||(current_gvsp && (!i_stream_enable) && i_tx_axis_tready == 1);
+	//	-------------------------------------------------------------------------------------
+	//	o_tx_axis_tuser为1的条件：S_GVSP状态;i_stream_enable为0
+	//	-------------------------------------------------------------------------------------
+	assign o_tx_axis_tuser = current_gvsp && (!i_stream_enable)	;
+	//	-------------------------------------------------------------------------------------
+	//	ov_tx_ifg_delay
+	//	-------------------------------------------------------------------------------------
+	assign ov_tx_ifg_delay	 = 'b0		;//tx_ifg_delay固定为0
+	//	-------------------------------------------------------------------------------------
+	//	o_tx_axis_aresetn
+	//	-------------------------------------------------------------------------------------
+	assign o_tx_axis_aresetn = !reset	;
+
+
+
+
+
+endmodule

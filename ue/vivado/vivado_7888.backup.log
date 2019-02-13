@@ -1,0 +1,531 @@
+#-----------------------------------------------------------
+# Vivado v2018.1 (64-bit)
+# SW Build 2188600 on Wed Apr  4 18:40:38 MDT 2018
+# IP Build 2185939 on Wed Apr  4 20:55:05 MDT 2018
+# Start of session at: Tue Feb 12 16:38:52 2019
+# Process ID: 7888
+# Current directory: c:/ue/vivado
+# Command line: vivado.exe -mode tcl -source synthesis.tcl
+# Log file: c:/ue/vivado/vivado.log
+# Journal file: c:/ue/vivado\vivado.jou
+#-----------------------------------------------------------
+source synthesis.tcl
+# read_verilog  F:/DAHENG/hw_mars/mars_platform/TD/Development_Phase/003_develop_phase/fpga_platform/ver10/src/gige_vision/gvsp_tx/ip_udp_gvsp_format.v
+# read_xdc src/template.xdc 
+# synth_design -top ip_udp_gvsp_format -part xc7a100tfgg484-2 
+Command: synth_design -top ip_udp_gvsp_format -part xc7a100tfgg484-2
+Starting synth_design
+Attempting to get a license for feature 'Synthesis' and/or device 'xc7a100t'
+INFO: [Common 17-349] Got license for feature 'Synthesis' and/or device 'xc7a100t'
+INFO: Launching helper process for spawning children vivado processes
+INFO: Helper process launched with PID 10576 
+---------------------------------------------------------------------------------
+Starting RTL Elaboration : Time (s): cpu = 00:00:09 ; elapsed = 00:00:09 . Memory (MB): peak = 416.496 ; gain = 101.129
+---------------------------------------------------------------------------------
+INFO: [Synth 8-6157] synthesizing module 'ip_udp_gvsp_format' [F:/DAHENG/hw_mars/mars_platform/TD/Development_Phase/003_develop_phase/fpga_platform/ver10/src/gige_vision/gvsp_tx/ip_udp_gvsp_format.v:29]
+	Parameter SHORT_REG_WD bound to: 16 - type: integer 
+	Parameter REG_WD bound to: 32 - type: integer 
+	Parameter LONG_REG_WD bound to: 64 - type: integer 
+	Parameter GEV_BE_WD bound to: 8 - type: integer 
+	Parameter GEV_DATA_WD bound to: 64 - type: integer 
+	Parameter PKT_LENGTH_WD bound to: 13 - type: integer 
+	Parameter PKT_CNT_WD bound to: 18 - type: integer 
+	Parameter TOTOAL_BYTES bound to: 34 - type: integer 
+	Parameter CLK_NUMS bound to: 5 - type: integer 
+	Parameter LAST_BYTES bound to: 2 - type: integer 
+	Parameter CNT_WD bound to: 3 - type: integer 
+	Parameter TYPE_UDP bound to: 8'b00010001 
+	Parameter GEV_STATUS_SUCCESS bound to: 16'b0000000000000000 
+	Parameter GEV_STATUS_PACKET_UNAVAILABLE bound to: 16'b1000000000001100 
+	Parameter DATA_LEADER_FORMAT bound to: 8'b00000001 
+	Parameter DATA_TRAILER_FORMAT bound to: 8'b00000010 
+	Parameter DATA_PAYLOAD_FORMAT bound to: 8'b00000011 
+	Parameter TYPE_IPV4 bound to: 4'b0100 
+WARNING: [Synth 8-6014] Unused sequential element ip_checksum_step1_sum1_reg was removed.  [F:/DAHENG/hw_mars/mars_platform/TD/Development_Phase/003_develop_phase/fpga_platform/ver10/src/gige_vision/gvsp_tx/ip_udp_gvsp_format.v:472]
+WARNING: [Synth 8-6014] Unused sequential element ip_checksum_step1_sum2_reg was removed.  [F:/DAHENG/hw_mars/mars_platform/TD/Development_Phase/003_develop_phase/fpga_platform/ver10/src/gige_vision/gvsp_tx/ip_udp_gvsp_format.v:473]
+INFO: [Synth 8-6155] done synthesizing module 'ip_udp_gvsp_format' (1#1) [F:/DAHENG/hw_mars/mars_platform/TD/Development_Phase/003_develop_phase/fpga_platform/ver10/src/gige_vision/gvsp_tx/ip_udp_gvsp_format.v:29]
+WARNING: [Synth 8-3331] design ip_udp_gvsp_format has unconnected port iv_bid_resend[63]
+WARNING: [Synth 8-3331] design ip_udp_gvsp_format has unconnected port iv_bid_resend[62]
+WARNING: [Synth 8-3331] design ip_udp_gvsp_format has unconnected port iv_bid_resend[61]
+WARNING: [Synth 8-3331] design ip_udp_gvsp_format has unconnected port iv_bid_resend[60]
+WARNING: [Synth 8-3331] design ip_udp_gvsp_format has unconnected port iv_bid_resend[59]
+WARNING: [Synth 8-3331] design ip_udp_gvsp_format has unconnected port iv_bid_resend[58]
+WARNING: [Synth 8-3331] design ip_udp_gvsp_format has unconnected port iv_bid_resend[57]
+WARNING: [Synth 8-3331] design ip_udp_gvsp_format has unconnected port iv_bid_resend[56]
+WARNING: [Synth 8-3331] design ip_udp_gvsp_format has unconnected port iv_bid_resend[55]
+WARNING: [Synth 8-3331] design ip_udp_gvsp_format has unconnected port iv_bid_resend[54]
+WARNING: [Synth 8-3331] design ip_udp_gvsp_format has unconnected port iv_bid_resend[53]
+WARNING: [Synth 8-3331] design ip_udp_gvsp_format has unconnected port iv_bid_resend[52]
+WARNING: [Synth 8-3331] design ip_udp_gvsp_format has unconnected port iv_bid_resend[51]
+WARNING: [Synth 8-3331] design ip_udp_gvsp_format has unconnected port iv_bid_resend[50]
+WARNING: [Synth 8-3331] design ip_udp_gvsp_format has unconnected port iv_bid_resend[49]
+WARNING: [Synth 8-3331] design ip_udp_gvsp_format has unconnected port iv_bid_resend[48]
+WARNING: [Synth 8-3331] design ip_udp_gvsp_format has unconnected port iv_bid_resend[47]
+WARNING: [Synth 8-3331] design ip_udp_gvsp_format has unconnected port iv_bid_resend[46]
+WARNING: [Synth 8-3331] design ip_udp_gvsp_format has unconnected port iv_bid_resend[45]
+WARNING: [Synth 8-3331] design ip_udp_gvsp_format has unconnected port iv_bid_resend[44]
+WARNING: [Synth 8-3331] design ip_udp_gvsp_format has unconnected port iv_bid_resend[43]
+WARNING: [Synth 8-3331] design ip_udp_gvsp_format has unconnected port iv_bid_resend[42]
+WARNING: [Synth 8-3331] design ip_udp_gvsp_format has unconnected port iv_bid_resend[41]
+WARNING: [Synth 8-3331] design ip_udp_gvsp_format has unconnected port iv_bid_resend[40]
+WARNING: [Synth 8-3331] design ip_udp_gvsp_format has unconnected port iv_bid_resend[39]
+WARNING: [Synth 8-3331] design ip_udp_gvsp_format has unconnected port iv_bid_resend[38]
+WARNING: [Synth 8-3331] design ip_udp_gvsp_format has unconnected port iv_bid_resend[37]
+WARNING: [Synth 8-3331] design ip_udp_gvsp_format has unconnected port iv_bid_resend[36]
+WARNING: [Synth 8-3331] design ip_udp_gvsp_format has unconnected port iv_bid_resend[35]
+WARNING: [Synth 8-3331] design ip_udp_gvsp_format has unconnected port iv_bid_resend[34]
+WARNING: [Synth 8-3331] design ip_udp_gvsp_format has unconnected port iv_bid_resend[33]
+WARNING: [Synth 8-3331] design ip_udp_gvsp_format has unconnected port iv_bid_resend[32]
+WARNING: [Synth 8-3331] design ip_udp_gvsp_format has unconnected port iv_bid_resend[31]
+WARNING: [Synth 8-3331] design ip_udp_gvsp_format has unconnected port iv_bid_resend[30]
+WARNING: [Synth 8-3331] design ip_udp_gvsp_format has unconnected port iv_bid_resend[29]
+WARNING: [Synth 8-3331] design ip_udp_gvsp_format has unconnected port iv_bid_resend[28]
+WARNING: [Synth 8-3331] design ip_udp_gvsp_format has unconnected port iv_bid_resend[27]
+WARNING: [Synth 8-3331] design ip_udp_gvsp_format has unconnected port iv_bid_resend[26]
+WARNING: [Synth 8-3331] design ip_udp_gvsp_format has unconnected port iv_bid_resend[25]
+WARNING: [Synth 8-3331] design ip_udp_gvsp_format has unconnected port iv_bid_resend[24]
+WARNING: [Synth 8-3331] design ip_udp_gvsp_format has unconnected port iv_bid_resend[23]
+WARNING: [Synth 8-3331] design ip_udp_gvsp_format has unconnected port iv_bid_resend[22]
+WARNING: [Synth 8-3331] design ip_udp_gvsp_format has unconnected port iv_bid_resend[21]
+WARNING: [Synth 8-3331] design ip_udp_gvsp_format has unconnected port iv_bid_resend[20]
+WARNING: [Synth 8-3331] design ip_udp_gvsp_format has unconnected port iv_bid_resend[19]
+WARNING: [Synth 8-3331] design ip_udp_gvsp_format has unconnected port iv_bid_resend[18]
+WARNING: [Synth 8-3331] design ip_udp_gvsp_format has unconnected port iv_bid_resend[17]
+WARNING: [Synth 8-3331] design ip_udp_gvsp_format has unconnected port iv_bid_resend[16]
+WARNING: [Synth 8-3331] design ip_udp_gvsp_format has unconnected port iv_bid_normal[63]
+WARNING: [Synth 8-3331] design ip_udp_gvsp_format has unconnected port iv_bid_normal[62]
+WARNING: [Synth 8-3331] design ip_udp_gvsp_format has unconnected port iv_bid_normal[61]
+WARNING: [Synth 8-3331] design ip_udp_gvsp_format has unconnected port iv_bid_normal[60]
+WARNING: [Synth 8-3331] design ip_udp_gvsp_format has unconnected port iv_bid_normal[59]
+WARNING: [Synth 8-3331] design ip_udp_gvsp_format has unconnected port iv_bid_normal[58]
+WARNING: [Synth 8-3331] design ip_udp_gvsp_format has unconnected port iv_bid_normal[57]
+WARNING: [Synth 8-3331] design ip_udp_gvsp_format has unconnected port iv_bid_normal[56]
+WARNING: [Synth 8-3331] design ip_udp_gvsp_format has unconnected port iv_bid_normal[55]
+WARNING: [Synth 8-3331] design ip_udp_gvsp_format has unconnected port iv_bid_normal[54]
+WARNING: [Synth 8-3331] design ip_udp_gvsp_format has unconnected port iv_bid_normal[53]
+WARNING: [Synth 8-3331] design ip_udp_gvsp_format has unconnected port iv_bid_normal[52]
+WARNING: [Synth 8-3331] design ip_udp_gvsp_format has unconnected port iv_bid_normal[51]
+WARNING: [Synth 8-3331] design ip_udp_gvsp_format has unconnected port iv_bid_normal[50]
+WARNING: [Synth 8-3331] design ip_udp_gvsp_format has unconnected port iv_bid_normal[49]
+WARNING: [Synth 8-3331] design ip_udp_gvsp_format has unconnected port iv_bid_normal[48]
+WARNING: [Synth 8-3331] design ip_udp_gvsp_format has unconnected port iv_bid_normal[47]
+WARNING: [Synth 8-3331] design ip_udp_gvsp_format has unconnected port iv_bid_normal[46]
+WARNING: [Synth 8-3331] design ip_udp_gvsp_format has unconnected port iv_bid_normal[45]
+WARNING: [Synth 8-3331] design ip_udp_gvsp_format has unconnected port iv_bid_normal[44]
+WARNING: [Synth 8-3331] design ip_udp_gvsp_format has unconnected port iv_bid_normal[43]
+WARNING: [Synth 8-3331] design ip_udp_gvsp_format has unconnected port iv_bid_normal[42]
+WARNING: [Synth 8-3331] design ip_udp_gvsp_format has unconnected port iv_bid_normal[41]
+WARNING: [Synth 8-3331] design ip_udp_gvsp_format has unconnected port iv_bid_normal[40]
+WARNING: [Synth 8-3331] design ip_udp_gvsp_format has unconnected port iv_bid_normal[39]
+WARNING: [Synth 8-3331] design ip_udp_gvsp_format has unconnected port iv_bid_normal[38]
+WARNING: [Synth 8-3331] design ip_udp_gvsp_format has unconnected port iv_bid_normal[37]
+WARNING: [Synth 8-3331] design ip_udp_gvsp_format has unconnected port iv_bid_normal[36]
+WARNING: [Synth 8-3331] design ip_udp_gvsp_format has unconnected port iv_bid_normal[35]
+WARNING: [Synth 8-3331] design ip_udp_gvsp_format has unconnected port iv_bid_normal[34]
+WARNING: [Synth 8-3331] design ip_udp_gvsp_format has unconnected port iv_bid_normal[33]
+WARNING: [Synth 8-3331] design ip_udp_gvsp_format has unconnected port iv_bid_normal[32]
+WARNING: [Synth 8-3331] design ip_udp_gvsp_format has unconnected port iv_bid_normal[31]
+WARNING: [Synth 8-3331] design ip_udp_gvsp_format has unconnected port iv_bid_normal[30]
+WARNING: [Synth 8-3331] design ip_udp_gvsp_format has unconnected port iv_bid_normal[29]
+WARNING: [Synth 8-3331] design ip_udp_gvsp_format has unconnected port iv_bid_normal[28]
+WARNING: [Synth 8-3331] design ip_udp_gvsp_format has unconnected port iv_bid_normal[27]
+WARNING: [Synth 8-3331] design ip_udp_gvsp_format has unconnected port iv_bid_normal[26]
+WARNING: [Synth 8-3331] design ip_udp_gvsp_format has unconnected port iv_bid_normal[25]
+WARNING: [Synth 8-3331] design ip_udp_gvsp_format has unconnected port iv_bid_normal[24]
+WARNING: [Synth 8-3331] design ip_udp_gvsp_format has unconnected port iv_bid_normal[23]
+WARNING: [Synth 8-3331] design ip_udp_gvsp_format has unconnected port iv_bid_normal[22]
+WARNING: [Synth 8-3331] design ip_udp_gvsp_format has unconnected port iv_bid_normal[21]
+WARNING: [Synth 8-3331] design ip_udp_gvsp_format has unconnected port iv_bid_normal[20]
+WARNING: [Synth 8-3331] design ip_udp_gvsp_format has unconnected port iv_bid_normal[19]
+WARNING: [Synth 8-3331] design ip_udp_gvsp_format has unconnected port iv_bid_normal[18]
+WARNING: [Synth 8-3331] design ip_udp_gvsp_format has unconnected port iv_bid_normal[17]
+WARNING: [Synth 8-3331] design ip_udp_gvsp_format has unconnected port iv_bid_normal[16]
+---------------------------------------------------------------------------------
+Finished RTL Elaboration : Time (s): cpu = 00:00:10 ; elapsed = 00:00:11 . Memory (MB): peak = 466.828 ; gain = 151.461
+---------------------------------------------------------------------------------
+
+Report Check Netlist: 
++------+------------------+-------+---------+-------+------------------+
+|      |Item              |Errors |Warnings |Status |Description       |
++------+------------------+-------+---------+-------+------------------+
+|1     |multi_driven_nets |      0|        0|Passed |Multi driven nets |
++------+------------------+-------+---------+-------+------------------+
+---------------------------------------------------------------------------------
+Start Handling Custom Attributes
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Handling Custom Attributes : Time (s): cpu = 00:00:11 ; elapsed = 00:00:11 . Memory (MB): peak = 466.828 ; gain = 151.461
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished RTL Optimization Phase 1 : Time (s): cpu = 00:00:11 ; elapsed = 00:00:11 . Memory (MB): peak = 466.828 ; gain = 151.461
+---------------------------------------------------------------------------------
+INFO: [Device 21-403] Loading part xc7a100tfgg484-2
+INFO: [Project 1-570] Preparing netlist for logic optimization
+
+Processing XDC Constraints
+Initializing timing engine
+Parsing XDC File [c:/ue/vivado/src/template.xdc]
+WARNING: [Vivado 12-584] No ports matched 'clk'. [c:/ue/vivado/src/template.xdc:46]
+CRITICAL WARNING: [Vivado 12-4739] create_clock:No valid object(s) found for '-objects [get_ports clk]'. [c:/ue/vivado/src/template.xdc:46]
+Resolution: Check if the specified object(s) exists in the current design. If it does, ensure that the correct design hierarchy was specified for the object. If you are working with clocks, make sure create_clock was used to create the clock object before it is referenced.
+WARNING: [Vivado 12-584] No ports matched 'clk_pix'. [c:/ue/vivado/src/template.xdc:48]
+CRITICAL WARNING: [Vivado 12-4739] create_clock:No valid object(s) found for '-objects [get_ports clk_pix]'. [c:/ue/vivado/src/template.xdc:48]
+Resolution: Check if the specified object(s) exists in the current design. If it does, ensure that the correct design hierarchy was specified for the object. If you are working with clocks, make sure create_clock was used to create the clock object before it is referenced.
+WARNING: [Vivado 12-584] No ports matched 'clk_osc'. [c:/ue/vivado/src/template.xdc:49]
+CRITICAL WARNING: [Vivado 12-4739] create_clock:No valid object(s) found for '-objects [get_ports clk_osc]'. [c:/ue/vivado/src/template.xdc:49]
+Resolution: Check if the specified object(s) exists in the current design. If it does, ensure that the correct design hierarchy was specified for the object. If you are working with clocks, make sure create_clock was used to create the clock object before it is referenced.
+WARNING: [Vivado 12-584] No ports matched 'clk_gtx'. [c:/ue/vivado/src/template.xdc:50]
+CRITICAL WARNING: [Vivado 12-4739] create_clock:No valid object(s) found for '-objects [get_ports clk_gtx]'. [c:/ue/vivado/src/template.xdc:50]
+Resolution: Check if the specified object(s) exists in the current design. If it does, ensure that the correct design hierarchy was specified for the object. If you are working with clocks, make sure create_clock was used to create the clock object before it is referenced.
+WARNING: [Vivado 12-584] No ports matched 'clk_grx'. [c:/ue/vivado/src/template.xdc:51]
+CRITICAL WARNING: [Vivado 12-4739] create_clock:No valid object(s) found for '-objects [get_ports clk_grx]'. [c:/ue/vivado/src/template.xdc:51]
+Resolution: Check if the specified object(s) exists in the current design. If it does, ensure that the correct design hierarchy was specified for the object. If you are working with clocks, make sure create_clock was used to create the clock object before it is referenced.
+WARNING: [Vivado 12-584] No ports matched 'clk_fb'. [c:/ue/vivado/src/template.xdc:52]
+CRITICAL WARNING: [Vivado 12-4739] create_clock:No valid object(s) found for '-objects [get_ports clk_fb]'. [c:/ue/vivado/src/template.xdc:52]
+Resolution: Check if the specified object(s) exists in the current design. If it does, ensure that the correct design hierarchy was specified for the object. If you are working with clocks, make sure create_clock was used to create the clock object before it is referenced.
+WARNING: [Vivado 12-584] No ports matched 'clk_sensor'. [c:/ue/vivado/src/template.xdc:53]
+CRITICAL WARNING: [Vivado 12-4739] create_clock:No valid object(s) found for '-objects [get_ports clk_sensor]'. [c:/ue/vivado/src/template.xdc:53]
+Resolution: Check if the specified object(s) exists in the current design. If it does, ensure that the correct design hierarchy was specified for the object. If you are working with clocks, make sure create_clock was used to create the clock object before it is referenced.
+WARNING: [Vivado 12-584] No ports matched 'clk_axi'. [c:/ue/vivado/src/template.xdc:54]
+CRITICAL WARNING: [Vivado 12-4739] create_clock:No valid object(s) found for '-objects [get_ports clk_axi]'. [c:/ue/vivado/src/template.xdc:54]
+Resolution: Check if the specified object(s) exists in the current design. If it does, ensure that the correct design hierarchy was specified for the object. If you are working with clocks, make sure create_clock was used to create the clock object before it is referenced.
+Finished Parsing XDC File [c:/ue/vivado/src/template.xdc]
+Completed Processing XDC Constraints
+
+INFO: [Project 1-111] Unisim Transformation Summary:
+No Unisim elements were transformed.
+
+Constraint Validation Runtime : Time (s): cpu = 00:00:00 ; elapsed = 00:00:00.007 . Memory (MB): peak = 823.625 ; gain = 0.000
+---------------------------------------------------------------------------------
+Finished Constraint Validation : Time (s): cpu = 00:00:38 ; elapsed = 00:00:39 . Memory (MB): peak = 823.625 ; gain = 508.258
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Loading Part and Timing Information
+---------------------------------------------------------------------------------
+Loading part: xc7a100tfgg484-2
+---------------------------------------------------------------------------------
+Finished Loading Part and Timing Information : Time (s): cpu = 00:00:38 ; elapsed = 00:00:39 . Memory (MB): peak = 823.625 ; gain = 508.258
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Applying 'set_property' XDC Constraints
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished applying 'set_property' XDC Constraints : Time (s): cpu = 00:00:38 ; elapsed = 00:00:39 . Memory (MB): peak = 823.625 ; gain = 508.258
+---------------------------------------------------------------------------------
+INFO: [Synth 8-5544] ROM "o_not_exist" won't be mapped to Block RAM because address size (2) smaller than threshold (5)
+INFO: [Synth 8-5545] ROM "not_exist_enable" won't be mapped to RAM because address size (32) is larger than maximum supported(25)
+---------------------------------------------------------------------------------
+Finished RTL Optimization Phase 2 : Time (s): cpu = 00:00:39 ; elapsed = 00:00:40 . Memory (MB): peak = 823.625 ; gain = 508.258
+---------------------------------------------------------------------------------
+
+Report RTL Partitions: 
++-+--------------+------------+----------+
+| |RTL Partition |Replication |Instances |
++-+--------------+------------+----------+
++-+--------------+------------+----------+
+---------------------------------------------------------------------------------
+Start RTL Component Statistics 
+---------------------------------------------------------------------------------
+Detailed RTL Component Info : 
++---Adders : 
+	   2 Input     19 Bit       Adders := 2     
+	   8 Input     19 Bit       Adders := 1     
+	   2 Input     16 Bit       Adders := 2     
+	   2 Input     14 Bit       Adders := 2     
+	   2 Input      3 Bit       Adders := 1     
++---Registers : 
+	              272 Bit    Registers := 1     
+	               16 Bit    Registers := 1     
+	               14 Bit    Registers := 1     
+	                3 Bit    Registers := 1     
+	                1 Bit    Registers := 7     
++---Muxes : 
+	   2 Input    272 Bit        Muxes := 3     
+	   2 Input     64 Bit        Muxes := 2     
+	   2 Input     24 Bit        Muxes := 1     
+	   2 Input     16 Bit        Muxes := 2     
+	   3 Input     16 Bit        Muxes := 1     
+	   2 Input     14 Bit        Muxes := 6     
+	   5 Input      8 Bit        Muxes := 1     
+	   2 Input      7 Bit        Muxes := 1     
+	   2 Input      2 Bit        Muxes := 2     
+	   3 Input      1 Bit        Muxes := 1     
+	   2 Input      1 Bit        Muxes := 10    
+---------------------------------------------------------------------------------
+Finished RTL Component Statistics 
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start RTL Hierarchical Component Statistics 
+---------------------------------------------------------------------------------
+Hierarchical RTL Component report 
+Module ip_udp_gvsp_format 
+Detailed RTL Component Info : 
++---Adders : 
+	   2 Input     19 Bit       Adders := 2     
+	   8 Input     19 Bit       Adders := 1     
+	   2 Input     16 Bit       Adders := 2     
+	   2 Input     14 Bit       Adders := 2     
+	   2 Input      3 Bit       Adders := 1     
++---Registers : 
+	              272 Bit    Registers := 1     
+	               16 Bit    Registers := 1     
+	               14 Bit    Registers := 1     
+	                3 Bit    Registers := 1     
+	                1 Bit    Registers := 7     
++---Muxes : 
+	   2 Input    272 Bit        Muxes := 3     
+	   2 Input     64 Bit        Muxes := 2     
+	   2 Input     24 Bit        Muxes := 1     
+	   2 Input     16 Bit        Muxes := 2     
+	   3 Input     16 Bit        Muxes := 1     
+	   2 Input     14 Bit        Muxes := 6     
+	   5 Input      8 Bit        Muxes := 1     
+	   2 Input      7 Bit        Muxes := 1     
+	   2 Input      2 Bit        Muxes := 2     
+	   3 Input      1 Bit        Muxes := 1     
+	   2 Input      1 Bit        Muxes := 10    
+---------------------------------------------------------------------------------
+Finished RTL Hierarchical Component Statistics
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Part Resource Summary
+---------------------------------------------------------------------------------
+Part Resources:
+DSPs: 240 (col length:80)
+BRAMs: 270 (col length: RAMB18 80 RAMB36 40)
+---------------------------------------------------------------------------------
+Finished Part Resource Summary
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Cross Boundary and Area Optimization
+---------------------------------------------------------------------------------
+Warning: Parallel synthesis criteria is not met 
+WARNING: [Synth 8-3331] design ip_udp_gvsp_format has unconnected port iv_bid_resend[63]
+WARNING: [Synth 8-3331] design ip_udp_gvsp_format has unconnected port iv_bid_resend[62]
+WARNING: [Synth 8-3331] design ip_udp_gvsp_format has unconnected port iv_bid_resend[61]
+WARNING: [Synth 8-3331] design ip_udp_gvsp_format has unconnected port iv_bid_resend[60]
+INFO: [Common 17-14] Message 'Synth 8-3331' appears 100 times and further instances of the messages will be disabled. Use the Tcl command set_msg_config to change the current settings.
+INFO: [Synth 8-3886] merging instance 'data_shift_reg[208]' (FDE) to 'data_shift_reg[247]'
+INFO: [Synth 8-3886] merging instance 'data_shift_reg[209]' (FDE) to 'data_shift_reg[247]'
+INFO: [Synth 8-3886] merging instance 'data_shift_reg[210]' (FDE) to 'data_shift_reg[247]'
+INFO: [Synth 8-3886] merging instance 'data_shift_reg[211]' (FDE) to 'data_shift_reg[247]'
+INFO: [Synth 8-3886] merging instance 'data_shift_reg[212]' (FDE) to 'data_shift_reg[247]'
+INFO: [Synth 8-3886] merging instance 'data_shift_reg[213]' (FDE) to 'data_shift_reg[247]'
+INFO: [Synth 8-3886] merging instance 'data_shift_reg[214]' (FDE) to 'data_shift_reg[247]'
+INFO: [Synth 8-3886] merging instance 'data_shift_reg[215]' (FDE) to 'data_shift_reg[219]'
+INFO: [Synth 8-3886] merging instance 'data_shift_reg[216]' (FDE) to 'data_shift_reg[247]'
+INFO: [Synth 8-3886] merging instance 'data_shift_reg[217]' (FDE) to 'data_shift_reg[247]'
+INFO: [Synth 8-3886] merging instance 'data_shift_reg[218]' (FDE) to 'data_shift_reg[219]'
+INFO: [Synth 8-3886] merging instance 'data_shift_reg[220]' (FDE) to 'data_shift_reg[247]'
+INFO: [Synth 8-3886] merging instance 'data_shift_reg[221]' (FDE) to 'data_shift_reg[247]'
+INFO: [Synth 8-3886] merging instance 'data_shift_reg[222]' (FDE) to 'data_shift_reg[247]'
+INFO: [Synth 8-3886] merging instance 'data_shift_reg[223]' (FDE) to 'data_shift_reg[247]'
+INFO: [Synth 8-3886] merging instance 'data_shift_reg[242]' (FDE) to 'data_shift_reg[247]'
+INFO: [Synth 8-3886] merging instance 'data_shift_reg[243]' (FDE) to 'data_shift_reg[247]'
+INFO: [Synth 8-3886] merging instance 'data_shift_reg[244]' (FDE) to 'data_shift_reg[247]'
+INFO: [Synth 8-3886] merging instance 'data_shift_reg[245]' (FDE) to 'data_shift_reg[247]'
+INFO: [Synth 8-3886] merging instance 'data_shift_reg[246]' (FDE) to 'data_shift_reg[247]'
+INFO: [Synth 8-3333] propagating constant 0 across sequential element (\data_shift_reg[247] )
+INFO: [Synth 8-3886] merging instance 'data_shift_reg[182]' (FDE) to 'data_shift_reg[183]'
+WARNING: [Synth 8-3332] Sequential element (data_shift_reg[247]) is unused and will be removed from module ip_udp_gvsp_format.
+---------------------------------------------------------------------------------
+Finished Cross Boundary and Area Optimization : Time (s): cpu = 00:00:41 ; elapsed = 00:00:43 . Memory (MB): peak = 823.625 ; gain = 508.258
+---------------------------------------------------------------------------------
+
+Report RTL Partitions: 
++-+--------------+------------+----------+
+| |RTL Partition |Replication |Instances |
++-+--------------+------------+----------+
++-+--------------+------------+----------+
+---------------------------------------------------------------------------------
+Start Applying XDC Timing Constraints
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Applying XDC Timing Constraints : Time (s): cpu = 00:00:55 ; elapsed = 00:00:57 . Memory (MB): peak = 828.785 ; gain = 513.418
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Timing Optimization
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Timing Optimization : Time (s): cpu = 00:00:58 ; elapsed = 00:00:59 . Memory (MB): peak = 886.359 ; gain = 570.992
+---------------------------------------------------------------------------------
+
+Report RTL Partitions: 
++-+--------------+------------+----------+
+| |RTL Partition |Replication |Instances |
++-+--------------+------------+----------+
++-+--------------+------------+----------+
+---------------------------------------------------------------------------------
+Start Technology Mapping
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Technology Mapping : Time (s): cpu = 00:00:58 ; elapsed = 00:01:00 . Memory (MB): peak = 887.363 ; gain = 571.996
+---------------------------------------------------------------------------------
+
+Report RTL Partitions: 
++-+--------------+------------+----------+
+| |RTL Partition |Replication |Instances |
++-+--------------+------------+----------+
++-+--------------+------------+----------+
+---------------------------------------------------------------------------------
+Start IO Insertion
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Flattening Before IO Insertion
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Flattening Before IO Insertion
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Final Netlist Cleanup
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Final Netlist Cleanup
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished IO Insertion : Time (s): cpu = 00:01:00 ; elapsed = 00:01:01 . Memory (MB): peak = 887.363 ; gain = 571.996
+---------------------------------------------------------------------------------
+
+Report Check Netlist: 
++------+------------------+-------+---------+-------+------------------+
+|      |Item              |Errors |Warnings |Status |Description       |
++------+------------------+-------+---------+-------+------------------+
+|1     |multi_driven_nets |      0|        0|Passed |Multi driven nets |
++------+------------------+-------+---------+-------+------------------+
+---------------------------------------------------------------------------------
+Start Renaming Generated Instances
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Renaming Generated Instances : Time (s): cpu = 00:01:00 ; elapsed = 00:01:01 . Memory (MB): peak = 887.363 ; gain = 571.996
+---------------------------------------------------------------------------------
+
+Report RTL Partitions: 
++-+--------------+------------+----------+
+| |RTL Partition |Replication |Instances |
++-+--------------+------------+----------+
++-+--------------+------------+----------+
+---------------------------------------------------------------------------------
+Start Rebuilding User Hierarchy
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Rebuilding User Hierarchy : Time (s): cpu = 00:01:00 ; elapsed = 00:01:01 . Memory (MB): peak = 887.363 ; gain = 571.996
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Renaming Generated Ports
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Renaming Generated Ports : Time (s): cpu = 00:01:00 ; elapsed = 00:01:01 . Memory (MB): peak = 887.363 ; gain = 571.996
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Handling Custom Attributes
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Handling Custom Attributes : Time (s): cpu = 00:01:00 ; elapsed = 00:01:02 . Memory (MB): peak = 887.363 ; gain = 571.996
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Renaming Generated Nets
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Renaming Generated Nets : Time (s): cpu = 00:01:00 ; elapsed = 00:01:02 . Memory (MB): peak = 887.363 ; gain = 571.996
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start ROM, RAM, DSP and Shift Register Reporting
+---------------------------------------------------------------------------------
+
+Static Shift Register Report:
++-------------------+----------------+--------+-------+--------------+--------------------+-------------------+--------+---------+
+|Module Name        | RTL Name       | Length | Width | Reset Signal | Pull out first Reg | Pull out last Reg | SRL16E | SRLC32E | 
++-------------------+----------------+--------+-------+--------------+--------------------+-------------------+--------+---------+
+|ip_udp_gvsp_format | start_dly4_reg | 4      | 1     | YES          | NO                 | YES               | 1      | 0       | 
++-------------------+----------------+--------+-------+--------------+--------------------+-------------------+--------+---------+
+
+---------------------------------------------------------------------------------
+Finished ROM, RAM, DSP and Shift Register Reporting
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Writing Synthesis Report
+---------------------------------------------------------------------------------
+
+Report BlackBoxes: 
++-+--------------+----------+
+| |BlackBox name |Instances |
++-+--------------+----------+
++-+--------------+----------+
+
+Report Cell Usage: 
++------+-------+------+
+|      |Cell   |Count |
++------+-------+------+
+|1     |BUFG   |     1|
+|2     |CARRY4 |    65|
+|3     |LUT1   |    34|
+|4     |LUT2   |    52|
+|5     |LUT3   |   109|
+|6     |LUT4   |   253|
+|7     |LUT5   |    63|
+|8     |LUT6   |    74|
+|9     |SRL16E |     1|
+|10    |FDRE   |   356|
+|11    |IBUF   |   251|
+|12    |OBUF   |    74|
++------+-------+------+
+
+Report Instance Areas: 
++------+---------+-------+------+
+|      |Instance |Module |Cells |
++------+---------+-------+------+
+|1     |top      |       |  1333|
++------+---------+-------+------+
+---------------------------------------------------------------------------------
+Finished Writing Synthesis Report : Time (s): cpu = 00:01:00 ; elapsed = 00:01:02 . Memory (MB): peak = 887.363 ; gain = 571.996
+---------------------------------------------------------------------------------
+Synthesis finished with 0 errors, 0 critical warnings and 97 warnings.
+Synthesis Optimization Runtime : Time (s): cpu = 00:00:31 ; elapsed = 00:00:42 . Memory (MB): peak = 887.363 ; gain = 215.199
+Synthesis Optimization Complete : Time (s): cpu = 00:01:00 ; elapsed = 00:01:02 . Memory (MB): peak = 887.363 ; gain = 571.996
+INFO: [Project 1-571] Translating synthesized netlist
+INFO: [Netlist 29-17] Analyzing 316 Unisim elements for replacement
+INFO: [Netlist 29-28] Unisim Transformation completed in 0 CPU seconds
+WARNING: [Netlist 29-101] Netlist 'ip_udp_gvsp_format' is not ideal for floorplanning, since the cellview 'ip_udp_gvsp_format' contains a large number of primitives.  Please consider enabling hierarchy in synthesis if you want to do floorplanning.
+INFO: [Project 1-570] Preparing netlist for logic optimization
+Parsing XDC File [c:/ue/vivado/src/template.xdc]
+WARNING: [Vivado 12-584] No ports matched 'clk'. [c:/ue/vivado/src/template.xdc:46]
+CRITICAL WARNING: [Vivado 12-4739] create_clock:No valid object(s) found for '-objects [get_ports clk]'. [c:/ue/vivado/src/template.xdc:46]
+Resolution: Check if the specified object(s) exists in the current design. If it does, ensure that the correct design hierarchy was specified for the object. If you are working with clocks, make sure create_clock was used to create the clock object before it is referenced.
+WARNING: [Vivado 12-584] No ports matched 'clk_pix'. [c:/ue/vivado/src/template.xdc:48]
+CRITICAL WARNING: [Vivado 12-4739] create_clock:No valid object(s) found for '-objects [get_ports clk_pix]'. [c:/ue/vivado/src/template.xdc:48]
+Resolution: Check if the specified object(s) exists in the current design. If it does, ensure that the correct design hierarchy was specified for the object. If you are working with clocks, make sure create_clock was used to create the clock object before it is referenced.
+WARNING: [Vivado 12-584] No ports matched 'clk_osc'. [c:/ue/vivado/src/template.xdc:49]
+CRITICAL WARNING: [Vivado 12-4739] create_clock:No valid object(s) found for '-objects [get_ports clk_osc]'. [c:/ue/vivado/src/template.xdc:49]
+Resolution: Check if the specified object(s) exists in the current design. If it does, ensure that the correct design hierarchy was specified for the object. If you are working with clocks, make sure create_clock was used to create the clock object before it is referenced.
+WARNING: [Vivado 12-584] No ports matched 'clk_gtx'. [c:/ue/vivado/src/template.xdc:50]
+CRITICAL WARNING: [Vivado 12-4739] create_clock:No valid object(s) found for '-objects [get_ports clk_gtx]'. [c:/ue/vivado/src/template.xdc:50]
+Resolution: Check if the specified object(s) exists in the current design. If it does, ensure that the correct design hierarchy was specified for the object. If you are working with clocks, make sure create_clock was used to create the clock object before it is referenced.
+WARNING: [Vivado 12-584] No ports matched 'clk_grx'. [c:/ue/vivado/src/template.xdc:51]
+CRITICAL WARNING: [Vivado 12-4739] create_clock:No valid object(s) found for '-objects [get_ports clk_grx]'. [c:/ue/vivado/src/template.xdc:51]
+Resolution: Check if the specified object(s) exists in the current design. If it does, ensure that the correct design hierarchy was specified for the object. If you are working with clocks, make sure create_clock was used to create the clock object before it is referenced.
+WARNING: [Vivado 12-584] No ports matched 'clk_fb'. [c:/ue/vivado/src/template.xdc:52]
+CRITICAL WARNING: [Vivado 12-4739] create_clock:No valid object(s) found for '-objects [get_ports clk_fb]'. [c:/ue/vivado/src/template.xdc:52]
+Resolution: Check if the specified object(s) exists in the current design. If it does, ensure that the correct design hierarchy was specified for the object. If you are working with clocks, make sure create_clock was used to create the clock object before it is referenced.
+WARNING: [Vivado 12-584] No ports matched 'clk_sensor'. [c:/ue/vivado/src/template.xdc:53]
+CRITICAL WARNING: [Vivado 12-4739] create_clock:No valid object(s) found for '-objects [get_ports clk_sensor]'. [c:/ue/vivado/src/template.xdc:53]
+Resolution: Check if the specified object(s) exists in the current design. If it does, ensure that the correct design hierarchy was specified for the object. If you are working with clocks, make sure create_clock was used to create the clock object before it is referenced.
+WARNING: [Vivado 12-584] No ports matched 'clk_axi'. [c:/ue/vivado/src/template.xdc:54]
+CRITICAL WARNING: [Vivado 12-4739] create_clock:No valid object(s) found for '-objects [get_ports clk_axi]'. [c:/ue/vivado/src/template.xdc:54]
+Resolution: Check if the specified object(s) exists in the current design. If it does, ensure that the correct design hierarchy was specified for the object. If you are working with clocks, make sure create_clock was used to create the clock object before it is referenced.
+Finished Parsing XDC File [c:/ue/vivado/src/template.xdc]
+INFO: [Opt 31-138] Pushed 0 inverter(s) to 0 load pin(s).
+INFO: [Project 1-111] Unisim Transformation Summary:
+No Unisim elements were transformed.
+
+INFO: [Common 17-83] Releasing license: Synthesis
+38 Infos, 120 Warnings, 16 Critical Warnings and 0 Errors encountered.
+synth_design completed successfully
+synth_design: Time (s): cpu = 00:01:03 ; elapsed = 00:01:06 . Memory (MB): peak = 888.293 ; gain = 585.582
+# report_utilization -file utilization_summary.rpt 
+report_utilization: Time (s): cpu = 00:00:00 ; elapsed = 00:00:00.073 . Memory (MB): peak = 888.293 ; gain = 0.000
+# report_timing_summary -file timing_summary.rpt 
+INFO: [Timing 38-35] Done setting XDC timing constraints.
+INFO: [Timing 38-91] UpdateTimingParams: Speed grade: -2, Delay Type: min_max.
+INFO: [Timing 38-191] Multithreading enabled for timing update using a maximum of 2 CPUs
+report_timing_summary: Time (s): cpu = 00:00:06 ; elapsed = 00:00:07 . Memory (MB): peak = 1269.172 ; gain = 380.879
+INFO: [Common 17-206] Exiting Vivado at Tue Feb 12 16:40:14 2019...
