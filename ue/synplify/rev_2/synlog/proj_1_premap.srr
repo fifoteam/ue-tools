@@ -1,0 +1,53 @@
+Synopsys Xilinx Technology Pre-mapping, Version maprc, Build 2608R, Built Feb 25 2015 15:38:49
+Copyright (C) 1994-2015, Synopsys, Inc. This software and the associated documentation are proprietary to Synopsys, Inc. This software may only be used in accordance with the terms and conditions of a written license agreement with Synopsys, Inc.  All other use, reproduction, or distribution of this software is strictly prohibited.
+Product Version J-2015.03
+
+Mapper Startup Complete (Real Time elapsed 0h:00m:01s; CPU Time elapsed 0h:00m:00s; Memory used current: 98MB peak: 99MB)
+
+@L: F:\test\rev_2\proj_1_scck.rpt 
+Printing clock  summary report in "F:\test\rev_2\proj_1_scck.rpt" file 
+@N: MF248 |Running in 64-bit mode.
+@N: MF666 |Clock conversion enabled 
+
+Design Input Complete (Real Time elapsed 0h:00m:01s; CPU Time elapsed 0h:00m:00s; Memory used current: 99MB peak: 101MB)
+
+
+Mapper Initialization Complete (Real Time elapsed 0h:00m:01s; CPU Time elapsed 0h:00m:00s; Memory used current: 99MB peak: 101MB)
+
+
+Start loading timing files (Real Time elapsed 0h:00m:01s; CPU Time elapsed 0h:00m:00s; Memory used current: 100MB peak: 101MB)
+
+
+Finished loading timing files (Real Time elapsed 0h:00m:01s; CPU Time elapsed 0h:00m:00s; Memory used current: 101MB peak: 103MB)
+
+@W: FX474 |User-specified initial value defined for some sequential elements which can prevent optimum synthesis results from being achieved. 
+ICG Latch Removal Summary:
+Number of ICG latches removed:	0
+Number of ICG latches not removed:	0
+syn_allowed_resources : blockrams=270  set on top level netlist frame_info_analysis
+
+Finished netlist restructuring (Real Time elapsed 0h:00m:01s; CPU Time elapsed 0h:00m:00s; Memory used current: 129MB peak: 130MB)
+
+
+
+@S |Clock Summary
+*****************
+
+Start                       Requested     Requested     Clock        Clock                
+Clock                       Frequency     Period        Type         Group                
+------------------------------------------------------------------------------------------
+frame_info_analysis|clk     954.5 MHz     1.048         inferred     Autoconstr_clkgroup_0
+==========================================================================================
+
+@W: MT529 :"f:\test\frame_info_analysis.v":187:1:187:6|Found inferred clock frame_info_analysis|clk which controls 481 sequential elements including status_info_en. This clock has no specified timing constraint which may prevent conversion of gated or generated clocks and may adversely impact design performance. 
+
+Finished Pre Mapping Phase.
+@N: BN225 |Writing default property annotation file F:\test\rev_2\proj_1.sap.
+Pre-mapping successful!
+
+At Mapper Exit (Real Time elapsed 0h:00m:01s; CPU Time elapsed 0h:00m:00s; Memory used current: 67MB peak: 130MB)
+
+Process took 0h:00m:01s realtime, 0h:00m:01s cputime
+# Thu Feb 14 11:16:08 2019
+
+###########################################################]

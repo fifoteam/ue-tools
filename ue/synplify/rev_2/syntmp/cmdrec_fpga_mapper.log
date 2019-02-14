@@ -1,0 +1,16 @@
+D:\tools\Synopsys\fpga_J-2015.03\bin64\m_xilinx.exe  -prodtype synplify_pro -encrypt  -pro  -rundir  F:\test\rev_2  -part XC7A100TFGG484-2   -use_vivado -enable_prepacking -overilog "proj_1.vm" -maxfan 10000  -m1  -pipe  -verification_mode 1   -fixgatedclocks 1 -fixgeneratedclocks 1   -resolveMultipleDriver -summaryfile 0 -RWCheckOnRam 1   -reporting_ctd 0  -preserve_slash_names -top_level_module  frame_info_analysis  -flow mapping  -mp 1 -prjfile  F:\test\rev_2\scratchproject.prs  -implementation rev_2 -licensetype  synplifypro_f  -oedif  F:\test\rev_2\proj_1.edf  -autoconstraint  -freq 1.000  F:\test\rev_2\synwork\proj_1_premap.srd  -sap  F:\test\rev_2\proj_1.sap  -otap  F:\test\rev_2\proj_1.tap  -omap  F:\test\rev_2\proj_1.map  -devicelib  D:\tools\Synopsys\fpga_J-2015.03\lib\xilinx\unisim_m10i.v  -devicelib  D:\tools\Synopsys\fpga_J-2015.03\lib\xilinx\unisim.v  -sap  F:\test\rev_2\proj_1.sap  -ologparam  F:\test\rev_2\syntmp\proj_1.plg  -osyn  F:\test\rev_2\proj_1.srm  -prjdir  F:\test\  -prjname  proj_1  -log  F:\test\rev_2\synlog\proj_1_fpga_mapper.srr 
+rc:1 success:1
+F:\test\rev_2\scratchproject.prs|o|1550114164|1684
+F:\test\rev_2\proj_1.edf|o|1550114171|498511
+F:\test\rev_2\synwork\proj_1_premap.srd|i|1550114168|24664
+F:\test\rev_2\proj_1.sap|o|1550114168|114969
+F:\test\rev_2\proj_1.tap|o|0|0
+F:\test\rev_2\proj_1.map|o|1550114172|28
+D:\tools\Synopsys\fpga_J-2015.03\lib\xilinx\unisim_m10i.v|i|1424800976|948675
+D:\tools\Synopsys\fpga_J-2015.03\lib\xilinx\unisim.v|i|1424800976|1220228
+F:\test\rev_2\proj_1.sap|o|1550114168|114969
+F:\test\rev_2\syntmp\proj_1.plg|o|1550114172|991
+F:\test\rev_2\proj_1.srm|o|1550114171|34297
+F:\test\rev_2\synlog\proj_1_fpga_mapper.srr|o|1550114172|41074
+D:\tools\Synopsys\fpga_J-2015.03\bin64\m_xilinx.exe|i|1424907598|26630144
+D:\tools\Synopsys\fpga_J-2015.03\bin\m_xilinx.exe|i|1424905704|15475200

@@ -1,0 +1,38 @@
+---------------------------------------
+Resource Usage Report for frame_info_analysis 
+
+Mapping to part: xc7a100tfgg484-2
+Cell usage:
+FD              2 uses
+FDE             469 uses
+FDR             23 uses
+GND             1 use
+VCC             1 use
+LUT2            7 uses
+LUT3            18 uses
+LUT4            4 uses
+LUT6            33 uses
+
+I/O ports: 507
+I/O primitives: 505
+IBUF           67 uses
+IBUFG          1 use
+OBUF           437 uses
+
+BUFG           1 use
+
+I/O Register bits:                  0
+Register bits not including I/Os:   494 (0%)
+
+Global Clock Buffers: 1 of 32 (3%)
+
+
+Mapping Summary:
+Total  LUTs: 51 (0%)
+
+Distribution of All Consumed LUTs = LUT2 + LUT3 + LUT4 + LUT6- HLUTNM/2 
+Distribution of All Consumed Luts 51 = 7 + 18 + 4 + 33- 22/2 
+
+
+ Number of unique control sets:              14
+

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!-- *************************************************************************************
+FILE DESCRIPTION
+The file contains the information about resource utilization per module to be displayed in the summary report.
+*******************************************************************************************-->
+<modules>
+<column_headers>
+<data>Module name</data>
+<data>LUTS</data>
+<data>REGISTERS</data>
+<data>SYNC RAMS</data>
+<data>DSP48</data>
+</column_headers>
+<module>
+<data>frame_info_analysis</data>
+<data>62</data>
+<data>494</data>
+<data>0</data>
+<data>0</data>
+</module>
+</modules>

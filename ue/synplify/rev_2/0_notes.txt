@@ -1,0 +1,35 @@
+@N: MF248 |Running in 64-bit mode.
+@N: MF666 |Clock conversion enabled 
+@N: MT206 |Auto Constrain mode is enabled
+@N: FX493 |Applying initial value "0000000000000000" on instance status_statis[15:0] 
+@N: FX493 |Applying initial value "0000000000000000" on instance status_info[15:0] 
+@N: FX493 |Applying initial value "00000000000000000000000000000000" on instance valid_payload_size[31:0] 
+@N: FX493 |Applying initial value "00000000000000000000000000000000" on instance expect_payload_size[31:0] 
+@N: FX493 |Applying initial value "00000" on instance chunk_info[4:0] 
+@N: FX493 |Applying initial value "0000000000000000" on instance width[15:0] 
+@N: FX493 |Applying initial value "0000000000000000000000000000000000000000000000000000000000000000" on instance timestamp[63:0] 
+@N: FX493 |Applying initial value "00000000000000000000000000000000" on instance pixel_format[31:0] 
+@N: FX493 |Applying initial value "00000000000000000000000000000000" on instance payload_size[31:0] 
+@N: FX493 |Applying initial value "0000000000000000" on instance offset_y[15:0] 
+@N: FX493 |Applying initial value "0000000000000000" on instance offset_x[15:0] 
+@N: FX493 |Applying initial value "00000000000000000000000000000000" on instance image_size[31:0] 
+@N: FX493 |Applying initial value "0000000000000000" on instance height[15:0] 
+@N: FX493 |Applying initial value "0000000000000000000000000000000000000000000000000000000000000000" on instance frame_interval[63:0] 
+@N: FX493 |Applying initial value "0000000000000000000000000000000000000000000000000000000000000000" on instance blockid[63:0] 
+@N: FX493 |Applying initial value "0000000000000000" on instance status[15:0] 
+@N: FX271 :|Instance "info_byte_cnt[4]" with 13 loads replicated 1 times to improve timing 
+@N: FX271 :|Instance "info_byte_cnt[3]" with 14 loads replicated 2 times to improve timing 
+@N: FX271 :|Instance "info_byte_cnt[6]" with 16 loads replicated 2 times to improve timing 
+@N: FX271 :|Instance "info_byte_cnt[5]" with 18 loads replicated 2 times to improve timing 
+@N: FX271 :|Instance "info_byte_cnt[7]" with 11 loads replicated 1 times to improve timing 
+@N: FX271 :|Instance "statis_byte_cnt[3]" with 7 loads replicated 1 times to improve timing 
+@N: FX271 :|Instance "statis_byte_cnt[5]" with 8 loads replicated 1 times to improve timing 
+@N: FX271 :|Instance "statis_byte_cnt[4]" with 9 loads replicated 1 times to improve timing 
+@N: FX271 :|Instance "statis_byte_cnt[6]" with 10 loads replicated 1 times to improve timing 
+@N: FX271 :|Instance "statis_byte_cnt[7]" with 5 loads replicated 1 times to improve timing 
+@N: FX164 |The option to pack registers in the IOB has not been specified. Please set syn_useioff attribute.  
+@N: FX623 |Packing into LUT6_2
+@N: MT320 |Timing report estimates place and route data. Please look at the place and route timing report for final timing.
+@N: MT322 |Clock constraints cover only FF-to-FF paths associated with the clock.
+@N: MT320 |Timing report estimates place and route data. Please look at the place and route timing report for final timing.
+@N: MT322 |Clock constraints cover only FF-to-FF paths associated with the clock.

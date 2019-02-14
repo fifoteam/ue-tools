@@ -1,0 +1,30 @@
+#Build: Synplify Pro J-2015.03, Build 120R, Feb 24 2012
+#install: D:\tools\Synopsys\fpga_J-2015.03
+#OS: Windows 7 6.1
+#Hostname: XHT-PC
+
+#Implementation: rev_2
+
+$ Start of Compile
+#Thu Feb 14 11:26:42 2019
+
+Synopsys Verilog Compiler, version comp201503rc, Build 056R, built Feb 25 2015
+@N|Running in 64-bit mode
+Copyright (C) 1994-2015 Synopsys, Inc. This software and the associated documentation are proprietary to Synopsys, Inc. This software may only be used in accordance with the terms and conditions of a written license agreement with Synopsys, Inc.  All other use, reproduction, or distribution of this software is strictly prohibited.
+
+@N:: Running Verilog Compiler in System Verilog mode
+@N:: Running Verilog Compiler in Multiple File Compilation Unit mode
+@I::"D:\tools\Synopsys\fpga_J-2015.03\lib\xilinx\unisim_m10i.v"
+@I::"D:\tools\Synopsys\fpga_J-2015.03\lib\xilinx\unisim.v"
+@I::"D:\tools\Synopsys\fpga_J-2015.03\lib\vlog\hypermods.v"
+@I::"D:\tools\Synopsys\fpga_J-2015.03\lib\vlog\umr_capim.v"
+@I::"D:\tools\Synopsys\fpga_J-2015.03\lib\vlog\scemi_objects.v"
+@I::"D:\tools\Synopsys\fpga_J-2015.03\lib\vlog\scemi_pipes.svh"
+@I::"F:\test\frame_info_analysis.v"
+@E: CG829 :"F:\test\frame_info_analysis.v":71:1:71:1|Unexpected ) after comma -- missing port in ANSI port list
+1 syntax errors
+@END
+Process took 0h:00m:01s realtime, 0h:00m:01s cputime
+# Thu Feb 14 11:26:43 2019
+
+###########################################################]

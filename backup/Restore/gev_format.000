@@ -1,0 +1,755 @@
+//-------------------------------------------------------------------------------------------------
+//  -- 版权所有者   : 中国大恒（集团）有限公司北京图像视觉技术分公司, 2010 -2018.
+//  -- 保密级别     ：绝密.
+//  -- 部门         : 硬件部，FPGA工作组
+//  -- 模块名       : gev_format
+//  -- 设计者       : 张少强
+//-------------------------------------------------------------------------------------------------
+//
+//  -- 版本记录 :
+//
+//  -- 作者         :| 版本号	:| 修改日期				:|  修改说明
+//-------------------------------------------------------------------------------------------------
+//  -- 张少强       :| V1.0		:| 2018/10/15 14:43:10	:|  初始版本
+//-------------------------------------------------------------------------------------------------
+//
+//  -- 模块描述     :
+//              1)  :
+//
+//              2)  :
+//
+//              3)  :
+//
+//-------------------------------------------------------------------------------------------------
+//`include			"gev_format_def.v"
+//仿真单位/精度
+`timescale 1ns/1ps
+//-------------------------------------------------------------------------------------------------
+
+module gev_format # (
+	parameter	SHORT_REG_WD   								= 16		,	//短寄存器位宽
+	parameter	REG_WD  						 			= 32		,	//寄存器位宽
+	parameter	LONG_REG_WD  						 		= 64		,	//长寄存器位宽
+	parameter	PKT_LENGTH_WD								= 13		,	//packet length 包长寄存器宽度
+	parameter	PKT_CNT_WD									= 18		,	//packet cnt 包个数寄存器宽度
+	parameter	GEV_BE_WD									= 8			,	//字节使能位宽，1byte数据使用一个使能位
+	parameter	GEV_DATA_WD									= 64			//数据位宽，支持32、64、128
+	)
+	(
+	//  -------------------------------------------------------------------------------------
+	//  时钟和复位信号
+	//  -------------------------------------------------------------------------------------
+	input							clk_gev								,	//工作时钟
+	input							reset_gev							,	//工作时钟域的复位信号，高有效
+	//  -------------------------------------------------------------------------------------
+	//  控制数据
+	//  -------------------------------------------------------------------------------------
+	input							i_stream_enable						,	//clk时钟域，流停止信号，高有效，有效时允许数据从帧存读出，无效时立即停止读出，并复位读写地址指针，清帧存
+	//	-------------------------------------------------------------------------------------
+	//	与packet_comb交互
+	//	-------------------------------------------------------------------------------------
+	input							i_stop								,	//clk_gev时钟域， stop时本模块不能输出数据
+	output		[GEV_DATA_WD-1:0]	ov_data								,	//clk_gev时钟域，输出图像数据
+	output		[GEV_BE_WD-1:0]		ov_be								,	//clk_gev时钟域，输出字节有效，单bit代表1byte
+	output							o_packet_over						,	//clk_gev时钟域，包结束标志
+	//	-------------------------------------------------------------------------------------
+	//	寄存器模块信号
+	//	-------------------------------------------------------------------------------------
+	input  	[PKT_LENGTH_WD-1:0]		iv_pkt_length						,	//clk_gev时钟域，packet length 正常包包长,仅payload部分，不包括ip、udp、gvsp头
+	input  	[PKT_CNT_WD-1:0]		iv_pkt_cnt							,	//clk_gev时钟域，packet cnt 正常包个数(包含帧信息部分)
+	input  	[PKT_LENGTH_WD-1:0]		iv_remain_pkt_length				,	//clk_gev时钟域，remain packet length 残包包长(包含帧信息部分)
+	//  -------------------------------------------------------------------------------------
+	//	frame info 解析后的数据
+	//  -------------------------------------------------------------------------------------
+	input							i_chunk_mode_active					,	//clk_gev时钟域，chunk开关寄存器
+	input	[LONG_REG_WD-1:0]		iv_bid_normal						,	//clk_gev时钟域，正常帧blockid
+	input	[LONG_REG_WD-1:0]		iv_frame_interval					,	//clk_gev时钟域，sensor输出的图像间隔，以ns为单位，开采之后第一帧的frame interval的数值为0
+	//  -------------------------------------------------------------------------------------
+	//  gvsp ctrl 相关交互信号
+	//  -------------------------------------------------------------------------------------
+	input							i_start								,	//clk_gev时钟域，模块开始标志，单脉冲信号，高有效
+	output							o_done								,	//clk_gev时钟域，模块结束标志，表明本模块添加包头完成;同时表明一个包结束
+//	output							o_not_exist							,	//clk_gev时钟域，模块结束标志，区别于o_done，这个信号不代表一个包计数
+	output							o_again								,	//clk_gev时钟域，表示本模块尚未完成，还需要重新启动一个包继续进行；同时表明一个包结束
+//	input							i_image_flag						,	//clk_gev时钟域，表示当前是payload包添加图像数据阶段，高有效
+	input							i_chunk_flag						,	//clk_gev时钟域，表示当前是payload包添加chunk信息阶段，高有效;
+	input							i_resending_flag					,	//clk_gev时钟域，表示当前是resend信息流，高有效;
+	input							i_unavail_flag						,	//clk_gev时钟域，表示当前是重传unavail包，高有效;
+//	input							i_new_resd_frm_flag					,	//clk_gev时钟域，表示新的重传帧开始
+//	input							i_new_norm_frm_flag					,	//clk_gev时钟域，表示新的正常帧开始
+	input	[LONG_REG_WD-1:0]		iv_bid_resend						,	//clk_gev时钟域，重传帧blockid
+	input	[REG_WD-1:0]			iv_pid_first						,	//clk_gev时钟域，重传起始pid
+	input	[REG_WD-1:0]			iv_pid_last								//clk_gev时钟域，重传末尾pid
+	);
+	//	===============================================================================================
+	//	ref functions
+	//	===============================================================================================
+	//	-------------------------------------------------------------------------------------
+	//	计算位宽
+	//	-------------------------------------------------------------------------------------
+	function integer log2 (input integer xx);
+		integer x;
+		begin
+			x	= xx-1 ;
+			for (log2=0;x>0;log2=log2+1) begin
+				x	= x >> 1;
+			end
+		end
+	endfunction
+	//	-------------------------------------------------------------------------------------
+	//	向上取整函数
+	//	-------------------------------------------------------------------------------------
+	function integer intup;
+		input integer a;
+		input integer b;
+		intup = a % b == 0 ? a / b : a / b + 1;
+	endfunction
+
+
+	//	-------------------------------------------------------------------------------------
+	//	取最大值
+	//	-------------------------------------------------------------------------------------
+	function integer max(input integer n1, input integer n2);
+		max = (n1 > n2) ? n1 : n2;
+	endfunction
+
+	//	-------------------------------------------------------------------------------------
+	//	按照输入值，编码成be输出
+	//	-------------------------------------------------------------------------------------
+	localparam		PTR_WD	= log2(GEV_BE_WD);
+	function [GEV_BE_WD-1:0] cnt2be;
+		input [PTR_WD-1:0] cnt;
+		integer i;
+		begin
+			cnt2be = {(GEV_BE_WD){1'b0}};//先初始化为全0
+			if(cnt==0) begin
+				cnt2be = {(GEV_BE_WD){1'b1}};
+			end
+			else begin
+				for(i=0;i<cnt;i=i+1) begin
+					cnt2be = {cnt2be[GEV_BE_WD-2:0],1'b1};//将1左移位进cnt2be中
+				end
+			end
+		end
+	endfunction
+
+	//	===============================================================================================
+	//	ref paramters
+	//	===============================================================================================
+	localparam					S_IDLE			=	3'd0;
+	localparam					S_LEADER		=	3'd1;
+	localparam					S_TRAILER		=	3'd2;
+	localparam					S_TEST			=	3'd3;
+	localparam					S_CHUNK1		=	3'd4;
+	localparam					S_CHUNK2		=	3'd5;
+	localparam					LEADER_SIZE_CHUNK_ON	= 12;
+	localparam					LEADER_SIZE_CHUNK_OFF	= 36;
+	localparam					LEADER_SIZE_WD	=	log2(max(LEADER_SIZE_CHUNK_ON,LEADER_SIZE_CHUNK_OFF)+1);
+	localparam					TRAILER_SIZE	=	8;
+	localparam					TRAILER_SIZE_WD =	log2(TRAILER_SIZE+1);
+	localparam					CHUNK_SIZE		=	40;
+	localparam					CHUNK_SIZE_WD	=	log2(CHUNK_SIZE+1);
+	localparam					MAX_SIZE		=	max(max(max(LEADER_SIZE_CHUNK_ON,LEADER_SIZE_CHUNK_OFF),TRAILER_SIZE),CHUNK_SIZE);
+	localparam					PAYLOAD_TYPE_IMAGE	=	16'd1;
+	localparam					PAYLOAD_TYPE_CHUNK	=	16'd4;
+	localparam					CHUNK_ID0		=	32'd0;
+	localparam					CHUNK_ID1		=	32'd1;
+	localparam					CHUNK_ID2		=	32'd2;
+
+	//	===============================================================================================
+	//	ref signals
+	//	===============================================================================================
+	reg		[2:0]				current_state	=	S_IDLE;
+	reg		[2:0]				next_state		=	S_IDLE;
+	reg		[REG_WD-1:0]		cnt				=	'b0	;
+	reg							chunk1_en		=	'b0	;
+	reg							chunk2_en		=	'b0	;
+	reg		[log2(CHUNK_SIZE+1)-1:0] chunk1_size	;//分布在第一个包里的chunk数据量不会超过CHUNK_SIZE
+	reg		[MAX_SIZE*8-1:0]	protocal_data		;
+	wire	[MAX_SIZE*8-1:0]	protocal_data_inv	;
+//	reg		[MAX_SIZE*8-1:0]	data_shift		= 'b0;
+	wire	[2*8-1:0]			padding_x='b0		;
+	wire	[2*8-1:0]			padding_y='b0		;
+	wire	[4*8-1:0]			chunk_length0		;
+	wire	[4*8-1:0]			chunk_length1		;
+	wire	[4*8-1:0]			chunk_length2		;
+	wire	[8*8-1:0]			frame_id			;
+	reg							pkt1_exist		;//重传状态下，如果重传帧的chunk信息在两个包里，第一个包是否需要重传
+	reg							pkt2_exist		;//重传状态下，如果重传帧的chunk信息在两个包里，第二个包是否需要重传
+	reg							done_reg	= 1'b0	;
+	reg							again_reg	= 1'b0	;
+//	reg		[log2(GEV_BE_WD):0]	be_nums		=	'b0	;//指示be中1的数量
+	reg		[GEV_DATA_WD-1:0]	data_reg			;
+	reg		[GEV_DATA_WD-1:0]	data_latch			;
+	reg		[GEV_BE_WD-1:0]		be_reg				;
+	reg							en					;
+	reg		[PKT_CNT_WD-1:0]	last_payload_cnt	;
+	reg							not_exist_reg		;
+	reg							packet_over_en	=0	;
+	//	===============================================================================================
+	//	ref ARCHITECTURE
+	//	===============================================================================================
+	//  -------------------------------------------------------------------------------------
+	//	模块使能
+	//  -------------------------------------------------------------------------------------
+	always @ (posedge clk_gev) begin
+		if(reset_gev || !i_stream_enable) begin
+			en <= 1'b0;
+		end
+		else if(i_start) begin
+			en <= 1'b1;
+		end
+		else if(o_done || o_again) begin
+			en <= 1'b0;
+		end
+	end
+	//	-------------------------------------------------------------------------------------
+	//	最后一个payload包
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk_gev) begin
+		//如果残包为0，最后一个payload包id就是iv_pkt_cnt
+		if(iv_remain_pkt_length==0) begin
+			last_payload_cnt <= iv_pkt_cnt;
+		end
+		//如果残包不为0，iv_pkt_cnt仅表示完整包数量
+		else begin
+			last_payload_cnt <= iv_pkt_cnt+1;
+		end
+	end
+	//	-------------------------------------------------------------------------------------
+	//	chunk包是否存在判断
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk_gev) begin
+		if(reset_gev || !i_stream_enable) begin
+			chunk1_en <= 1'b0;
+			chunk2_en <= 1'b0;
+		end
+		//帧信息关闭时，chunk不存在
+		else if(~i_chunk_mode_active) begin
+			chunk1_en <= 1'b0;
+			chunk2_en <= 1'b0;
+		end
+		//重传不可见，chunk包一定不存在
+		else if(i_resending_flag && i_unavail_flag) begin
+			chunk1_en <= 1'b0;
+			chunk2_en <= 1'b0;
+		end
+		//重传流（可见）或正常流
+		else begin
+			//chunk包小于残包时或者残包大小为0时，chunk数据存在于一个网络包中
+			if(iv_remain_pkt_length==0 || iv_remain_pkt_length>=CHUNK_SIZE) begin
+				chunk1_en <= 1'b0;
+				chunk2_en <= pkt2_exist;
+			end
+			//chunk包大于等于残包时,chunk数据存在于两个网络包中
+			else begin
+				chunk1_en <= pkt1_exist;
+				chunk2_en <= pkt2_exist;
+			end
+		end
+	end
+
+	always @ (*) begin
+		//正常流下，倒数第二个包一定存在
+		if(~i_resending_flag) begin
+			pkt1_exist = 1'b1;
+		end
+		//重传流下，last_payload_cnt-1是倒数第二个payload包，满足以下条件，说明会重传这个包
+		else if(iv_pid_first<=last_payload_cnt-1 && last_payload_cnt-1<=iv_pid_last) begin
+			pkt1_exist = 1'b1;
+		end
+		else begin
+			pkt1_exist = 1'b0;
+		end
+	end
+	always @ (*) begin
+		//正常流下，倒数第二个包一定存在
+		if(~i_resending_flag) begin
+			pkt2_exist = 1'b1;
+		end
+		//last_payload_cnt是最后一个payload包，满足以下条件，说明会重传这个包
+		else if(iv_pid_first<=last_payload_cnt && last_payload_cnt<=iv_pid_last) begin
+			pkt2_exist = 1'b1;
+		end
+		else begin
+			pkt2_exist = 1'b0;
+		end
+	end
+
+	always @ (posedge clk_gev) begin
+		//残包大于等于CHUNK时或者残包大小为0时，chunk数据仅存在于一个网络包中,chunk1_size为0
+		if(iv_remain_pkt_length>=CHUNK_SIZE || iv_remain_pkt_length==0) begin
+			chunk1_size <= 0;
+		end
+		//当chunk数据存在于两个网络包时，chunk1_size为CHUNK_SIZE-iv_remain_pkt_length
+		else begin
+			chunk1_size <= CHUNK_SIZE - iv_remain_pkt_length;
+		end
+	end
+	//	===============================================================================================
+	//	ref ***FSM***
+	//	===============================================================================================
+	//	-------------------------------------------------------------------------------------
+	//	FSM Sequential Logic
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk_gev) begin
+		if(reset_gev || !i_stream_enable) begin
+			current_state	<= S_IDLE;
+		end
+		else begin
+			current_state	<= next_state;
+		end
+	end
+
+	//	-------------------------------------------------------------------------------------
+	//	FSM Conbinatial Logic
+	//	-------------------------------------------------------------------------------------
+	always @ ( * ) begin
+		case(current_state)
+			S_IDLE	: begin
+				else if(i_start && i_chunk_flag) begin
+					next_state = S_CHUNK1;
+				end
+				else begin
+					next_state = S_IDLE;
+				end
+			end
+			S_CHUNK1 : begin
+				//没有chunk包需要发送，直接返回S_IDLE状态
+				if(chunk1_en==1'b0 && chunk2_en==1'b0) begin
+					next_state = S_IDLE;
+				end
+				//chunk存在于两个网络包中且仅需要发送第一个网络包，此时需要等到第一个包发完再进入S_CHUNK2状态，但是在S_CHUNK2状态不发出数据
+				else if(chunk1_en==1'b1 && chunk2_en==1'b0) begin
+					if(cnt[CHUNK_SIZE_WD-1:0]==(chunk1_size-1)>>log2(GEV_BE_WD) && ~i_stop) begin //注意此时chunk1_size一定不为0
+						next_state = S_CHUNK2;
+					end
+					else begin
+						next_state = S_CHUNK1;
+					end
+				end
+				//chunk存在于一个网络包中或者chunk存在于两个网络包中且只需要发送第二个包
+				//模块会发出一个o_again然后等待返回i_start后跳转到
+				else if(chunk1_en==1'b0 && chunk2_en==1'b1) begin
+					//当残包等于0（没有残包）时，说明最后一个包里除了残包之外还有image数据（包长一定大于CHUNK长度）
+					//，此时无需发出o_again，直接跳转到S_CHUNK2状态
+					if(iv_remain_pkt_length==0) begin
+						next_state = S_CHUNK2;
+					end
+					//当残包小于CHUNK_SIZE时，说明最后一个包里只有chunk，这个时候就要通过发出o_again增加ip头
+					//本模块需要等到返回i_start后再往下走
+					else if(iv_remain_pkt_length<=CHUNK_SIZE) begin
+						if(i_start) begin
+							next_state = S_CHUNK2;
+						end
+						else begin
+							next_state = S_CHUNK1;
+						end
+					end
+					//否则直接进入S_CHUNK2
+					else begin
+						next_state = S_CHUNK2;
+					end
+				end
+				//chunk存在于两个网络包中且两个网络包都需要发送时，在S_CHUNK1状态发送完第一个网络包的内容后发出o_again
+				//然后等待返回i_start后进入下一个状态
+				else begin
+					if(i_start) begin
+						next_state = S_CHUNK2;
+					end
+					else begin
+						next_state = S_CHUNK1;
+					end
+				end
+			end
+			S_CHUNK2 : begin
+				//以下这种情况是不需要发送第二个chunk包
+				if(~chunk2_en) begin
+					next_state = S_IDLE;
+				end
+				//以下这种情况是第二个chunk包发送完成
+				else if(cnt[CHUNK_SIZE_WD-1:0]==(CHUNK_SIZE-1)>>log2(GEV_BE_WD) && ~i_stop) begin
+					next_state = S_IDLE;
+				end
+				else begin
+					next_state = S_CHUNK2;
+				end
+			end
+			default	: begin
+				next_state	= S_IDLE;
+			end
+		endcase
+	end
+
+	//	-------------------------------------------------------------------------------------
+	//	FSM Output Logic
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk_gev) begin
+		if(reset_gev || !i_stream_enable) begin
+			cnt <= 'b0;//停流时要复位计数器
+		end
+		else if(current_state==S_IDLE) begin
+			cnt <= 'b0;
+		end
+		//leader状态根据chunk打开与否计数值不同
+		else if(current_state==S_LEADER && ~i_stop) begin//在i_stop为0时，本模块不允许输出数据，相应的计数器也要停止计数，下同
+			if(i_chunk_mode_active && cnt[LEADER_SIZE_WD-1:0]==(LEADER_SIZE_CHUNK_ON-1)>>log2(GEV_BE_WD)) begin
+				cnt <= 'b0;
+			end
+			else if(~i_chunk_mode_active && cnt[LEADER_SIZE_WD-1:0]==(LEADER_SIZE_CHUNK_OFF-1)>>log2(GEV_BE_WD)) begin
+				cnt <= 'b0;
+			end
+			else begin
+				cnt <= cnt + 1'b1;
+			end
+		end
+		//trailer状态的处理方式与leader类似
+		else if(current_state==S_TRAILER && ~i_stop) begin
+			if(cnt[TRAILER_SIZE_WD-1:0]==(TRAILER_SIZE-1)>>log2(GEV_BE_WD)) begin
+				cnt <= 'b0;
+			end
+			else begin
+				cnt <= cnt + 1'b1;
+			end
+		end
+		//test状态的处理方式与leader类似
+		else if(current_state==S_TEST && ~i_stop) begin
+			if(cnt>=(iv_pkt_length-1)>>log2(GEV_BE_WD)) begin
+				cnt <= 'b0;
+			end
+			else begin
+				cnt <= cnt + 1'b1;
+			end
+		end
+		//CHUNK1状态的最后一个周期计数器值保持，其它时候累加
+		else if(current_state==S_CHUNK1 && ~i_stop) begin
+			if(cnt[CHUNK_SIZE_WD-1:0]==(chunk1_size-1)>>log2(GEV_BE_WD) || chunk1_size==0) begin
+				cnt <= cnt;
+			end
+			else begin
+				cnt <= cnt + 1'b1;
+			end
+		end
+		//CHUNK2状态与leader状态类似
+		else if(current_state==S_CHUNK2 && ~i_stop) begin
+			if(cnt[CHUNK_SIZE_WD-1:0]==(CHUNK_SIZE-1)>>log2(GEV_BE_WD)) begin
+				cnt <= 'b0;
+			end
+			else begin
+				cnt <= cnt + 1'b1;
+			end
+		end
+		else begin
+			cnt <= cnt;
+		end
+	end
+
+	//	数据选择
+	always @ (posedge clk_gev) begin
+		//帧信息打开时的leader协议请见详细设计
+		else if(i_chunk_flag) begin
+			protocal_data <= {CHUNK_ID0[4*8-1:0],chunk_length0[4*8-1:0],frame_id[8*8-1:0],CHUNK_ID1[4*8-1:0],chunk_length1[4*8-1:0],iv_frame_interval[8*8-1:0],CHUNK_ID2[4*8-1:0],chunk_length2[4*8-1:0]};
+		end
+	end
+	genvar	i;
+	generate
+		for(i=0;i<MAX_SIZE;i=i+1) begin
+			assign protocal_data_inv[8*(MAX_SIZE-1-i)+:8] = protocal_data[8*i+:8];
+		end
+	endgenerate
+	assign chunk_length0 = iv_imagesize;//指示传输中的图像数据大小，字节为单位，长度是4byte
+	assign chunk_length1 = 32'd8;//指示Frame ID的长度大小，定义为8，长度是4byte
+	assign chunk_length2 = 32'd8;//指示Frame Interval的长度大小，定义为8，长度是4byte
+	assign frame_id	= i_resending_flag ? iv_bid_resend : iv_bid_normal;
+	//	-------------------------------------------------------------------------------------
+	//	-ref o_again
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk_gev ) begin
+		if(reset_gev || !i_stream_enable) begin
+			again_reg <= 1'b0;
+		end
+		else if(en && current_state==S_CHUNK1 && chunk2_en) begin
+			if(iv_remain_pkt_length==0) begin
+				again_reg <= 1'b0;
+			end
+			else if(iv_remain_pkt_length<CHUNK_SIZE) begin
+				if(cnt[CHUNK_SIZE_WD-1:0]==(chunk1_size-1)>>log2(GEV_BE_WD) && ~i_stop) begin
+					again_reg <= 1'b1;
+				end
+				else begin
+					again_reg <= 1'b0;
+				end
+			end
+			else if(iv_remain_pkt_length==CHUNK_SIZE) begin
+				again_reg <= 1'b1;
+			end
+			else begin
+				again_reg <= 1'b0;
+			end
+		end
+		else begin
+			again_reg <= 1'b0;
+		end
+	end
+	assign o_again = again_reg && en;
+	//	-------------------------------------------------------------------------------------
+	//	-ref o_packet_over
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk_gev) begin
+		if(reset_gev || !i_stream_enable) begin
+			packet_over_en <= 1'b0;
+		end
+		else begin
+			case(current_state)
+				S_IDLE: begin
+					packet_over_en <= 1'b0;
+				end
+				S_CHUNK1: begin
+					if(i_resending_flag) begin
+						//重传不可见，发出o_done不能表示包结束，因为前面没有重传image的内容
+						if(i_unavail_flag) begin
+							packet_over_en <= 1'b0;
+						end
+						//当仅重传尾包时，发出o_done不能表示包结束，因为前面没有重传image的内容
+						else if(iv_pid_first==last_payload_cnt+1) begin
+							packet_over_en <= 1'b0;
+						end
+						//当重传从最后一个payload包开始，同时最后一个payload包只有chunk数据（没有image）时,发出o_again不能表示包结束，因为前面没有重传image的内容
+						else if(iv_pid_first==last_payload_cnt && i_chunk_mode_active) begin
+							if(iv_remain_pkt_length==0) begin
+								packet_over_en <= 1'b1;
+							end
+							if(iv_remain_pkt_length<=CHUNK_SIZE) begin
+								packet_over_en <= 1'b0;
+							end
+							else begin
+								packet_over_en <= 1'b1;
+							end
+						end
+						else begin
+							packet_over_en <= 1'b1;
+						end
+					end
+					//正常流在S_CHUNK1结束时如果发出o_done或者o_again可以表示包结束
+					else begin
+						packet_over_en <= 1'b1;
+					end
+				end
+				//如果进入S_CHUNK2状态，说明发送了一部分或者全部的chunk数据，o_done信号是可以表示包结束的
+				S_CHUNK2: begin
+					packet_over_en <= 1'b1;
+				end
+				default: begin
+					packet_over_en <= 1'b0;
+				end
+			endcase
+		end
+	end
+	assign o_packet_over = packet_over_en && (o_done || o_again);
+	//	-------------------------------------------------------------------------------------
+	//	-ref o_done
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk_gev) begin
+		if(reset_gev || !i_stream_enable) begin
+			done_reg <= 1'b0;
+		end
+		if(~en) begin
+			done_reg <= 1'b0;
+		end
+		else begin
+			case(current_state)
+				//在S_CHUNK1状态，如果检测到没有chunk包可以发送，就直接发出o_done信号并跳转回S_IDLE状态
+				S_CHUNK1: begin
+					if(chunk1_en==1'b0 && chunk2_en==1'b0) begin
+						done_reg <= 1'b1;
+					end
+					else begin
+						done_reg <= 1'b0;
+					end
+				end
+				//S_CHUNK2状态发出done信号的时机是从S_CHUNK2状态跳出到S_IDLE状态的时机
+				S_CHUNK2 : begin
+					if(~chunk2_en) begin
+						done_reg <= 1'b1;
+					end
+					else if(cnt[CHUNK_SIZE_WD-1:0]==(CHUNK_SIZE-1)>>log2(GEV_BE_WD) && ~i_stop) begin
+						done_reg <= 1'b1;
+					end
+					else begin
+						done_reg <= 1'b0;
+					end
+				end
+				default : begin
+					done_reg <= 1'b0;
+				end
+			endcase
+		end
+	end
+	assign o_done = done_reg && en;
+	//	-------------------------------------------------------------------------------------
+	//	-ref ov_data
+	//	-------------------------------------------------------------------------------------
+
+	generate
+		if(GEV_DATA_WD==64) begin
+			always @ (posedge clk_gev) begin
+				if(reset_gev||~i_stream_enable) begin
+					data_reg <= 'b0;
+				end
+				else if(i_stop) begin
+					data_reg <= data_reg;
+				end
+				else begin
+					case(cnt)
+						0: begin
+							data_reg <= protocal_data_inv[0+:64];
+						end
+						1: begin
+							data_reg <= protocal_data_inv[1*64+:64];
+						end
+						2: begin
+							data_reg <= protocal_data_inv[2*64+:64];
+						end
+						3: begin
+							data_reg <= protocal_data_inv[3*64+:64];
+						end
+						4: begin
+							data_reg <= protocal_data_inv[4*64+:64];
+						end
+						default: begin
+							data_reg <= 'b0;
+						end
+					endcase
+				end
+			end
+		end
+		else if(GEV_DATA_WD==128) begin
+			//以下逻辑仅支持GEV_DATA_WD=128bit
+			always @ (posedge clk_gev) begin
+				if(reset_gev||~i_stream_enable) begin
+					data_reg <= 'b0;
+				end
+				else if(i_stop) begin
+					data_reg <= data_reg;
+				end
+				else begin
+					case(cnt)
+						0: begin
+							data_reg <= protocal_data_inv[0+:128];
+						end
+						1: begin
+							data_reg <= protocal_data_inv[1*128+:128];
+						end
+						2: begin
+							data_reg <= protocal_data_inv[2*128+:128];
+						end
+						default: begin
+							data_reg <= 'b0;
+						end
+					endcase
+				end
+			end
+		end
+		else if(GEV_DATA_WD==32) begin
+			//以下逻辑仅支持GEV_DATA_WD=128bit
+			always @ (posedge clk_gev) begin
+				if(reset_gev||~i_stream_enable) begin
+					data_reg <= 'b0;
+				end
+				else if(i_stop) begin
+					data_reg <= data_reg;
+				end
+				else begin
+					case(cnt)
+						0: begin
+							data_reg <= protocal_data_inv[0+:32];
+						end
+						1: begin
+							data_reg <= protocal_data_inv[1*32+:32];
+						end
+						2: begin
+							data_reg <= protocal_data_inv[2*32+:32];
+						end
+						3: begin
+							data_reg <= protocal_data_inv[3*32+:32];
+						end
+						4: begin
+							data_reg <= protocal_data_inv[4*32+:32];
+						end
+						5: begin
+							data_reg <= protocal_data_inv[5*32+:32];
+						end
+						6: begin
+							data_reg <= protocal_data_inv[6*32+:32];
+						end
+						7: begin
+							data_reg <= protocal_data_inv[7*32+:32];
+						end
+						8: begin
+							data_reg <= protocal_data_inv[8*32+:32];
+						end
+						9: begin
+							data_reg <= protocal_data_inv[9*32+:32];
+						end
+						default: begin
+							data_reg <= 'b0;
+						end
+					endcase
+				end
+			end
+		end
+	endgenerate
+
+
+	assign ov_data = (|ov_be) ? data_reg : 'b0;
+	//	-------------------------------------------------------------------------------------
+	//	-ref ov_be
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk_gev) begin
+		if(reset_gev||~i_stream_enable) begin
+			be_reg <= 'b0;
+		end
+		else if(~en) begin
+			be_reg <= 'b0;
+		end
+		else begin
+			case(current_state)
+				S_CHUNK1: begin
+					if(chunk1_en) begin//仅在chunk1_en使能时数据才会有效
+						if(cnt[CHUNK_SIZE_WD-1:0]==(chunk1_size-1)>>log2(GEV_BE_WD)) begin//注意此时chunk1_size一定不为0
+							be_reg <= cnt2be(chunk1_size[PTR_WD-1:0]);
+						end
+						else begin
+							be_reg <= {(GEV_BE_WD){1'b1}};
+						end
+					end
+					else begin
+						be_reg <= {(GEV_BE_WD){1'b0}};
+					end
+				end
+				S_CHUNK2: begin
+					if(chunk2_en) begin//仅在chunk2_en使能时数据才会有效
+						//S_CHUNK2第一个有效周期的be与S_CHUNK1最后一个有效周期的be为按位反的关系
+						if(cnt[CHUNK_SIZE_WD-1:0]==(chunk1_size-1)>>log2(GEV_BE_WD)) begin
+							be_reg <= ~cnt2be(chunk1_size[PTR_WD-1:0]);
+						end
+						//S_CHUNK2最后一个有效周期根据CHUNK_SIZE/GEV_BE_WD取余数译码得到
+						else if(cnt[CHUNK_SIZE_WD-1:0]==(CHUNK_SIZE-1)>>log2(GEV_BE_WD)) begin
+							be_reg <= cnt2be(CHUNK_SIZE[PTR_WD-1:0]);
+						end
+						else begin
+							be_reg <= {(GEV_BE_WD){1'b1}};
+						end
+					end
+					else begin
+						be_reg <= {(GEV_BE_WD){1'b0}};
+					end
+				end
+				default: begin
+					be_reg <= {(GEV_BE_WD){1'b0}};
+				end
+			endcase
+		end
+	end
+	assign ov_be = (en&&~i_stop) ? be_reg : 'b0;
+endmodule

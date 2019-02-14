@@ -1,0 +1,18 @@
+@P:  Worst Slack : -0.368
+@P:  frame_info_analysis|clk - Estimated Frequency : 407.5 MHz
+@P:  frame_info_analysis|clk - Requested Frequency : 479.4 MHz
+@P:  frame_info_analysis|clk - Estimated Period : 2.454
+@P:  frame_info_analysis|clk - Requested Period : 2.086
+@P:  frame_info_analysis|clk - Slack : -0.368
+@P:  Worst Slack(min analysis) : 0.753
+@P:  frame_info_analysis|clk - Estimated Frequency(min analysis) : 407.5 MHz
+@P:  frame_info_analysis|clk - Requested Frequency(min analysis) : 479.4 MHz
+@P:  frame_info_analysis|clk - Estimated Period(min analysis) : 2.454
+@P:  frame_info_analysis|clk - Requested Period(min analysis) : 2.086
+@P:  frame_info_analysis|clk - Slack(min analysis) : -0.368
+@P: frame_info_analysis Part : xc7a100tfgg484-2
+@P: frame_info_analysis I/O primitives : 505
+@P: frame_info_analysis I/O Register bits : 0
+@P: frame_info_analysis Register bits (Non I/O) : 494 (0%)
+@P: frame_info_analysis Total Luts : 51 (0%)
+@P:  CPU Time : 0h:00m:02s

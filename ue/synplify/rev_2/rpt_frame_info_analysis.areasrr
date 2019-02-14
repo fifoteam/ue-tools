@@ -1,0 +1,41 @@
+#### START OF AREA REPORT #####[
+
+Part:			XC7A100TFGG484-2 (Xilinx)
+
+-----------------------------------------------------------------------------------
+########   Utilization report for  Top level view:   frame_info_analysis   ########
+===================================================================================
+
+SEQUENTIAL ELEMENTS
+Name          Total elements     Total area     Utilization     Notes
+---------------------------------------------------------------------
+REGISTERS     494                494            100 %                
+=====================================================================
+Total SEQUENTIAL ELEMENTS in the block frame_info_analysis:	494 (46.34 % Utilization)
+
+
+COMBINATIONAL LOGIC
+Name            Total elements     Total area     Utilization     Notes
+-----------------------------------------------------------------------
+LUTS            62                 62             100 %                
+Shared LUTS     22                 4294967285     100 %                
+=======================================================================
+Total COMBINATIONAL LOGIC in the block frame_info_analysis:	84 (7.88 % Utilization)
+
+
+IO PADS
+Name     Total elements     Total area     Utilization     Notes
+----------------------------------------------------------------
+PADS     505                505            100 %                
+================================================================
+Total IO PADS in the block frame_info_analysis:	505 (47.37 % Utilization)
+
+
+Summary Table
+Name         Total elements     Total area     Utilization     Notes
+--------------------------------------------------------------------
+LUT Site     62                 51                                  
+====================================================================
+
+##### END OF AREA REPORT #####]
+
