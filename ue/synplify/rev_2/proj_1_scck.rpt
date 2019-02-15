@@ -1,12 +1,12 @@
 # Synopsys Constraint Checker(syntax only), version maprc, Build 2608R, built Feb 25 2015
 # Copyright (C) 1994-2015, Synopsys, Inc. This software and the associated documentation are proprietary to Synopsys, Inc. This software may only be used in accordance with the terms and conditions of a written license agreement with Synopsys, Inc.  All other use, reproduction, or distribution of this software is strictly prohibited.
 
-# Written on Thu Feb 14 11:16:08 2019
+# Written on Fri Feb 15 11:07:43 2019
 
 
 ##### DESIGN INFO #######################################################
 
-Top View:                "frame_info_analysis"
+Top View:                "filter"
 Constraint File(s):      (none)
 
 #Run constraint checker to find more issues with constraints.
@@ -21,8 +21,8 @@ No issues found in constraint syntax.
 Clock Summary
 *************
 
-Start                       Requested     Requested     Clock        Clock                
-Clock                       Frequency     Period        Type         Group                
-------------------------------------------------------------------------------------------
-frame_info_analysis|clk     954.5 MHz     1.048         inferred     Autoconstr_clkgroup_0
-==========================================================================================
+Start          Requested     Requested     Clock        Clock                
+Clock          Frequency     Period        Type         Group                
+-----------------------------------------------------------------------------
+filter|clk     615.0 MHz     1.626         inferred     Autoconstr_clkgroup_0
+=============================================================================

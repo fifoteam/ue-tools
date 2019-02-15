@@ -1,2 +1,0 @@
-@E: CG829 :"F:\test\frame_info_analysis.v":71:1:71:1|Unexpected ) after comma -- missing port in ANSI port list
-

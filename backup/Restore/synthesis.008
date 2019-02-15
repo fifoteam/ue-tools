@@ -5,17 +5,26 @@ import os
 verilog_path_name = sys.argv[1]
 (verilog_path,verilog_name) = os.path.split(verilog_path_name)
 (verilog_name_only,extension) = os.path.splitext(verilog_name)
-with open("c:\\ue\\vivado\\synthesis.tcl","w") as f:
+with open("c:\\ue\\synplify\\synthesis.tcl","w") as f:
 	path_list=verilog_path_name.split(os.path.sep)
 	path_list="/".join(path_list)
-	f.write("read_verilog  "+path_list+"\r\n")
-	f.write("read_xdc src/template.xdc \r\n")
-	f.write("synth_design -top "+verilog_name_only+" -part xc7a100tfgg484-2 \r\n")
-	f.write("report_utilization -file utilization_summary.rpt \r\n")
-	f.write("report_timing_summary -file timing_summary.rpt \r\n")
-os.system("c:\\ue\\vivado\\synthesis.bat ")
+	f.write("project -new D:/tools/Synopsys/fpga_J-2015.03/bin/mbin/proj_1.prj\r\n")
+	f.write("project -save proj_1 c:/ue/synplify/proj_1.prj \r\n")
+	f.write("add_file -verilog "+path_list+"\r\n")
+	f.write("set_option -grade -2\r\n")
+	f.write("set_option -package FGG484\r\n")
+	f.write("set_option -enable_nfilter 1\r\n")
+	f.write("set_option -top_module "+verilog_name_only+"\r\n")
+	f.write("project -save proj_1 c:/ue/synplify/proj_1.prj \r\n")
+	f.write("project -run  -bg \r\n")
 
-os.system("uedit32.exe c:\\ue\\vivado\\timing_summary.rpt ")
-os.system("uedit32.exe c:\\ue\\vivado\\utilization_summary.rpt ")
-
-
+os.system("c:\\ue\\synplify\\synthesis.bat ")
+src_path=[];
+src_path="c:\\ue\\synplify\\rev_2\\proj_1.srr"
+if(os.path.isfile(src_path)==True):
+	infile	= open(src_path,"r")
+	file_content 		= infile.readlines();
+	for i in range(0,len(file_content)):
+		print(""+file_content[i]+"");
+	os.system("uedit32.exe c:\\ue\\synplify\\rev_2\\proj_1.srr")
+	infile.close();

@@ -1,1 +1,0 @@
-@W: MT420 |Found inferred clock trigger_active|clk with period 0.76ns. Please declare a user-defined clock on object "p:clk"

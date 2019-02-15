@@ -1,13 +1,13 @@
 #--  Synopsys, Inc.
 #--  Version J-2015.03
-#--  Project file F:\test\rev_2\scratchproject.prs
+#--  Project file C:\ue\synplify\rev_2\scratchproject.prs
 
 #project files
-add_file -verilog "F:/test/frame_info_analysis.v"
+add_file -verilog "f:/DAHENG/hw_mer/branches/u3v_temp/fpga_module/3_io_channel/common/filter/src/filter.v"
 
 
 #implementation: "rev_2"
-impl -add F:\test\rev_2 -type fpga
+impl -add C:\ue\synplify\rev_2 -type fpga
 
 #
 #implementation attributes
@@ -15,7 +15,7 @@ impl -add F:\test\rev_2 -type fpga
 set_option -vlog_std sysv
 set_option -project_relative_includes 1
 set_option -enable_nfilter 1
-set_option -include_path {F:/test/}
+set_option -include_path {c:/ue/synplify/}
 
 #device options
 set_option -technology Artix7
@@ -26,7 +26,7 @@ set_option -part_companion ""
 
 #compilation/mapping options
 set_option -use_fsm_explorer 0
-set_option -top_module "frame_info_analysis"
+set_option -top_module "filter"
 
 # mapper_options
 set_option -frequency auto
@@ -66,5 +66,5 @@ set_option -auto_infer_blackbox :%PROD=all_protocert?1:0
 set_option -write_apr_constraint 1
 
 #set result format/file last
-project -result_file "F:/test/rev_2/proj_1.edf"
+project -result_file "C:/ue/synplify/rev_2/proj_1.edf"
 impl -active "rev_2"

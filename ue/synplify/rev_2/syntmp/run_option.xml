@@ -2,15 +2,15 @@
 <!-- 
   Synopsys, Inc.
   Version J-2015.03
-  Project file F:\test\rev_2\syntmp\run_option.xml
-  Written on Thu Feb 14 11:26:42 2019
+  Project file C:\ue\synplify\rev_2\syntmp\run_option.xml
+  Written on Fri Feb 15 11:07:41 2019
 
 
 --> 
 <project_attribute_list name="Project Settings"> 
      <option name="project_name" display_name="Project Name">proj_1</option>
      <option name="impl_name" display_name="Implementation Name">rev_2</option>
-     <option name="top_module" display_name="Top Module">frame_info_analysis</option>
+     <option name="top_module" display_name="Top Module">filter</option>
      <option name="pipe" display_name="Pipelining">1</option>
      <option name="retiming" display_name="Retiming">0</option>
      <option name="resource_sharing" display_name="Resource Sharing">1</option>

@@ -13,7 +13,8 @@ with open("c:\\ue\\vivado\\synthesis.tcl","w") as f:
 	f.write("synth_design -top "+verilog_name_only+" -part xc7a100tfgg484-2 \r\n")
 	f.write("report_utilization -file utilization_summary.rpt \r\n")
 	f.write("report_timing_summary -file timing_summary.rpt \r\n")
-os.system("c:\\ue\\vivado\\synthesis.bat ")
+#os.system("c:\\ue\\vivado\\synthesis.bat ")
+os.system("%SystemRoot%\\system32\\cmd.exe /k d:\\tools\\Xilinx\\Vivado\\2018.1\\bin\\vivado.bat -mode tcl -source synthesis.tcl ")
 
 os.system("uedit32.exe c:\\ue\\vivado\\timing_summary.rpt ")
 os.system("uedit32.exe c:\\ue\\vivado\\utilization_summary.rpt ")

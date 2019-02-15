@@ -1,12 +1,12 @@
 
 
 @S |##### START OF TIMING REPORT #####[
-# Timing Report written on Thu Feb 14 11:16:11 2019
+# Timing Report written on Fri Feb 15 11:07:46 2019
 #
 
 
-Top view:               frame_info_analysis
-Requested Frequency:    479.4 MHz
+Top view:               filter
+Requested Frequency:    335.1 MHz
 Wire load mode:         top
 Paths requested:        5
 Constraint File(s):    
@@ -20,25 +20,25 @@ Performance Summary
 *******************
 
 
-Worst slack in design: 0.753
+Worst slack in design: 0.637
 
-                            Requested     Estimated     Requested     Estimated                Clock        Clock                
-Starting Clock              Frequency     Frequency     Period        Period        Slack      Type         Group                
----------------------------------------------------------------------------------------------------------------------------------
-frame_info_analysis|clk     479.4 MHz     407.5 MHz     2.086         2.454         -0.368     inferred     Autoconstr_clkgroup_0
-=================================================================================================================================
+                   Requested     Estimated     Requested     Estimated                Clock        Clock                
+Starting Clock     Frequency     Frequency     Period        Period        Slack      Type         Group                
+------------------------------------------------------------------------------------------------------------------------
+filter|clk         335.1 MHz     286.2 MHz     2.984         3.494         -0.509     inferred     Autoconstr_clkgroup_0
+========================================================================================================================
 
 
 
 Clock Relationships
 *******************
 
-Clocks                                            |    rise  to  rise   |    fall  to  fall   |    rise  to  fall   |    fall  to  rise 
-----------------------------------------------------------------------------------------------------------------------------------------
-Starting                 Ending                   |  constraint  slack  |  constraint  slack  |  constraint  slack  |  constraint  slack
-----------------------------------------------------------------------------------------------------------------------------------------
-frame_info_analysis|clk  frame_info_analysis|clk  |  0.000       0.753  |  No paths    -      |  No paths    -      |  No paths    -    
-========================================================================================================================================
+Clocks                  |    rise  to  rise   |    fall  to  fall   |    rise  to  fall   |    fall  to  rise 
+--------------------------------------------------------------------------------------------------------------
+Starting    Ending      |  constraint  slack  |  constraint  slack  |  constraint  slack  |  constraint  slack
+--------------------------------------------------------------------------------------------------------------
+filter|clk  filter|clk  |  0.000       0.637  |  No paths    -      |  No paths    -      |  No paths    -    
+==============================================================================================================
  Note: 'No paths' indicates there are no paths in the design for that pair of clock edges.
        'Diff grp' indicates that paths exist but the starting clock and ending clock are in different clock groups.
 
@@ -52,7 +52,7 @@ No IO constraint found
 
 
 ====================================
-Detailed Report for Clock: frame_info_analysis|clk
+Detailed Report for Clock: filter|clk
 ====================================
 
 
@@ -60,41 +60,41 @@ Detailed Report for Clock: frame_info_analysis|clk
 Starting Points with Worst Slack
 ********************************
 
-                            Starting                                                                 Arrival          
-Instance                    Reference                   Type     Pin     Net                         Time        Slack
-                            Clock                                                                                     
-----------------------------------------------------------------------------------------------------------------------
-statis_byte_cnt[7]          frame_info_analysis|clk     FDR      Q       statis_byte_cnt[7]          2.586       0.753
-statis_byte_cnt_fast[7]     frame_info_analysis|clk     FDR      Q       statis_byte_cnt_fast[7]     2.586       0.779
-info_byte_cnt_fast[7]       frame_info_analysis|clk     FDR      Q       info_byte_cnt_fast[7]       2.586       0.810
-status_info[0]              frame_info_analysis|clk     FDE      Q       status_info[0]              2.586       0.821
-status_info[1]              frame_info_analysis|clk     FDE      Q       status_info[1]              2.586       0.821
-status_info[2]              frame_info_analysis|clk     FDE      Q       status_info[2]              2.586       0.821
-status_info[3]              frame_info_analysis|clk     FDE      Q       status_info[3]              2.586       0.821
-status_info[4]              frame_info_analysis|clk     FDE      Q       status_info[4]              2.586       0.821
-status_info[5]              frame_info_analysis|clk     FDE      Q       status_info[5]              2.586       0.821
-status_info[6]              frame_info_analysis|clk     FDE      Q       status_info[6]              2.586       0.821
-======================================================================================================================
+                            Starting                                                    Arrival          
+Instance                    Reference      Type     Pin     Net                         Time        Slack
+                            Clock                                                                        
+---------------------------------------------------------------------------------------------------------
+filter_fall_cnt_fast[0]     filter|clk     FDRE     Q       filter_fall_cnt_fast[0]     2.586       0.637
+filter_rise_cnt_fast[0]     filter|clk     FDRE     Q       filter_rise_cnt_fast[0]     2.586       0.637
+filter_fall_cnt[0]          filter|clk     FDRE     Q       filter_fall_cnt[0]          2.586       0.680
+filter_rise_cnt[0]          filter|clk     FDRE     Q       filter_rise_cnt[0]          2.586       0.680
+filter_sig                  filter|clk     FD       Q       filter_sig                  2.586       0.857
+filter_fall_cnt[2]          filter|clk     FDRE     Q       filter_fall_cnt[2]          2.586       1.122
+filter_fall_cnt[6]          filter|clk     FDRE     Q       filter_fall_cnt[6]          2.586       1.122
+filter_fall_cnt[10]         filter|clk     FDRE     Q       filter_fall_cnt[10]         2.586       1.122
+filter_fall_cnt[14]         filter|clk     FDRE     Q       filter_fall_cnt[14]         2.586       1.122
+filter_fall_cnt[18]         filter|clk     FDRE     Q       filter_fall_cnt[18]         2.586       1.122
+=========================================================================================================
 
 
 Ending Points with Worst Slack
 ******************************
 
-                            Starting                                                                Required          
-Instance                    Reference                   Type     Pin     Net                        Time         Slack
-                            Clock                                                                                     
-----------------------------------------------------------------------------------------------------------------------
-statis_byte_cnt[7]          frame_info_analysis|clk     FDR      D       statis_byte_cnt_RNO[7]     2.277        0.753
-statis_byte_cnt_fast[7]     frame_info_analysis|clk     FDR      D       N_2120_fast                2.277        0.779
-info_byte_cnt_fast[7]       frame_info_analysis|clk     FDR      D       N_2115_fast                2.277        0.810
-status[0]                   frame_info_analysis|clk     FDE      D       status_4[0]                2.277        0.821
-status[1]                   frame_info_analysis|clk     FDE      D       status_4[1]                2.277        0.821
-status[2]                   frame_info_analysis|clk     FDE      D       status_4[2]                2.277        0.821
-status[3]                   frame_info_analysis|clk     FDE      D       status_4[3]                2.277        0.821
-status[4]                   frame_info_analysis|clk     FDE      D       status_4[4]                2.277        0.821
-status[5]                   frame_info_analysis|clk     FDE      D       status_4[5]                2.277        0.821
-status[6]                   frame_info_analysis|clk     FDE      D       status_4[6]                2.277        0.821
-======================================================================================================================
+                            Starting                                                      Required          
+Instance                    Reference      Type     Pin     Net                           Time         Slack
+                            Clock                                                                           
+------------------------------------------------------------------------------------------------------------
+filter_fall_cnt_fast[0]     filter|clk     FDRE     D       filter_fall_cnt_s_fast[0]     2.277        0.637
+filter_rise_cnt_fast[0]     filter|clk     FDRE     D       filter_rise_cnt_s_fast[0]     2.277        0.637
+filter_fall_cnt[0]          filter|clk     FDRE     D       filter_fall_cnt_s[0]          2.277        0.680
+filter_rise_cnt[0]          filter|clk     FDRE     D       filter_rise_cnt_s[0]          2.277        0.680
+filter_sig                  filter|clk     FD       D       N_3_0                         2.277        0.857
+filter_fall_cnt[2]          filter|clk     FDRE     D       filter_fall_cnt_s[2]          2.321        0.993
+filter_rise_cnt[2]          filter|clk     FDRE     D       filter_rise_cnt_s[2]          2.321        0.993
+filter_fall_cnt[3]          filter|clk     FDRE     D       filter_fall_cnt_s[3]          2.321        1.033
+filter_rise_cnt[3]          filter|clk     FDRE     D       filter_rise_cnt_s[3]          2.321        1.033
+filter_fall_cnt[1]          filter|clk     FDRE     D       filter_fall_cnt_s[1]          2.321        1.045
+============================================================================================================
 
 
 
@@ -103,67 +103,67 @@ Worst Path Information
 
 
 Path information for path number 1: 
-    Propagation time:                        0.709
+    Propagation time:                        0.593
     + Clock delay at starting point:         2.321
     - Requested Period:                      0.000
     - Hold time:                             -0.044
     - Clock delay at ending point:           2.321
-    = Slack (critical) :                     0.753
+    = Slack (critical) :                     0.637
 
     Number of logic level(s):                1
-    Starting point:                          statis_byte_cnt[7] / Q
-    Ending point:                            statis_byte_cnt[7] / D
-    The start point is clocked by            frame_info_analysis|clk [rising] on pin C
-    The end   point is clocked by            frame_info_analysis|clk [rising] on pin C
+    Starting point:                          filter_fall_cnt_fast[0] / Q
+    Ending point:                            filter_fall_cnt_fast[0] / D
+    The start point is clocked by            filter|clk [rising] on pin C
+    The end   point is clocked by            filter|clk [rising] on pin C
 
-Instance / Net                        Pin      Pin               Arrival     No. of    
-Name                       Type       Name     Dir     Delay     Time        Fan Out(s)
----------------------------------------------------------------------------------------
-statis_byte_cnt[7]         FDR        Q        Out     0.265     2.586       -         
-statis_byte_cnt[7]         Net        -        -       0.297     -           3         
-statis_byte_cnt_RNO[7]     LUT4_L     I2       In      -         2.883       -         
-statis_byte_cnt_RNO[7]     LUT4_L     LO       Out     0.147     3.030       -         
-statis_byte_cnt_RNO[7]     Net        -        -       0.000     -           1         
-statis_byte_cnt[7]         FDR        D        In      -         3.030       -         
-=======================================================================================
+Instance / Net                         Pin      Pin               Arrival     No. of    
+Name                          Type     Name     Dir     Delay     Time        Fan Out(s)
+----------------------------------------------------------------------------------------
+filter_fall_cnt_fast[0]       FDRE     Q        Out     0.265     2.586       -         
+filter_fall_cnt_fast[0]       Net      -        -       0.254     -           2         
+filter_fall_cnt_s_fast[0]     INV      I        In      -         2.840       -         
+filter_fall_cnt_s_fast[0]     INV      O        Out     0.073     2.913       -         
+filter_fall_cnt_s_fast[0]     Net      -        -       0.000     -           1         
+filter_fall_cnt_fast[0]       FDRE     D        In      -         2.913       -         
+========================================================================================
 
 
 Start clock path (MIN):
 
-Instance / Net                                     Pin      Pin               Arrival     No. of    
-Name                   Type                        Name     Dir     Delay     Time        Fan Out(s)
-----------------------------------------------------------------------------------------------------
-Start Clock :          frame_info_analysis|clk                                                      
-------------                                                                                        
-clk                    Port                        clk      In      -         0.000       -         
-clk                    Net                         -        -       0.000     -           1         
-clk_ibuf_iso           IBUFG                       I        In      -         0.000       -         
-clk_ibuf_iso           IBUFG                       O        Out     0.705     0.705       -         
-clk_ibuf_iso           Net                         -        -       0.420     -           1         
-clk_ibuf               BUFG                        I        In      -         1.125       -         
-clk_ibuf               BUFG                        O        Out     0.064     1.189       -         
-clk_c                  Net                         -        -       1.131     -           494       
-statis_byte_cnt[7]     FDR                         C        In      -         2.321       -         
-====================================================================================================
+Instance / Net                             Pin      Pin               Arrival     No. of    
+Name                        Type           Name     Dir     Delay     Time        Fan Out(s)
+--------------------------------------------------------------------------------------------
+Start Clock :               filter|clk                                                      
+------------                                                                                
+clk                         Port           clk      In      -         0.000       -         
+clk                         Net            -        -       0.000     -           1         
+clk_ibuf_iso                IBUFG          I        In      -         0.000       -         
+clk_ibuf_iso                IBUFG          O        Out     0.705     0.705       -         
+clk_ibuf_iso                Net            -        -       0.420     -           1         
+clk_ibuf                    BUFG           I        In      -         1.125       -         
+clk_ibuf                    BUFG           O        Out     0.064     1.189       -         
+clk_c                       Net            -        -       1.131     -           79        
+filter_fall_cnt_fast[0]     FDRE           C        In      -         2.321       -         
+============================================================================================
 
 
 End clock path (MIN):
 
-Instance / Net                                     Pin      Pin               Arrival     No. of    
-Name                   Type                        Name     Dir     Delay     Time        Fan Out(s)
-----------------------------------------------------------------------------------------------------
-Start Clock :          frame_info_analysis|clk                                                      
-------------                                                                                        
-clk                    Port                        clk      In      -         0.000       -         
-clk                    Net                         -        -       0.000     -           1         
-clk_ibuf_iso           IBUFG                       I        In      -         0.000       -         
-clk_ibuf_iso           IBUFG                       O        Out     0.705     0.705       -         
-clk_ibuf_iso           Net                         -        -       0.420     -           1         
-clk_ibuf               BUFG                        I        In      -         1.125       -         
-clk_ibuf               BUFG                        O        Out     0.064     1.189       -         
-clk_c                  Net                         -        -       1.131     -           494       
-statis_byte_cnt[7]     FDR                         C        In      -         2.321       -         
-====================================================================================================
+Instance / Net                             Pin      Pin               Arrival     No. of    
+Name                        Type           Name     Dir     Delay     Time        Fan Out(s)
+--------------------------------------------------------------------------------------------
+Start Clock :               filter|clk                                                      
+------------                                                                                
+clk                         Port           clk      In      -         0.000       -         
+clk                         Net            -        -       0.000     -           1         
+clk_ibuf_iso                IBUFG          I        In      -         0.000       -         
+clk_ibuf_iso                IBUFG          O        Out     0.705     0.705       -         
+clk_ibuf_iso                Net            -        -       0.420     -           1         
+clk_ibuf                    BUFG           I        In      -         1.125       -         
+clk_ibuf                    BUFG           O        Out     0.064     1.189       -         
+clk_c                       Net            -        -       1.131     -           79        
+filter_fall_cnt_fast[0]     FDRE           C        In      -         2.321       -         
+============================================================================================
 
 
 

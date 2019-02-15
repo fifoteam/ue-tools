@@ -1,0 +1,41 @@
+---------------------------------------
+Resource Usage Report for filter 
+
+Mapping to part: xc7a100tfgg484-2
+Cell usage:
+CARRY4          24 uses
+FD              1 use
+FDE             38 uses
+FDRE            40 uses
+GND             1 use
+VCC             1 use
+LUT1            74 uses
+LUT2            3 uses
+LUT3            2 uses
+LUT4            2 uses
+LUT5            1 use
+LUT6            18 uses
+
+I/O ports: 41
+I/O primitives: 41
+IBUF           39 uses
+IBUFG          1 use
+OBUF           1 use
+
+BUFG           1 use
+
+I/O Register bits:                  0
+Register bits not including I/Os:   79 (0%)
+
+Global Clock Buffers: 1 of 32 (3%)
+
+
+Mapping Summary:
+Total  LUTs: 99 (0%)
+
+Distribution of All Consumed LUTs = LUT1 + LUT2 + LUT3 + LUT4 + LUT5 + LUT6- HLUTNM/2 
+Distribution of All Consumed Luts 99 = 74 + 3 + 2 + 2 + 1 + 18- 2/2 
+
+
+ Number of unique control sets:              5
+

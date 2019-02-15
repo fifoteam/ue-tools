@@ -34,7 +34,7 @@ module led_ctrl # (
 	//时钟
 	input								clk				,	//时钟信号
 	//寄存器信号
-	input								i_usb_slwr_n	,	//GPIF 写信号，clk_gpif时钟域
+	input								i_usb_slwr_n		//GPIF 写信号，clk_gpif时钟域
 	//  -------------------------------------------------------------------------------------
 	//	led_ctrl
 	//	0x00:红灯常亮。此时FPGA程序未完成加载或在线升级中。

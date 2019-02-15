@@ -1,4 +1,7 @@
 @N|Running in 64-bit mode
 @N:: Running Verilog Compiler in System Verilog mode
 @N:: Running Verilog Compiler in Multiple File Compilation Unit mode
+@N: CG364 :"f:\DAHENG\hw_mer\branches\u3v_temp\fpga_module\3_io_channel\common\filter\src\filter.v":28:7:28:12|Synthesizing module filter
+@N: CG179 :"f:\DAHENG\hw_mer\branches\u3v_temp\fpga_module\3_io_channel\common\filter\src\filter.v":80:23:80:37|Removing redundant assignment
+@N: CG179 :"f:\DAHENG\hw_mer\branches\u3v_temp\fpga_module\3_io_channel\common\filter\src\filter.v":99:23:99:37|Removing redundant assignment
 

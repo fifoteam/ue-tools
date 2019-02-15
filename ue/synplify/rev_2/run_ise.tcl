@@ -7,8 +7,8 @@ set FamilyName  	"ARTIX7"
 set DeviceName  	"XC7A100T"
 set PackageName 	"FGG484"
 set SpeedGrade  	"-2"
-set TopModule   	"frame_info_analysis"
-set EdifFile    	"F:/test/rev_2/proj_1.edf"
+set TopModule   	"filter"
+set EdifFile    	"C:/ue/synplify/rev_2/proj_1.edf"
 
 #################################################
 ###  SET FLOW                                 ###

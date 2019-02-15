@@ -1,0 +1,6 @@
+
+c:\ue\synplify>d:\tools\Synopsys\fpga_J-2015.03\bin\mbin\synplify.exe -batch synthesis.tcl 
+error reading package index file d:/tools/Synopsys/fpga_J-2015.03/lib/pkgIndex.tcl: invalid command name "obffn"
+error reading package index file d:/tools/Synopsys/fpga_J-2015.03/lib/pkgIndex.tcl: invalid command name "obffn"
+error reading package index file d:/tools/Synopsys/fpga_J-2015.03/lib/pkgIndex.tcl: invalid command name "obffn"
+error reading package index file d:/tools/Synopsys/fpga_J-2015.03/lib/pkgIndex.tcl: invalid command name "obffn"

@@ -1,11 +1,11 @@
 #--  Synopsys, Inc.
 #--  Version J-2015.03
-#--  Project file F:\test\rev_2\run_options.txt
-#--  Written on Thu Feb 14 11:26:42 2019
+#--  Project file C:\ue\synplify\rev_2\run_options.txt
+#--  Written on Fri Feb 15 11:07:41 2019
 
 
 #project files
-add_file -verilog "./frame_info_analysis.v"
+add_file -verilog "f:/DAHENG/hw_mer/branches/u3v_temp/fpga_module/3_io_channel/common/filter/src/filter.v"
 
 
 #implementation: "rev_2"
@@ -27,7 +27,7 @@ set_option -part_companion ""
 
 #compilation/mapping options
 set_option -use_fsm_explorer 0
-set_option -top_module "frame_info_analysis"
+set_option -top_module "filter"
 
 # mapper_options
 set_option -frequency auto

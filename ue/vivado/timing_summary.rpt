@@ -1,10 +1,10 @@
 Copyright 1986-2018 Xilinx, Inc. All Rights Reserved.
 ------------------------------------------------------------------------------------
 | Tool Version : Vivado v.2018.1 (win64) Build 2188600 Wed Apr  4 18:40:38 MDT 2018
-| Date         : Thu Feb 14 10:44:34 2019
+| Date         : Fri Feb 15 11:14:07 2019
 | Host         : xht-PC running 64-bit Service Pack 1  (build 7601)
 | Command      : report_timing_summary -file timing_summary.rpt
-| Design       : frame_info_analysis_ctrl
+| Design       : filter
 | Device       : 7a100t-fgg484
 | Speed File   : -2  PRODUCTION 1.21 2018-02-08
 ------------------------------------------------------------------------------------
@@ -74,14 +74,14 @@ Table of Contents
 
 5. checking no_input_delay
 --------------------------
- There are 6 input ports with no input delay specified. (HIGH)
+ There are 39 input ports with no input delay specified. (HIGH)
 
  There are 0 input ports with no input delay but user has a false path constraint.
 
 
 6. checking no_output_delay
 ---------------------------
- There are 68 ports with no output delay specified. (HIGH)
+ There is 1 port with no output delay specified. (HIGH)
 
  There are 0 ports with no output delay but user has a false path constraint
 
@@ -126,7 +126,7 @@ Table of Contents
 
     WNS(ns)      TNS(ns)  TNS Failing Endpoints  TNS Total Endpoints      WHS(ns)      THS(ns)  THS Failing Endpoints  THS Total Endpoints     WPWS(ns)     TPWS(ns)  TPWS Failing Endpoints  TPWS Total Endpoints  
     -------      -------  ---------------------  -------------------      -------      -------  ---------------------  -------------------     --------     --------  ----------------------  --------------------  
-     22.853        0.000                      0                    1        0.719        0.000                      0                    1       12.000        0.000                       0                     2  
+     21.207        0.000                      0                  116        0.201        0.000                      0                  116       12.000        0.000                       0                    78  
 
 
 All user specified timing constraints are met.
@@ -137,9 +137,9 @@ All user specified timing constraints are met.
 | -------------
 ------------------------------------------------------------------------------------------------
 
-Clock    Waveform(ns)       Period(ns)      Frequency(MHz)
------    ------------       ----------      --------------
-clk_gev  {0.000 12.500}     25.000          40.000          
+Clock  Waveform(ns)       Period(ns)      Frequency(MHz)
+-----  ------------       ----------      --------------
+clk    {0.000 12.500}     25.000          40.000          
 
 
 ------------------------------------------------------------------------------------------------
@@ -149,7 +149,7 @@ clk_gev  {0.000 12.500}     25.000          40.000
 
 Clock             WNS(ns)      TNS(ns)  TNS Failing Endpoints  TNS Total Endpoints      WHS(ns)      THS(ns)  THS Failing Endpoints  THS Total Endpoints     WPWS(ns)     TPWS(ns)  TPWS Failing Endpoints  TPWS Total Endpoints  
 -----             -------      -------  ---------------------  -------------------      -------      -------  ---------------------  -------------------     --------     --------  ----------------------  --------------------  
-clk_gev            22.853        0.000                      0                    1        0.719        0.000                      0                    1       12.000        0.000                       0                     2  
+clk                21.207        0.000                      0                  116        0.201        0.000                      0                  116       12.000        0.000                       0                    78  
 
 
 ------------------------------------------------------------------------------------------------
@@ -177,27 +177,27 @@ Path Group    From Clock    To Clock          WNS(ns)      TNS(ns)  TNS Failing 
 
 
 ---------------------------------------------------------------------------------------------------
-From Clock:  clk_gev
-  To Clock:  clk_gev
+From Clock:  clk
+  To Clock:  clk
 
-Setup :            0  Failing Endpoints,  Worst Slack       22.853ns,  Total Violation        0.000ns
-Hold  :            0  Failing Endpoints,  Worst Slack        0.719ns,  Total Violation        0.000ns
+Setup :            0  Failing Endpoints,  Worst Slack       21.207ns,  Total Violation        0.000ns
+Hold  :            0  Failing Endpoints,  Worst Slack        0.201ns,  Total Violation        0.000ns
 PW    :            0  Failing Endpoints,  Worst Slack       12.000ns,  Total Violation        0.000ns
 ---------------------------------------------------------------------------------------------------
 
 
 Max Delay Paths
 --------------------------------------------------------------------------------------
-Slack (MET) :             22.853ns  (required time - arrival time)
-  Source:                 en_reg/C
-                            (rising edge-triggered cell FDRE clocked by clk_gev  {rise@0.000ns fall@12.500ns period=25.000ns})
-  Destination:            en_reg/CE
-                            (rising edge-triggered cell FDRE clocked by clk_gev  {rise@0.000ns fall@12.500ns period=25.000ns})
-  Path Group:             clk_gev
+Slack (MET) :             21.207ns  (required time - arrival time)
+  Source:                 filter_rise_reg_reg[5]/C
+                            (rising edge-triggered cell FDRE clocked by clk  {rise@0.000ns fall@12.500ns period=25.000ns})
+  Destination:            filter_sig_reg/S
+                            (rising edge-triggered cell FDSE clocked by clk  {rise@0.000ns fall@12.500ns period=25.000ns})
+  Path Group:             clk
   Path Type:              Setup (Max at Slow Process Corner)
-  Requirement:            25.000ns  (clk_gev rise@25.000ns - clk_gev rise@0.000ns)
-  Data Path Delay:        1.802ns  (logic 0.629ns (34.906%)  route 1.173ns (65.094%))
-  Logic Levels:           1  (LUT6=1)
+  Requirement:            25.000ns  (clk rise@25.000ns - clk rise@0.000ns)
+  Data Path Delay:        3.161ns  (logic 1.536ns (48.592%)  route 1.625ns (51.408%))
+  Logic Levels:           4  (CARRY4=2 LUT2=1 LUT6=1)
   Clock Path Skew:        -0.145ns (DCD - SCD + CPR)
     Destination Clock Delay (DCD):    1.904ns = ( 26.904 - 25.000 ) 
     Source Clock Delay      (SCD):    2.217ns
@@ -210,38 +210,46 @@ Slack (MET) :             22.853ns  (required time - arrival time)
 
     Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
   -------------------------------------------------------------------    -------------------
-                         (clock clk_gev rise edge)    0.000     0.000 r  
-                                                      0.000     0.000 r  clk_gev (IN)
-                         net (fo=0)                   0.000     0.000    clk_gev
-                         IBUF (Prop_ibuf_I_O)         0.904     0.904 r  clk_gev_IBUF_inst/O
-                         net (fo=1, unplaced)         0.647     1.552    clk_gev_IBUF
-                         BUFG (Prop_bufg_I_O)         0.081     1.633 r  clk_gev_IBUF_BUFG_inst/O
-                         net (fo=1, unplaced)         0.584     2.217    clk_gev_IBUF_BUFG
-                         FDRE                                         r  en_reg/C
+                         (clock clk rise edge)        0.000     0.000 r  
+                                                      0.000     0.000 r  clk (IN)
+                         net (fo=0)                   0.000     0.000    clk
+                         IBUF (Prop_ibuf_I_O)         0.904     0.904 r  clk_IBUF_inst/O
+                         net (fo=1, unplaced)         0.647     1.552    clk_IBUF
+                         BUFG (Prop_bufg_I_O)         0.081     1.633 r  clk_IBUF_BUFG_inst/O
+                         net (fo=77, unplaced)        0.584     2.217    clk_IBUF_BUFG
+                         FDRE                                         r  filter_rise_reg_reg[5]/C
   -------------------------------------------------------------------    -------------------
-                         FDRE (Prop_fdre_C_Q)         0.397     2.614 r  en_reg/Q
-                         net (fo=5, unplaced)         0.807     3.421    en_reg_n_0
-                         LUT6 (Prop_lut6_I0_O)        0.232     3.653 r  en_i_1/O
-                         net (fo=1, unplaced)         0.366     4.019    fb_rd_en
-                         FDRE                                         r  en_reg/CE
+                         FDRE (Prop_fdre_C_Q)         0.397     2.614 r  filter_rise_reg_reg[5]/Q
+                         net (fo=1, unplaced)         0.779     3.393    filter_rise_reg_reg_n_0_[5]
+                         LUT6 (Prop_lut6_I0_O)        0.232     3.625 r  filter_sig_i_15/O
+                         net (fo=1, unplaced)         0.000     3.625    filter_sig_i_15_n_0
+                         CARRY4 (Prop_carry4_S[1]_CO[3])
+                                                      0.444     4.069 r  filter_sig_reg_i_5/CO[3]
+                         net (fo=1, unplaced)         0.000     4.069    filter_sig_reg_i_5_n_0
+                         CARRY4 (Prop_carry4_CI_CO[2])
+                                                      0.211     4.280 r  filter_sig_reg_i_3/CO[2]
+                         net (fo=2, unplaced)         0.360     4.640    filter_rise_cnt1
+                         LUT2 (Prop_lut2_I0_O)        0.252     4.892 r  filter_sig_i_1/O
+                         net (fo=1, unplaced)         0.486     5.378    filter_sig00_out
+                         FDSE                                         r  filter_sig_reg/S
   -------------------------------------------------------------------    -------------------
 
-                         (clock clk_gev rise edge)   25.000    25.000 r  
-                                                      0.000    25.000 r  clk_gev (IN)
-                         net (fo=0)                   0.000    25.000    clk_gev
-                         IBUF (Prop_ibuf_I_O)         0.773    25.773 r  clk_gev_IBUF_inst/O
-                         net (fo=1, unplaced)         0.615    26.388    clk_gev_IBUF
-                         BUFG (Prop_bufg_I_O)         0.077    26.465 r  clk_gev_IBUF_BUFG_inst/O
-                         net (fo=1, unplaced)         0.439    26.904    clk_gev_IBUF_BUFG
-                         FDRE                                         r  en_reg/C
+                         (clock clk rise edge)       25.000    25.000 r  
+                                                      0.000    25.000 r  clk (IN)
+                         net (fo=0)                   0.000    25.000    clk
+                         IBUF (Prop_ibuf_I_O)         0.773    25.773 r  clk_IBUF_inst/O
+                         net (fo=1, unplaced)         0.615    26.388    clk_IBUF
+                         BUFG (Prop_bufg_I_O)         0.077    26.465 r  clk_IBUF_BUFG_inst/O
+                         net (fo=77, unplaced)        0.439    26.904    clk_IBUF_BUFG
+                         FDSE                                         r  filter_sig_reg/C
                          clock pessimism              0.167    27.072    
                          clock uncertainty           -0.035    27.036    
-                         FDRE (Setup_fdre_C_CE)      -0.165    26.871    en_reg
+                         FDSE (Setup_fdse_C_S)       -0.452    26.584    filter_sig_reg
   -------------------------------------------------------------------
-                         required time                         26.871    
-                         arrival time                          -4.019    
+                         required time                         26.584    
+                         arrival time                          -5.378    
   -------------------------------------------------------------------
-                         slack                                 22.853    
+                         slack                                 21.207    
 
 
 
@@ -249,16 +257,16 @@ Slack (MET) :             22.853ns  (required time - arrival time)
 
 Min Delay Paths
 --------------------------------------------------------------------------------------
-Slack (MET) :             0.719ns  (arrival time - required time)
-  Source:                 en_reg/C
-                            (rising edge-triggered cell FDRE clocked by clk_gev  {rise@0.000ns fall@12.500ns period=25.000ns})
-  Destination:            en_reg/CE
-                            (rising edge-triggered cell FDRE clocked by clk_gev  {rise@0.000ns fall@12.500ns period=25.000ns})
-  Path Group:             clk_gev
+Slack (MET) :             0.201ns  (arrival time - required time)
+  Source:                 filter_fall_cnt_reg[0]/C
+                            (rising edge-triggered cell FDRE clocked by clk  {rise@0.000ns fall@12.500ns period=25.000ns})
+  Destination:            filter_fall_cnt_reg[0]/D
+                            (rising edge-triggered cell FDRE clocked by clk  {rise@0.000ns fall@12.500ns period=25.000ns})
+  Path Group:             clk
   Path Type:              Hold (Min at Fast Process Corner)
-  Requirement:            0.000ns  (clk_gev rise@0.000ns - clk_gev rise@0.000ns)
-  Data Path Delay:        0.827ns  (logic 0.245ns (29.636%)  route 0.582ns (70.364%))
-  Logic Levels:           1  (LUT6=1)
+  Requirement:            0.000ns  (clk rise@0.000ns - clk rise@0.000ns)
+  Data Path Delay:        0.459ns  (logic 0.262ns (57.035%)  route 0.197ns (42.965%))
+  Logic Levels:           2  (CARRY4=1 LUT1=1)
   Clock Path Skew:        0.145ns (DCD - SCD - CPR)
     Destination Clock Delay (DCD):    1.016ns
     Source Clock Delay      (SCD):    0.662ns
@@ -266,37 +274,40 @@ Slack (MET) :             0.719ns  (arrival time - required time)
 
     Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
   -------------------------------------------------------------------    -------------------
-                         (clock clk_gev rise edge)    0.000     0.000 r  
-                                                      0.000     0.000 r  clk_gev (IN)
-                         net (fo=0)                   0.000     0.000    clk_gev
-                         IBUF (Prop_ibuf_I_O)         0.201     0.201 r  clk_gev_IBUF_inst/O
-                         net (fo=1, unplaced)         0.321     0.522    clk_gev_IBUF
-                         BUFG (Prop_bufg_I_O)         0.026     0.548 r  clk_gev_IBUF_BUFG_inst/O
-                         net (fo=1, unplaced)         0.114     0.662    clk_gev_IBUF_BUFG
-                         FDRE                                         r  en_reg/C
+                         (clock clk rise edge)        0.000     0.000 r  
+                                                      0.000     0.000 r  clk (IN)
+                         net (fo=0)                   0.000     0.000    clk
+                         IBUF (Prop_ibuf_I_O)         0.201     0.201 r  clk_IBUF_inst/O
+                         net (fo=1, unplaced)         0.321     0.522    clk_IBUF
+                         BUFG (Prop_bufg_I_O)         0.026     0.548 r  clk_IBUF_BUFG_inst/O
+                         net (fo=77, unplaced)        0.114     0.662    clk_IBUF_BUFG
+                         FDRE                                         r  filter_fall_cnt_reg[0]/C
   -------------------------------------------------------------------    -------------------
-                         FDRE (Prop_fdre_C_Q)         0.147     0.809 r  en_reg/Q
-                         net (fo=5, unplaced)         0.400     1.209    en_reg_n_0
-                         LUT6 (Prop_lut6_I0_O)        0.098     1.307 r  en_i_1/O
-                         net (fo=1, unplaced)         0.182     1.489    fb_rd_en
-                         FDRE                                         r  en_reg/CE
+                         FDRE (Prop_fdre_C_Q)         0.147     0.809 f  filter_fall_cnt_reg[0]/Q
+                         net (fo=3, unplaced)         0.197     1.006    filter_fall_cnt_reg[0]
+                         LUT1 (Prop_lut1_I0_O)        0.045     1.051 r  filter_fall_cnt[0]_i_3/O
+                         net (fo=1, unplaced)         0.000     1.051    filter_fall_cnt[0]_i_3_n_0
+                         CARRY4 (Prop_carry4_S[0]_O[0])
+                                                      0.070     1.121 r  filter_fall_cnt_reg[0]_i_2/O[0]
+                         net (fo=1, unplaced)         0.000     1.121    filter_fall_cnt_reg[0]_i_2_n_7
+                         FDRE                                         r  filter_fall_cnt_reg[0]/D
   -------------------------------------------------------------------    -------------------
 
-                         (clock clk_gev rise edge)    0.000     0.000 r  
-                                                      0.000     0.000 r  clk_gev (IN)
-                         net (fo=0)                   0.000     0.000    clk_gev
-                         IBUF (Prop_ibuf_I_O)         0.390     0.390 r  clk_gev_IBUF_inst/O
-                         net (fo=1, unplaced)         0.338     0.728    clk_gev_IBUF
-                         BUFG (Prop_bufg_I_O)         0.029     0.757 r  clk_gev_IBUF_BUFG_inst/O
-                         net (fo=1, unplaced)         0.259     1.016    clk_gev_IBUF_BUFG
-                         FDRE                                         r  en_reg/C
+                         (clock clk rise edge)        0.000     0.000 r  
+                                                      0.000     0.000 r  clk (IN)
+                         net (fo=0)                   0.000     0.000    clk
+                         IBUF (Prop_ibuf_I_O)         0.390     0.390 r  clk_IBUF_inst/O
+                         net (fo=1, unplaced)         0.338     0.728    clk_IBUF
+                         BUFG (Prop_bufg_I_O)         0.029     0.757 r  clk_IBUF_BUFG_inst/O
+                         net (fo=77, unplaced)        0.259     1.016    clk_IBUF_BUFG
+                         FDRE                                         r  filter_fall_cnt_reg[0]/C
                          clock pessimism             -0.209     0.807    
-                         FDRE (Hold_fdre_C_CE)       -0.037     0.770    en_reg
+                         FDRE (Hold_fdre_C_D)         0.113     0.920    filter_fall_cnt_reg[0]
   -------------------------------------------------------------------
-                         required time                         -0.770    
-                         arrival time                           1.489    
+                         required time                         -0.920    
+                         arrival time                           1.121    
   -------------------------------------------------------------------
-                         slack                                  0.719    
+                         slack                                  0.201    
 
 
 
@@ -304,15 +315,15 @@ Slack (MET) :             0.719ns  (arrival time - required time)
 
 Pulse Width Checks
 --------------------------------------------------------------------------------------
-Clock Name:         clk_gev
+Clock Name:         clk
 Waveform(ns):       { 0.000 12.500 }
 Period(ns):         25.000
-Sources:            { clk_gev }
+Sources:            { clk }
 
 Check Type        Corner  Lib Pin  Reference Pin  Required(ns)  Actual(ns)  Slack(ns)  Location  Pin
-Min Period        n/a     BUFG/I   n/a            1.592         25.000      23.408               clk_gev_IBUF_BUFG_inst/I
-Low Pulse Width   Slow    FDRE/C   n/a            0.500         12.500      12.000               en_reg/C
-High Pulse Width  Fast    FDRE/C   n/a            0.500         12.500      12.000               en_reg/C
+Min Period        n/a     BUFG/I   n/a            1.592         25.000      23.408               clk_IBUF_BUFG_inst/I
+Low Pulse Width   Slow    FDRE/C   n/a            0.500         12.500      12.000               filter_fall_cnt_reg[0]/C
+High Pulse Width  Fast    FDRE/C   n/a            0.500         12.500      12.000               filter_fall_cnt_reg[0]/C
 
 
 

@@ -2,52 +2,52 @@ Synopsys Xilinx Technology Pre-mapping, Version maprc, Build 2608R, Built Feb 25
 Copyright (C) 1994-2015, Synopsys, Inc. This software and the associated documentation are proprietary to Synopsys, Inc. This software may only be used in accordance with the terms and conditions of a written license agreement with Synopsys, Inc.  All other use, reproduction, or distribution of this software is strictly prohibited.
 Product Version J-2015.03
 
-Mapper Startup Complete (Real Time elapsed 0h:00m:01s; CPU Time elapsed 0h:00m:00s; Memory used current: 98MB peak: 99MB)
+Mapper Startup Complete (Real Time elapsed 0h:00m:00s; CPU Time elapsed 0h:00m:00s; Memory used current: 98MB peak: 99MB)
 
-@L: F:\test\rev_2\proj_1_scck.rpt 
-Printing clock  summary report in "F:\test\rev_2\proj_1_scck.rpt" file 
+@L: C:\ue\synplify\rev_2\proj_1_scck.rpt 
+Printing clock  summary report in "C:\ue\synplify\rev_2\proj_1_scck.rpt" file 
 @N: MF248 |Running in 64-bit mode.
 @N: MF666 |Clock conversion enabled 
 
-Design Input Complete (Real Time elapsed 0h:00m:01s; CPU Time elapsed 0h:00m:00s; Memory used current: 99MB peak: 101MB)
+Design Input Complete (Real Time elapsed 0h:00m:00s; CPU Time elapsed 0h:00m:00s; Memory used current: 98MB peak: 101MB)
 
 
-Mapper Initialization Complete (Real Time elapsed 0h:00m:01s; CPU Time elapsed 0h:00m:00s; Memory used current: 99MB peak: 101MB)
+Mapper Initialization Complete (Real Time elapsed 0h:00m:00s; CPU Time elapsed 0h:00m:00s; Memory used current: 98MB peak: 101MB)
 
 
-Start loading timing files (Real Time elapsed 0h:00m:01s; CPU Time elapsed 0h:00m:00s; Memory used current: 100MB peak: 101MB)
+Start loading timing files (Real Time elapsed 0h:00m:00s; CPU Time elapsed 0h:00m:00s; Memory used current: 99MB peak: 101MB)
 
 
-Finished loading timing files (Real Time elapsed 0h:00m:01s; CPU Time elapsed 0h:00m:00s; Memory used current: 101MB peak: 103MB)
+Finished loading timing files (Real Time elapsed 0h:00m:00s; CPU Time elapsed 0h:00m:00s; Memory used current: 100MB peak: 102MB)
 
 @W: FX474 |User-specified initial value defined for some sequential elements which can prevent optimum synthesis results from being achieved. 
 ICG Latch Removal Summary:
 Number of ICG latches removed:	0
 Number of ICG latches not removed:	0
-syn_allowed_resources : blockrams=270  set on top level netlist frame_info_analysis
+syn_allowed_resources : blockrams=270  set on top level netlist filter
 
-Finished netlist restructuring (Real Time elapsed 0h:00m:01s; CPU Time elapsed 0h:00m:00s; Memory used current: 129MB peak: 130MB)
+Finished netlist restructuring (Real Time elapsed 0h:00m:00s; CPU Time elapsed 0h:00m:00s; Memory used current: 128MB peak: 130MB)
 
 
 
 @S |Clock Summary
 *****************
 
-Start                       Requested     Requested     Clock        Clock                
-Clock                       Frequency     Period        Type         Group                
-------------------------------------------------------------------------------------------
-frame_info_analysis|clk     954.5 MHz     1.048         inferred     Autoconstr_clkgroup_0
-==========================================================================================
+Start          Requested     Requested     Clock        Clock                
+Clock          Frequency     Period        Type         Group                
+-----------------------------------------------------------------------------
+filter|clk     615.0 MHz     1.626         inferred     Autoconstr_clkgroup_0
+=============================================================================
 
-@W: MT529 :"f:\test\frame_info_analysis.v":187:1:187:6|Found inferred clock frame_info_analysis|clk which controls 481 sequential elements including status_info_en. This clock has no specified timing constraint which may prevent conversion of gated or generated clocks and may adversely impact design performance. 
+@W: MT529 :"f:\daheng\hw_mer\branches\u3v_temp\fpga_module\3_io_channel\common\filter\src\filter.v":112:1:112:6|Found inferred clock filter|clk which controls 77 sequential elements including filter_sig. This clock has no specified timing constraint which may prevent conversion of gated or generated clocks and may adversely impact design performance. 
 
 Finished Pre Mapping Phase.
-@N: BN225 |Writing default property annotation file F:\test\rev_2\proj_1.sap.
+@N: BN225 |Writing default property annotation file C:\ue\synplify\rev_2\proj_1.sap.
 Pre-mapping successful!
 
-At Mapper Exit (Real Time elapsed 0h:00m:01s; CPU Time elapsed 0h:00m:00s; Memory used current: 67MB peak: 130MB)
+At Mapper Exit (Real Time elapsed 0h:00m:00s; CPU Time elapsed 0h:00m:00s; Memory used current: 66MB peak: 130MB)
 
 Process took 0h:00m:01s realtime, 0h:00m:01s cputime
-# Thu Feb 14 11:16:08 2019
+# Fri Feb 15 11:07:43 2019
 
 ###########################################################]

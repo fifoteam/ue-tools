@@ -1,7 +1,7 @@
-error reading package index file D:/tools/Synopsys/fpga_J-2015.03/lib/pkgIndex.tcl: invalid command name "obffn"
-error reading package index file D:/tools/Synopsys/fpga_J-2015.03/lib/pkgIndex.tcl: invalid command name "obffn"
-error reading package index file D:/tools/Synopsys/fpga_J-2015.03/lib/pkgIndex.tcl: invalid command name "obffn"
-error reading package index file D:/tools/Synopsys/fpga_J-2015.03/lib/pkgIndex.tcl: invalid command name "obffn"
+error reading package index file d:/tools/Synopsys/fpga_J-2015.03/lib/pkgIndex.tcl: invalid command name "obffn"
+error reading package index file d:/tools/Synopsys/fpga_J-2015.03/lib/pkgIndex.tcl: invalid command name "obffn"
+error reading package index file d:/tools/Synopsys/fpga_J-2015.03/lib/pkgIndex.tcl: invalid command name "obffn"
+error reading package index file d:/tools/Synopsys/fpga_J-2015.03/lib/pkgIndex.tcl: invalid command name "obffn"
 Invalid value for -save: :%PROD=all_protocert?if_changed:off
 Invalid value for -save: :%PROD=all_protocert?always:if_changed
 Invalid value for -save: :%PROD=all_protocert?always:if_changed
@@ -30,12 +30,12 @@ job not found while reading designflow: partition_premap
 job not found while reading designflow: compile_dm
 unrecognized field in license extension ignored: f
 
-Starting:    D:\tools\Synopsys\fpga_J-2015.03\bin\mbin\synplify.exe
-Install:     D:\tools\Synopsys\fpga_J-2015.03
-Date:        Thu Feb 14 11:26:42 2019
+Starting:    d:\tools\Synopsys\fpga_J-2015.03\bin\mbin\synplify.exe
+Install:     d:\tools\Synopsys\fpga_J-2015.03
+Date:        Fri Feb 15 11:07:40 2019
 Version:     J-2015.03
 
-Arguments:   -batch f:\test\syn.tcl
+Arguments:   -batch synthesis.tcl
 ProductType: synplify_pro
 
 License checkout: synplifypro_f
@@ -54,22 +54,34 @@ job not found while reading designflow: global_prep
 job not found while reading designflow: partition_premap
 enable_nfilter is not supported in current product.
 -bg switch to "project -run" command ignored in batch mode
-log file: "F:\test\rev_2\proj_1.srr"
+log file: "C:\ue\synplify\rev_2\proj_1.srr"
 
 Running proj_1|rev_2
 Running Compile on proj_1|rev_2
 Running Compile Process on proj_1|rev_2
 Running Compile Input on proj_1|rev_2
-compiler exited with errors
-Job: "compiler" terminated with error status: 2.
-See log file: "F:\test\rev_2\proj_1.srr"
-Return Code: 2
-Run Time:0h:00m:01s
+Copied C:\ue\synplify\rev_2\synwork\proj_1_compiler.srs to C:\ue\synplify\rev_2\proj_1.srl
+Copied C:\ue\synplify\rev_2\synwork\proj_1_compiler.srs to C:\ue\synplify\rev_2\proj_1.srs
+compiler Completed
+Return Code: 0
+Run Time:0h:00m:02s
 
 Job Compile Process completed on proj_1|rev_2
+Running Pre-mapping on proj_1|rev_2
+premap Completed with warnings
+Return Code: 1
+Run Time:0h:00m:01s
+
 Job Compile completed on proj_1|rev_2
+Running Map on proj_1|rev_2
+Running Map & Optimize on proj_1|rev_2
+fpga_mapper Completed with warnings
+Return Code: 1
+Run Time:0h:00m:02s
+
+Job Map completed on proj_1|rev_2
 Job Logic Synthesis completed on proj_1|rev_2
-TCL script complete: "f:\test\syn.tcl"
-exit status=2
+TCL script complete: "synthesis.tcl"
+exit status=0
 
 
