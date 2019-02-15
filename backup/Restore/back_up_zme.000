@@ -67,10 +67,28 @@ echo "UE Saved* del done!"
 
 @ cd	f:\kuaipan\kuaipan\FifoTeam\ue-tools\ue >nul
 @ rd work /S/Q >nul
+echo "UE work del done!"
+
 @ cd	f:\kuaipan\kuaipan\FifoTeam\ue-tools\ue\gcc_work >nul
 @ del *.o >nul
 @ del *.exe >nul
-echo "UE work gcc_work del done!"
+echo "UE gcc_work del done!"
+
+@ cd	f:\kuaipan\kuaipan\FifoTeam\ue-tools\ue\vivado >nul
+@ del *.jou >nul
+@ del *.log >nul
+@ del *.rpt >nul
+echo "UE work vivado del done!"
+
+@ cd	f:\kuaipan\kuaipan\FifoTeam\ue-tools\ue\synplify >nul
+@ rd rev* /S/Q >nul
+@ del *.log >nul
+@ del *.prj >nul
+echo "UE work synplify del done!"
+
+
+
+
 
 ::配置文件上传到SVN-fifoteam
 @ cd f:\kuaipan\kuaipan\FifoTeam\ue-tools >nul
