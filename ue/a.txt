@@ -1,23 +1,0 @@
-
-C:\ue>cloc -force-lang=Verilog-SystemVerilog --ignore-whitespace --windows --diff-alignment=c:\ue\cloc_res.txt --diff F:\DAHENG\hw_mer\trunk\fpga_prj\mer-502-79u3x\src\ F:\DAHENG\hw_mer\trunk\fpga_prj\mer-503-36u3x\src\ 
-     100 files     156 text files.
-classified 156 files     200 files     300 files     156 text files.
-classified 156 filesDuplicate file check 156 files (125 known unique)Unique:      100 files                                           1:        1 unique file.                          Duplicate file check 156 files (125 known unique)Unique:      100 files                                           2:        2 unique files.                          Counting:  100Wrote c:\ue\cloc_res.txt
-     110 files ignored.                           
-
-https://github.com/AlDanial/cloc v 1.66  T=2.74 s (0.4 files/s, 0.4 lines/s)
------------------------------------------------------------------------------------
-Language                         files          blank        comment           code
------------------------------------------------------------------------------------
-Verilog-SystemVerilog
- same                              138              0           8386          31228
- modified                           14              0              6             33
- added                               0              1             26             28
- removed                             0              1              4              1
------------------------------------------------------------------------------------
-SUM:
- same                              138              0           8386          31228
- modified                           14              0              6             33
- added                               0              1             26             28
- removed                             0              1              4              1
------------------------------------------------------------------------------------

@@ -1,0 +1,825 @@
+#Build: Synplify Pro J-2015.03, Build 120R, Feb 24 2012
+#install: d:\tools\Synopsys\fpga_J-2015.03
+#OS: Windows 7 6.1
+#Hostname: XHT-PC
+
+#Implementation: rev_2
+
+$ Start of Compile
+#Fri Feb 15 13:23:58 2019
+
+Synopsys Verilog Compiler, version comp201503rc, Build 056R, built Feb 25 2015
+@N|Running in 64-bit mode
+Copyright (C) 1994-2015 Synopsys, Inc. This software and the associated documentation are proprietary to Synopsys, Inc. This software may only be used in accordance with the terms and conditions of a written license agreement with Synopsys, Inc.  All other use, reproduction, or distribution of this software is strictly prohibited.
+
+@N:: Running Verilog Compiler in System Verilog mode
+@N:: Running Verilog Compiler in Multiple File Compilation Unit mode
+@I::"d:\tools\Synopsys\fpga_J-2015.03\lib\xilinx\unisim_m10i.v"
+@I::"d:\tools\Synopsys\fpga_J-2015.03\lib\xilinx\unisim.v"
+@I::"d:\tools\Synopsys\fpga_J-2015.03\lib\vlog\hypermods.v"
+@I::"d:\tools\Synopsys\fpga_J-2015.03\lib\vlog\umr_capim.v"
+@I::"d:\tools\Synopsys\fpga_J-2015.03\lib\vlog\scemi_objects.v"
+@I::"d:\tools\Synopsys\fpga_J-2015.03\lib\vlog\scemi_pipes.svh"
+@I::"f:\DAHENG\hw_mars\mars_platform\TD\Development_Phase\003_develop_phase\fpga_platform\ver10\src\gige_vision\gvsp_tx\gvsp_ctrl_core.v"
+Verilog syntax check successful!
+Selecting top level module gvsp_ctrl_core
+@N: CG364 :"f:\DAHENG\hw_mars\mars_platform\TD\Development_Phase\003_develop_phase\fpga_platform\ver10\src\gige_vision\gvsp_tx\gvsp_ctrl_core.v":29:7:29:20|Synthesizing module gvsp_ctrl_core
+
+@W: CG360 :"f:\DAHENG\hw_mars\mars_platform\TD\Development_Phase\003_develop_phase\fpga_platform\ver10\src\gige_vision\gvsp_tx\gvsp_ctrl_core.v":130:12:130:21|No assignment to wire fb_rd_data
+
+@W: CG360 :"f:\DAHENG\hw_mars\mars_platform\TD\Development_Phase\003_develop_phase\fpga_platform\ver10\src\gige_vision\gvsp_tx\gvsp_ctrl_core.v":131:12:131:20|No assignment to wire fb_rd_cmd
+
+@W: CL189 :"f:\DAHENG\hw_mars\mars_platform\TD\Development_Phase\003_develop_phase\fpga_platform\ver10\src\gige_vision\gvsp_tx\gvsp_ctrl_core.v":303:1:303:6|Register bit add_cmd_reg[0] is always 0, optimizing ...
+@W: CL189 :"f:\DAHENG\hw_mars\mars_platform\TD\Development_Phase\003_develop_phase\fpga_platform\ver10\src\gige_vision\gvsp_tx\gvsp_ctrl_core.v":303:1:303:6|Register bit add_cmd_reg[1] is always 0, optimizing ...
+@W: CL189 :"f:\DAHENG\hw_mars\mars_platform\TD\Development_Phase\003_develop_phase\fpga_platform\ver10\src\gige_vision\gvsp_tx\gvsp_ctrl_core.v":303:1:303:6|Register bit add_cmd_reg[2] is always 0, optimizing ...
+@W: CL189 :"f:\DAHENG\hw_mars\mars_platform\TD\Development_Phase\003_develop_phase\fpga_platform\ver10\src\gige_vision\gvsp_tx\gvsp_ctrl_core.v":303:1:303:6|Register bit add_cmd_reg[3] is always 0, optimizing ...
+@W: CL189 :"f:\DAHENG\hw_mars\mars_platform\TD\Development_Phase\003_develop_phase\fpga_platform\ver10\src\gige_vision\gvsp_tx\gvsp_ctrl_core.v":303:1:303:6|Register bit add_cmd_reg[4] is always 0, optimizing ...
+@W: CL189 :"f:\DAHENG\hw_mars\mars_platform\TD\Development_Phase\003_develop_phase\fpga_platform\ver10\src\gige_vision\gvsp_tx\gvsp_ctrl_core.v":303:1:303:6|Register bit add_cmd_reg[5] is always 0, optimizing ...
+@W: CL189 :"f:\DAHENG\hw_mars\mars_platform\TD\Development_Phase\003_develop_phase\fpga_platform\ver10\src\gige_vision\gvsp_tx\gvsp_ctrl_core.v":303:1:303:6|Register bit add_cmd_reg[6] is always 0, optimizing ...
+@W: CL189 :"f:\DAHENG\hw_mars\mars_platform\TD\Development_Phase\003_develop_phase\fpga_platform\ver10\src\gige_vision\gvsp_tx\gvsp_ctrl_core.v":344:1:344:6|Register bit o_statis_flag is always 0, optimizing ...
+@W: CL279 :"f:\DAHENG\hw_mars\mars_platform\TD\Development_Phase\003_develop_phase\fpga_platform\ver10\src\gige_vision\gvsp_tx\gvsp_ctrl_core.v":303:1:303:6|Pruning register bits 6 to 0 of add_cmd_reg[7:0] 
+
+@N: CL201 :"f:\DAHENG\hw_mars\mars_platform\TD\Development_Phase\003_develop_phase\fpga_platform\ver10\src\gige_vision\gvsp_tx\gvsp_ctrl_core.v":484:1:484:6|Trying to extract state machine for register step_cnt
+Extracted state machine for register step_cnt
+State machine has 5 reachable states with original encodings of:
+   000
+   001
+   010
+   011
+   100
+@W: CL247 :"f:\DAHENG\hw_mars\mars_platform\TD\Development_Phase\003_develop_phase\fpga_platform\ver10\src\gige_vision\gvsp_tx\gvsp_ctrl_core.v":56:25:56:38|Input port bit 1 of iv_data_is_cmd[1:0] is unused
+
+@W: CL247 :"f:\DAHENG\hw_mars\mars_platform\TD\Development_Phase\003_develop_phase\fpga_platform\ver10\src\gige_vision\gvsp_tx\gvsp_ctrl_core.v":57:25:57:31|Input port bit 1 of iv_dval[1:0] is unused
+
+@W: CL246 :"f:\DAHENG\hw_mars\mars_platform\TD\Development_Phase\003_develop_phase\fpga_platform\ver10\src\gige_vision\gvsp_tx\gvsp_ctrl_core.v":58:26:58:32|Input port bits 63 to 16 of iv_data[63:0] are unused
+
+@W: CL246 :"f:\DAHENG\hw_mars\mars_platform\TD\Development_Phase\003_develop_phase\fpga_platform\ver10\src\gige_vision\gvsp_tx\gvsp_ctrl_core.v":58:26:58:32|Input port bits 7 to 0 of iv_data[63:0] are unused
+
+@END
+
+At c_ver Exit (Real Time elapsed 0h:00m:00s; CPU Time elapsed 0h:00m:00s; Memory used current: 106MB peak: 107MB)
+
+Process took 0h:00m:01s realtime, 0h:00m:01s cputime
+# Fri Feb 15 13:23:59 2019
+
+###########################################################]
+Pre-mapping Report
+
+Synopsys Xilinx Technology Pre-mapping, Version maprc, Build 2608R, Built Feb 25 2015 15:38:49
+Copyright (C) 1994-2015, Synopsys, Inc. This software and the associated documentation are proprietary to Synopsys, Inc. This software may only be used in accordance with the terms and conditions of a written license agreement with Synopsys, Inc.  All other use, reproduction, or distribution of this software is strictly prohibited.
+Product Version J-2015.03
+
+Mapper Startup Complete (Real Time elapsed 0h:00m:00s; CPU Time elapsed 0h:00m:00s; Memory used current: 98MB peak: 99MB)
+
+@L: C:\ue\synplify\rev_2\proj_1_scck.rpt 
+Printing clock  summary report in "C:\ue\synplify\rev_2\proj_1_scck.rpt" file 
+@N: MF248 |Running in 64-bit mode.
+@N: MF666 |Clock conversion enabled 
+
+Design Input Complete (Real Time elapsed 0h:00m:00s; CPU Time elapsed 0h:00m:00s; Memory used current: 99MB peak: 101MB)
+
+
+Mapper Initialization Complete (Real Time elapsed 0h:00m:00s; CPU Time elapsed 0h:00m:00s; Memory used current: 99MB peak: 101MB)
+
+
+Start loading timing files (Real Time elapsed 0h:00m:00s; CPU Time elapsed 0h:00m:00s; Memory used current: 100MB peak: 101MB)
+
+
+Finished loading timing files (Real Time elapsed 0h:00m:00s; CPU Time elapsed 0h:00m:00s; Memory used current: 100MB peak: 102MB)
+
+@W: FX474 |User-specified initial value defined for some sequential elements which can prevent optimum synthesis results from being achieved. 
+ICG Latch Removal Summary:
+Number of ICG latches removed:	0
+Number of ICG latches not removed:	0
+syn_allowed_resources : blockrams=270  set on top level netlist gvsp_ctrl_core
+
+Finished netlist restructuring (Real Time elapsed 0h:00m:00s; CPU Time elapsed 0h:00m:00s; Memory used current: 128MB peak: 130MB)
+
+
+
+@S |Clock Summary
+*****************
+
+Start                      Requested     Requested     Clock        Clock                
+Clock                      Frequency     Period        Type         Group                
+-----------------------------------------------------------------------------------------
+gvsp_ctrl_core|clk_gev     382.9 MHz     2.612         inferred     Autoconstr_clkgroup_0
+=========================================================================================
+
+@W: MT529 :"f:\daheng\hw_mars\mars_platform\td\development_phase\003_develop_phase\fpga_platform\ver10\src\gige_vision\gvsp_tx\gvsp_ctrl_core.v":344:1:344:6|Found inferred clock gvsp_ctrl_core|clk_gev which controls 40 sequential elements including o_info_flag. This clock has no specified timing constraint which may prevent conversion of gated or generated clocks and may adversely impact design performance. 
+
+Finished Pre Mapping Phase.
+@N: BN225 |Writing default property annotation file C:\ue\synplify\rev_2\proj_1.sap.
+Pre-mapping successful!
+
+At Mapper Exit (Real Time elapsed 0h:00m:00s; CPU Time elapsed 0h:00m:00s; Memory used current: 66MB peak: 130MB)
+
+Process took 0h:00m:01s realtime, 0h:00m:01s cputime
+# Fri Feb 15 13:24:01 2019
+
+###########################################################]
+Map & Optimize Report
+
+Synopsys Xilinx Technology Mapper, Version maprc, Build 2608R, Built Feb 25 2015 15:38:49
+Copyright (C) 1994-2015, Synopsys, Inc. This software and the associated documentation are proprietary to Synopsys, Inc. This software may only be used in accordance with the terms and conditions of a written license agreement with Synopsys, Inc.  All other use, reproduction, or distribution of this software is strictly prohibited.
+Product Version J-2015.03
+
+Mapper Startup Complete (Real Time elapsed 0h:00m:00s; CPU Time elapsed 0h:00m:00s; Memory used current: 98MB peak: 99MB)
+
+@N: MF248 |Running in 64-bit mode.
+@N: MF666 |Clock conversion enabled 
+
+Design Input Complete (Real Time elapsed 0h:00m:00s; CPU Time elapsed 0h:00m:00s; Memory used current: 98MB peak: 100MB)
+
+
+Mapper Initialization Complete (Real Time elapsed 0h:00m:00s; CPU Time elapsed 0h:00m:00s; Memory used current: 98MB peak: 100MB)
+
+
+Start loading timing files (Real Time elapsed 0h:00m:00s; CPU Time elapsed 0h:00m:00s; Memory used current: 99MB peak: 100MB)
+
+
+Finished loading timing files (Real Time elapsed 0h:00m:00s; CPU Time elapsed 0h:00m:00s; Memory used current: 100MB peak: 102MB)
+
+
+
+Starting Optimization and Mapping (Real Time elapsed 0h:00m:00s; CPU Time elapsed 0h:00m:00s; Memory used current: 128MB peak: 130MB)
+
+
+Available hyper_sources - for debug and ip models
+	None Found
+
+@N: MT206 |Auto Constrain mode is enabled
+
+Finished RTL optimizations (Real Time elapsed 0h:00m:00s; CPU Time elapsed 0h:00m:00s; Memory used current: 128MB peak: 130MB)
+
+Encoding state machine step_cnt[4:0] (view:work.gvsp_ctrl_core(verilog))
+original code -> new code
+   000 -> 00001
+   001 -> 00010
+   010 -> 00100
+   011 -> 01000
+   100 -> 10000
+
+Finished factoring (Real Time elapsed 0h:00m:00s; CPU Time elapsed 0h:00m:00s; Memory used current: 132MB peak: 132MB)
+
+
+Finished gated-clock and generated-clock conversion (Real Time elapsed 0h:00m:00s; CPU Time elapsed 0h:00m:00s; Memory used current: 131MB peak: 132MB)
+
+
+Clock Buffers:
+  Inserting Clock buffer for port clk_gev,
+
+
+Finished generic timing optimizations - Pass 1 (Real Time elapsed 0h:00m:00s; CPU Time elapsed 0h:00m:00s; Memory used current: 133MB peak: 134MB)
+
+
+Starting Early Timing Optimization (Real Time elapsed 0h:00m:00s; CPU Time elapsed 0h:00m:00s; Memory used current: 133MB peak: 134MB)
+
+
+Finished Early Timing Optimization (Real Time elapsed 0h:00m:00s; CPU Time elapsed 0h:00m:00s; Memory used current: 134MB peak: 134MB)
+
+
+Finished generic timing optimizations - Pass 2 (Real Time elapsed 0h:00m:00s; CPU Time elapsed 0h:00m:00s; Memory used current: 134MB peak: 134MB)
+
+
+Finished preparing to map (Real Time elapsed 0h:00m:00s; CPU Time elapsed 0h:00m:00s; Memory used current: 134MB peak: 134MB)
+
+
+Finished technology mapping (Real Time elapsed 0h:00m:01s; CPU Time elapsed 0h:00m:01s; Memory used current: 155MB peak: 156MB)
+
+Pass		 CPU time		Worst Slack		Luts / Registers
+------------------------------------------------------------
+   1		0h:00m:01s		    -1.51ns		 130 /        40
+   2		0h:00m:01s		    -1.51ns		 130 /        40
+   3		0h:00m:01s		    -1.48ns		 130 /        40
+   4		0h:00m:01s		    -1.48ns		 130 /        40
+@N: FX271 :"f:\daheng\hw_mars\mars_platform\td\development_phase\003_develop_phase\fpga_platform\ver10\src\gige_vision\gvsp_tx\gvsp_ctrl_core.v":344:1:344:6|Instance "N_160_i" with 2 loads replicated 1 times to improve timing 
+Timing driven replication report
+Added 0 Registers via timing driven replication
+Added 1 LUTs via timing driven replication
+
+
+
+   5		0h:00m:02s		    -1.19ns		 139 /        40
+
+
+   6		0h:00m:02s		    -1.19ns		 139 /        40
+
+Finished technology timing optimizations and critical path resynthesis (Real Time elapsed 0h:00m:02s; CPU Time elapsed 0h:00m:02s; Memory used current: 146MB peak: 162MB)
+
+@N: FX164 |The option to pack registers in the IOB has not been specified. Please set syn_useioff attribute.  
+@N: FX623 |Packing into LUT6_2
+
+Finished restoring hierarchy (Real Time elapsed 0h:00m:02s; CPU Time elapsed 0h:00m:02s; Memory used current: 146MB peak: 162MB)
+
+
+
+#### START OF CLOCK OPTIMIZATION REPORT #####[
+
+1 non-gated/non-generated clock tree(s) driving 40 clock pin(s) of sequential element(s)
+0 gated/generated clock tree(s) driving 0 clock pin(s) of sequential element(s)
+0 instances converted, 0 sequential instances remain driven by gated/generated clocks
+
+=========================== Non-Gated/Non-Generated Clocks ============================
+Clock Tree ID     Driving Element     Drive Element Type     Fanout     Sample Instance
+---------------------------------------------------------------------------------------
+@K:CKID0001       clk_gev             port                   40         add_cmd_reg[7] 
+=======================================================================================
+
+
+##### END OF CLOCK OPTIMIZATION REPORT ######]
+
+
+Start Writing Netlists (Real Time elapsed 0h:00m:02s; CPU Time elapsed 0h:00m:02s; Memory used current: 124MB peak: 162MB)
+
+Writing Analyst data base C:\ue\synplify\rev_2\proj_1.srm
+
+Finished Writing Netlist Databases (Real Time elapsed 0h:00m:02s; CPU Time elapsed 0h:00m:02s; Memory used current: 146MB peak: 162MB)
+
+Writing EDIF Netlist and constraint files
+Writing XDC file C:\ue\synplify\rev_2\proj_1_edif.xdc
+Starting XDC forward annotation..
+J-2015.03
+
+Finished Writing EDIF Netlist and constraint files (Real Time elapsed 0h:00m:02s; CPU Time elapsed 0h:00m:02s; Memory used current: 146MB peak: 162MB)
+
+Writing Verilog Simulation files
+
+Finished Writing Verilog Simulation files (Real Time elapsed 0h:00m:02s; CPU Time elapsed 0h:00m:02s; Memory used current: 145MB peak: 162MB)
+
+
+Start final timing analysis (Real Time elapsed 0h:00m:02s; CPU Time elapsed 0h:00m:02s; Memory used current: 146MB peak: 162MB)
+
+@W: MT420 |Found inferred clock gvsp_ctrl_core|clk_gev with period 3.40ns. Please declare a user-defined clock on object "p:clk_gev"
+
+
+
+@S |##### START OF TIMING REPORT #####[
+# Timing Report written on Fri Feb 15 13:24:04 2019
+#
+
+
+Top view:               gvsp_ctrl_core
+Requested Frequency:    294.1 MHz
+Wire load mode:         top
+Paths requested:        5
+Constraint File(s):    
+@N: MT320 |Timing report estimates place and route data. Please look at the place and route timing report for final timing.
+
+@N: MT322 |Clock constraints cover only FF-to-FF paths associated with the clock.
+
+
+
+Performance Summary 
+*******************
+
+
+Worst slack in design: -0.605
+
+                           Requested     Estimated     Requested     Estimated                Clock        Clock                
+Starting Clock             Frequency     Frequency     Period        Period        Slack      Type         Group                
+--------------------------------------------------------------------------------------------------------------------------------
+gvsp_ctrl_core|clk_gev     294.1 MHz     249.7 MHz     3.400         4.005         -0.605     inferred     Autoconstr_clkgroup_0
+================================================================================================================================
+
+
+
+
+
+Clock Relationships
+*******************
+
+Clocks                                          |    rise  to  rise    |    fall  to  fall   |    rise  to  fall   |    fall  to  rise 
+---------------------------------------------------------------------------------------------------------------------------------------
+Starting                Ending                  |  constraint  slack   |  constraint  slack  |  constraint  slack  |  constraint  slack
+---------------------------------------------------------------------------------------------------------------------------------------
+gvsp_ctrl_core|clk_gev  gvsp_ctrl_core|clk_gev  |  3.400       -0.605  |  No paths    -      |  No paths    -      |  No paths    -    
+=======================================================================================================================================
+ Note: 'No paths' indicates there are no paths in the design for that pair of clock edges.
+       'Diff grp' indicates that paths exist but the starting clock and ending clock are in different clock groups.
+
+
+
+Interface Information 
+*********************
+
+No IO constraint found
+
+
+
+====================================
+Detailed Report for Clock: gvsp_ctrl_core|clk_gev
+====================================
+
+
+
+Starting Points with Worst Slack
+********************************
+
+                    Starting                                                        Arrival           
+Instance            Reference                  Type     Pin     Net                 Time        Slack 
+                    Clock                                                                             
+------------------------------------------------------------------------------------------------------
+next_fb_cmd         gvsp_ctrl_core|clk_gev     FDS      Q       next_fb_cmd         3.694       -0.605
+fb_cmd_hold_reg     gvsp_ctrl_core|clk_gev     FDR      Q       fb_cmd_hold_reg     3.694       -0.566
+fb_cmd_reg[7]       gvsp_ctrl_core|clk_gev     FDRE     Q       fb_cmd_reg[7]       3.694       -0.483
+add_cmd_en          gvsp_ctrl_core|clk_gev     FDRE     Q       add_cmd_en          3.694       -0.473
+fb_cmd_reg[0]       gvsp_ctrl_core|clk_gev     FDRE     Q       fb_cmd_reg[0]       3.694       -0.126
+fb_cmd_reg[2]       gvsp_ctrl_core|clk_gev     FDRE     Q       fb_cmd_reg[2]       3.694       -0.121
+add_cmd_reg[7]      gvsp_ctrl_core|clk_gev     FD       Q       add_cmd_reg[7]      3.694       -0.118
+fb_cmd_reg[3]       gvsp_ctrl_core|clk_gev     FDRE     Q       fb_cmd_reg[3]       3.694       -0.045
+fb_cmd_reg[6]       gvsp_ctrl_core|clk_gev     FDRE     Q       fb_cmd_reg[6]       3.694       -0.045
+fb_cmd_reg[4]       gvsp_ctrl_core|clk_gev     FDRE     Q       fb_cmd_reg[4]       3.694       0.011 
+======================================================================================================
+
+
+Ending Points with Worst Slack
+******************************
+
+                      Starting                                                      Required           
+Instance              Reference                  Type     Pin     Net               Time         Slack 
+                      Clock                                                                            
+-------------------------------------------------------------------------------------------------------
+add_cmd_reg[7]        gvsp_ctrl_core|clk_gev     FD       D       VCC_0_e           6.778        -0.605
+step_cnt[1]           gvsp_ctrl_core|clk_gev     FDRE     D       N_338s_0          6.778        -0.591
+step_cnt[2]           gvsp_ctrl_core|clk_gev     FDRE     D       N_339s_0          6.780        -0.551
+gev_enable            gvsp_ctrl_core|clk_gev     FDR      R       N_42_i            6.598        -0.550
+image_enable          gvsp_ctrl_core|clk_gev     FDR      R       N_42_i            6.598        -0.550
+ip_enable             gvsp_ctrl_core|clk_gev     FDR      R       N_42_i            6.598        -0.550
+new_resd_frm_flag     gvsp_ctrl_core|clk_gev     FD       D       N_530_i_0_e       6.778        -0.446
+o_image_flag          gvsp_ctrl_core|clk_gev     FD       D       N_529_i_0_e       6.778        -0.446
+o_test_flag           gvsp_ctrl_core|clk_gev     FD       D       N_484_i_0_e       6.778        -0.446
+next_fb_cmd           gvsp_ctrl_core|clk_gev     FDS      D       next_fb_cmd_0     6.778        -0.436
+=======================================================================================================
+
+
+
+Worst Path Information
+***********************
+
+
+Path information for path number 1: 
+      Requested Period:                      3.400
+    - Setup time:                            -0.063
+    + Clock delay at ending point:           3.315
+    = Required time:                         6.778
+
+    - Propagation time:                      4.068
+    - Clock delay at starting point:         3.315
+    = Slack (critical) :                     -0.605
+
+    Number of logic level(s):                5
+    Starting point:                          next_fb_cmd / Q
+    Ending point:                            add_cmd_reg[7] / D
+    The start point is clocked by            gvsp_ctrl_core|clk_gev [rising] on pin C
+    The end   point is clocked by            gvsp_ctrl_core|clk_gev [rising] on pin C
+
+Instance / Net                               Pin      Pin               Arrival     No. of    
+Name                                Type     Name     Dir     Delay     Time        Fan Out(s)
+----------------------------------------------------------------------------------------------
+next_fb_cmd                         FDS      Q        Out     0.379     3.694       -         
+next_fb_cmd                         Net      -        -       0.584     -           13        
+fb_cmd_hold_reg_RNIK50F             LUT5     I4       In      -         4.277       -         
+fb_cmd_hold_reg_RNIK50F             LUT5     O        Out     0.171     4.449       -         
+N_224                               Net      -        -       0.522     -           7         
+cmd_1_m0[0]                         LUT4     I3       In      -         4.971       -         
+cmd_1_m0[0]                         LUT4     O        Out     0.105     5.076       -         
+cmd_1_m0[0]                         Net      -        -       0.649     -           26        
+un5_add_cmd_end_0_o2_1_RNIANHL3     LUT6     I5       In      -         5.724       -         
+un5_add_cmd_end_0_o2_1_RNIANHL3     LUT6     O        Out     0.397     6.122       -         
+N_312                               Net      -        -       0.363     -           2         
+add_cmd_reg_RNO_0[7]                LUT6     I5       In      -         6.484       -         
+add_cmd_reg_RNO_0[7]                LUT6     O        Out     0.550     7.035       -         
+add_cmd_reg_RNO_0[7]                Net      -        -       0.243     -           1         
+add_cmd_reg_RNO[7]                  LUT3     I1       In      -         7.278       -         
+add_cmd_reg_RNO[7]                  LUT3     O        Out     0.105     7.383       -         
+VCC_0_e                             Net      -        -       0.000     -           1         
+add_cmd_reg[7]                      FD       D        In      -         7.383       -         
+==============================================================================================
+Total path delay (propagation time + setup) of 4.005 is 1.645(41.1%) logic and 2.360(58.9%) route.
+Path delay compensated for clock skew. Clock skew is added to clock-to-out value, and is subtracted from setup time value
+
+
+Start clock path:
+
+Instance / Net                                  Pin         Pin               Arrival     No. of    
+Name                 Type                       Name        Dir     Delay     Time        Fan Out(s)
+----------------------------------------------------------------------------------------------------
+Start Clock :        gvsp_ctrl_core|clk_gev                                                         
+------------                                                                                        
+clk_gev              Port                       clk_gev     In      -         0.000       -         
+clk_gev              Net                        -           -       0.000     -           1         
+clk_gev_ibuf_iso     IBUFG                      I           In      -         0.000       -         
+clk_gev_ibuf_iso     IBUFG                      O           Out     1.007     1.007       -         
+clk_gev_ibuf_iso     Net                        -           -       0.600     -           1         
+clk_gev_ibuf         BUFG                       I           In      -         1.607       -         
+clk_gev_ibuf         BUFG                       O           Out     0.092     1.699       -         
+clk_gev_c            Net                        -           -       1.616     -           40        
+next_fb_cmd          FDS                        C           In      -         3.315       -         
+====================================================================================================
+
+
+End clock path:
+
+Instance / Net                                  Pin         Pin               Arrival     No. of    
+Name                 Type                       Name        Dir     Delay     Time        Fan Out(s)
+----------------------------------------------------------------------------------------------------
+Start Clock :        gvsp_ctrl_core|clk_gev                                                         
+------------                                                                                        
+clk_gev              Port                       clk_gev     In      -         0.000       -         
+clk_gev              Net                        -           -       0.000     -           1         
+clk_gev_ibuf_iso     IBUFG                      I           In      -         0.000       -         
+clk_gev_ibuf_iso     IBUFG                      O           Out     1.007     1.007       -         
+clk_gev_ibuf_iso     Net                        -           -       0.600     -           1         
+clk_gev_ibuf         BUFG                       I           In      -         1.607       -         
+clk_gev_ibuf         BUFG                       O           Out     0.092     1.699       -         
+clk_gev_c            Net                        -           -       1.616     -           40        
+add_cmd_reg[7]       FD                         C           In      -         3.315       -         
+====================================================================================================
+
+
+Path information for path number 2: 
+      Requested Period:                      3.400
+    - Setup time:                            -0.063
+    + Clock delay at ending point:           3.315
+    = Required time:                         6.778
+
+    - Propagation time:                      4.057
+    - Clock delay at starting point:         3.315
+    = Slack (non-critical) :                 -0.594
+
+    Number of logic level(s):                6
+    Starting point:                          next_fb_cmd / Q
+    Ending point:                            add_cmd_reg[7] / D
+    The start point is clocked by            gvsp_ctrl_core|clk_gev [rising] on pin C
+    The end   point is clocked by            gvsp_ctrl_core|clk_gev [rising] on pin C
+
+Instance / Net                      Pin      Pin               Arrival     No. of    
+Name                     Type       Name     Dir     Delay     Time        Fan Out(s)
+-------------------------------------------------------------------------------------
+next_fb_cmd              FDS        Q        Out     0.379     3.694       -         
+next_fb_cmd              Net        -        -       0.584     -           13        
+cmd_1_m0[7]              LUT6       I5       In      -         4.277       -         
+cmd_1_m0[7]              LUT6       O        Out     0.257     4.535       -         
+cmd_1_m0[7]              Net        -        -       0.486     -           5         
+cmd_1[7]                 LUT6       I5       In      -         5.021       -         
+cmd_1[7]                 LUT6       O        Out     0.105     5.126       -         
+cmd_1[7]                 Net        -        -       0.641     -           24        
+add_cmd_reg_RNO_4[7]     LUT3_L     I2       In      -         5.767       -         
+add_cmd_reg_RNO_4[7]     LUT3_L     LO       Out     0.105     5.872       -         
+g3_0                     Net        -        -       0.243     -           1         
+add_cmd_reg_RNO_3[7]     LUT6       I5       In      -         6.115       -         
+add_cmd_reg_RNO_3[7]     LUT6       O        Out     0.105     6.220       -         
+N_931_0                  Net        -        -       0.243     -           1         
+add_cmd_reg_RNO_0[7]     LUT6       I4       In      -         6.463       -         
+add_cmd_reg_RNO_0[7]     LUT6       O        Out     0.561     7.024       -         
+add_cmd_reg_RNO_0[7]     Net        -        -       0.243     -           1         
+add_cmd_reg_RNO[7]       LUT3       I1       In      -         7.267       -         
+add_cmd_reg_RNO[7]       LUT3       O        Out     0.105     7.372       -         
+VCC_0_e                  Net        -        -       0.000     -           1         
+add_cmd_reg[7]           FD         D        In      -         7.372       -         
+=====================================================================================
+Total path delay (propagation time + setup) of 3.994 is 1.554(38.9%) logic and 2.440(61.1%) route.
+Path delay compensated for clock skew. Clock skew is added to clock-to-out value, and is subtracted from setup time value
+
+
+Start clock path:
+
+Instance / Net                                  Pin         Pin               Arrival     No. of    
+Name                 Type                       Name        Dir     Delay     Time        Fan Out(s)
+----------------------------------------------------------------------------------------------------
+Start Clock :        gvsp_ctrl_core|clk_gev                                                         
+------------                                                                                        
+clk_gev              Port                       clk_gev     In      -         0.000       -         
+clk_gev              Net                        -           -       0.000     -           1         
+clk_gev_ibuf_iso     IBUFG                      I           In      -         0.000       -         
+clk_gev_ibuf_iso     IBUFG                      O           Out     1.007     1.007       -         
+clk_gev_ibuf_iso     Net                        -           -       0.600     -           1         
+clk_gev_ibuf         BUFG                       I           In      -         1.607       -         
+clk_gev_ibuf         BUFG                       O           Out     0.092     1.699       -         
+clk_gev_c            Net                        -           -       1.616     -           40        
+next_fb_cmd          FDS                        C           In      -         3.315       -         
+====================================================================================================
+
+
+End clock path:
+
+Instance / Net                                  Pin         Pin               Arrival     No. of    
+Name                 Type                       Name        Dir     Delay     Time        Fan Out(s)
+----------------------------------------------------------------------------------------------------
+Start Clock :        gvsp_ctrl_core|clk_gev                                                         
+------------                                                                                        
+clk_gev              Port                       clk_gev     In      -         0.000       -         
+clk_gev              Net                        -           -       0.000     -           1         
+clk_gev_ibuf_iso     IBUFG                      I           In      -         0.000       -         
+clk_gev_ibuf_iso     IBUFG                      O           Out     1.007     1.007       -         
+clk_gev_ibuf_iso     Net                        -           -       0.600     -           1         
+clk_gev_ibuf         BUFG                       I           In      -         1.607       -         
+clk_gev_ibuf         BUFG                       O           Out     0.092     1.699       -         
+clk_gev_c            Net                        -           -       1.616     -           40        
+add_cmd_reg[7]       FD                         C           In      -         3.315       -         
+====================================================================================================
+
+
+Path information for path number 3: 
+      Requested Period:                      3.400
+    - Setup time:                            -0.063
+    + Clock delay at ending point:           3.315
+    = Required time:                         6.778
+
+    - Propagation time:                      4.054
+    - Clock delay at starting point:         3.315
+    = Slack (non-critical) :                 -0.591
+
+    Number of logic level(s):                5
+    Starting point:                          next_fb_cmd / Q
+    Ending point:                            step_cnt[1] / D
+    The start point is clocked by            gvsp_ctrl_core|clk_gev [rising] on pin C
+    The end   point is clocked by            gvsp_ctrl_core|clk_gev [rising] on pin C
+
+Instance / Net                                     Pin      Pin               Arrival     No. of    
+Name                                    Type       Name     Dir     Delay     Time        Fan Out(s)
+----------------------------------------------------------------------------------------------------
+next_fb_cmd                             FDS        Q        Out     0.379     3.694       -         
+next_fb_cmd                             Net        -        -       0.584     -           13        
+cmd_1_m0[7]                             LUT6       I5       In      -         4.277       -         
+cmd_1_m0[7]                             LUT6       O        Out     0.257     4.535       -         
+cmd_1_m0[7]                             Net        -        -       0.486     -           5         
+cmd_1[7]                                LUT6       I5       In      -         5.021       -         
+cmd_1[7]                                LUT6       O        Out     0.105     5.126       -         
+cmd_1[7]                                Net        -        -       0.641     -           24        
+gev_enable_5_iv_0_i_o3_0                LUT5       I4       In      -         5.767       -         
+gev_enable_5_iv_0_i_o3_0                LUT5       O        Out     0.348     6.115       -         
+N_194                                   Net        -        -       0.506     -           6         
+step_cnt_ns_i_0_0_2[1]                  LUT6_L     I5       In      -         6.621       -         
+step_cnt_ns_i_0_0_2[1]                  LUT6_L     LO       Out     0.400     7.021       -         
+step_cnt_ns_i_0_0_2[1]                  Net        -        -       0.243     -           1         
+step_cnt_ns_i_0_0_a3_0_lut6_2_o5[1]     LUT4       I3       In      -         7.264       -         
+step_cnt_ns_i_0_0_a3_0_lut6_2_o5[1]     LUT4       O        Out     0.105     7.369       -         
+N_338s_0                                Net        -        -       0.000     -           1         
+step_cnt[1]                             FDRE       D        In      -         7.369       -         
+====================================================================================================
+Total path delay (propagation time + setup) of 3.991 is 1.531(38.4%) logic and 2.460(61.6%) route.
+Path delay compensated for clock skew. Clock skew is added to clock-to-out value, and is subtracted from setup time value
+
+
+Start clock path:
+
+Instance / Net                                  Pin         Pin               Arrival     No. of    
+Name                 Type                       Name        Dir     Delay     Time        Fan Out(s)
+----------------------------------------------------------------------------------------------------
+Start Clock :        gvsp_ctrl_core|clk_gev                                                         
+------------                                                                                        
+clk_gev              Port                       clk_gev     In      -         0.000       -         
+clk_gev              Net                        -           -       0.000     -           1         
+clk_gev_ibuf_iso     IBUFG                      I           In      -         0.000       -         
+clk_gev_ibuf_iso     IBUFG                      O           Out     1.007     1.007       -         
+clk_gev_ibuf_iso     Net                        -           -       0.600     -           1         
+clk_gev_ibuf         BUFG                       I           In      -         1.607       -         
+clk_gev_ibuf         BUFG                       O           Out     0.092     1.699       -         
+clk_gev_c            Net                        -           -       1.616     -           40        
+next_fb_cmd          FDS                        C           In      -         3.315       -         
+====================================================================================================
+
+
+End clock path:
+
+Instance / Net                                  Pin         Pin               Arrival     No. of    
+Name                 Type                       Name        Dir     Delay     Time        Fan Out(s)
+----------------------------------------------------------------------------------------------------
+Start Clock :        gvsp_ctrl_core|clk_gev                                                         
+------------                                                                                        
+clk_gev              Port                       clk_gev     In      -         0.000       -         
+clk_gev              Net                        -           -       0.000     -           1         
+clk_gev_ibuf_iso     IBUFG                      I           In      -         0.000       -         
+clk_gev_ibuf_iso     IBUFG                      O           Out     1.007     1.007       -         
+clk_gev_ibuf_iso     Net                        -           -       0.600     -           1         
+clk_gev_ibuf         BUFG                       I           In      -         1.607       -         
+clk_gev_ibuf         BUFG                       O           Out     0.092     1.699       -         
+clk_gev_c            Net                        -           -       1.616     -           40        
+step_cnt[1]          FDRE                       C           In      -         3.315       -         
+====================================================================================================
+
+
+Path information for path number 4: 
+      Requested Period:                      3.400
+    - Setup time:                            -0.063
+    + Clock delay at ending point:           3.315
+    = Required time:                         6.778
+
+    - Propagation time:                      4.050
+    - Clock delay at starting point:         3.315
+    = Slack (non-critical) :                 -0.588
+
+    Number of logic level(s):                5
+    Starting point:                          next_fb_cmd / Q
+    Ending point:                            add_cmd_reg[7] / D
+    The start point is clocked by            gvsp_ctrl_core|clk_gev [rising] on pin C
+    The end   point is clocked by            gvsp_ctrl_core|clk_gev [rising] on pin C
+
+Instance / Net                               Pin      Pin               Arrival     No. of    
+Name                                Type     Name     Dir     Delay     Time        Fan Out(s)
+----------------------------------------------------------------------------------------------
+next_fb_cmd                         FDS      Q        Out     0.379     3.694       -         
+next_fb_cmd                         Net      -        -       0.584     -           13        
+fb_cmd_hold_reg_RNIK50F             LUT5     I4       In      -         4.277       -         
+fb_cmd_hold_reg_RNIK50F             LUT5     O        Out     0.171     4.449       -         
+N_224                               Net      -        -       0.522     -           7         
+un5_add_cmd_end_0_o2_0              LUT6     I5       In      -         4.971       -         
+un5_add_cmd_end_0_o2_0              LUT6     O        Out     0.105     5.076       -         
+un5_add_cmd_end_0_o2_0              Net      -        -       0.615     -           18        
+un5_add_cmd_end_0_o2_1_RNIANHL3     LUT6     I4       In      -         5.690       -         
+un5_add_cmd_end_0_o2_1_RNIANHL3     LUT6     O        Out     0.414     6.105       -         
+N_312                               Net      -        -       0.363     -           2         
+add_cmd_reg_RNO_0[7]                LUT6     I5       In      -         6.467       -         
+add_cmd_reg_RNO_0[7]                LUT6     O        Out     0.550     7.018       -         
+add_cmd_reg_RNO_0[7]                Net      -        -       0.243     -           1         
+add_cmd_reg_RNO[7]                  LUT3     I1       In      -         7.261       -         
+add_cmd_reg_RNO[7]                  LUT3     O        Out     0.105     7.365       -         
+VCC_0_e                             Net      -        -       0.000     -           1         
+add_cmd_reg[7]                      FD       D        In      -         7.365       -         
+==============================================================================================
+Total path delay (propagation time + setup) of 3.987 is 1.662(41.7%) logic and 2.326(58.3%) route.
+Path delay compensated for clock skew. Clock skew is added to clock-to-out value, and is subtracted from setup time value
+
+
+Start clock path:
+
+Instance / Net                                  Pin         Pin               Arrival     No. of    
+Name                 Type                       Name        Dir     Delay     Time        Fan Out(s)
+----------------------------------------------------------------------------------------------------
+Start Clock :        gvsp_ctrl_core|clk_gev                                                         
+------------                                                                                        
+clk_gev              Port                       clk_gev     In      -         0.000       -         
+clk_gev              Net                        -           -       0.000     -           1         
+clk_gev_ibuf_iso     IBUFG                      I           In      -         0.000       -         
+clk_gev_ibuf_iso     IBUFG                      O           Out     1.007     1.007       -         
+clk_gev_ibuf_iso     Net                        -           -       0.600     -           1         
+clk_gev_ibuf         BUFG                       I           In      -         1.607       -         
+clk_gev_ibuf         BUFG                       O           Out     0.092     1.699       -         
+clk_gev_c            Net                        -           -       1.616     -           40        
+next_fb_cmd          FDS                        C           In      -         3.315       -         
+====================================================================================================
+
+
+End clock path:
+
+Instance / Net                                  Pin         Pin               Arrival     No. of    
+Name                 Type                       Name        Dir     Delay     Time        Fan Out(s)
+----------------------------------------------------------------------------------------------------
+Start Clock :        gvsp_ctrl_core|clk_gev                                                         
+------------                                                                                        
+clk_gev              Port                       clk_gev     In      -         0.000       -         
+clk_gev              Net                        -           -       0.000     -           1         
+clk_gev_ibuf_iso     IBUFG                      I           In      -         0.000       -         
+clk_gev_ibuf_iso     IBUFG                      O           Out     1.007     1.007       -         
+clk_gev_ibuf_iso     Net                        -           -       0.600     -           1         
+clk_gev_ibuf         BUFG                       I           In      -         1.607       -         
+clk_gev_ibuf         BUFG                       O           Out     0.092     1.699       -         
+clk_gev_c            Net                        -           -       1.616     -           40        
+add_cmd_reg[7]       FD                         C           In      -         3.315       -         
+====================================================================================================
+
+
+Path information for path number 5: 
+      Requested Period:                      3.400
+    - Setup time:                            -0.063
+    + Clock delay at ending point:           3.315
+    = Required time:                         6.778
+
+    - Propagation time:                      4.050
+    - Clock delay at starting point:         3.315
+    = Slack (non-critical) :                 -0.588
+
+    Number of logic level(s):                5
+    Starting point:                          next_fb_cmd / Q
+    Ending point:                            add_cmd_reg[7] / D
+    The start point is clocked by            gvsp_ctrl_core|clk_gev [rising] on pin C
+    The end   point is clocked by            gvsp_ctrl_core|clk_gev [rising] on pin C
+
+Instance / Net                               Pin      Pin               Arrival     No. of    
+Name                                Type     Name     Dir     Delay     Time        Fan Out(s)
+----------------------------------------------------------------------------------------------
+next_fb_cmd                         FDS      Q        Out     0.379     3.694       -         
+next_fb_cmd                         Net      -        -       0.584     -           13        
+fb_cmd_hold_reg_RNIK50F             LUT5     I4       In      -         4.277       -         
+fb_cmd_hold_reg_RNIK50F             LUT5     O        Out     0.171     4.449       -         
+N_224                               Net      -        -       0.522     -           7         
+cmd_1_m0[2]                         LUT4     I3       In      -         4.971       -         
+cmd_1_m0[2]                         LUT4     O        Out     0.105     5.076       -         
+cmd_1_m0[2]                         Net      -        -       0.615     -           18        
+un5_add_cmd_end_0_o2_1_RNIANHL3     LUT6     I3       In      -         5.690       -         
+un5_add_cmd_end_0_o2_1_RNIANHL3     LUT6     O        Out     0.414     6.105       -         
+N_312                               Net      -        -       0.363     -           2         
+add_cmd_reg_RNO_0[7]                LUT6     I5       In      -         6.467       -         
+add_cmd_reg_RNO_0[7]                LUT6     O        Out     0.550     7.018       -         
+add_cmd_reg_RNO_0[7]                Net      -        -       0.243     -           1         
+add_cmd_reg_RNO[7]                  LUT3     I1       In      -         7.261       -         
+add_cmd_reg_RNO[7]                  LUT3     O        Out     0.105     7.365       -         
+VCC_0_e                             Net      -        -       0.000     -           1         
+add_cmd_reg[7]                      FD       D        In      -         7.365       -         
+==============================================================================================
+Total path delay (propagation time + setup) of 3.987 is 1.662(41.7%) logic and 2.326(58.3%) route.
+Path delay compensated for clock skew. Clock skew is added to clock-to-out value, and is subtracted from setup time value
+
+
+Start clock path:
+
+Instance / Net                                  Pin         Pin               Arrival     No. of    
+Name                 Type                       Name        Dir     Delay     Time        Fan Out(s)
+----------------------------------------------------------------------------------------------------
+Start Clock :        gvsp_ctrl_core|clk_gev                                                         
+------------                                                                                        
+clk_gev              Port                       clk_gev     In      -         0.000       -         
+clk_gev              Net                        -           -       0.000     -           1         
+clk_gev_ibuf_iso     IBUFG                      I           In      -         0.000       -         
+clk_gev_ibuf_iso     IBUFG                      O           Out     1.007     1.007       -         
+clk_gev_ibuf_iso     Net                        -           -       0.600     -           1         
+clk_gev_ibuf         BUFG                       I           In      -         1.607       -         
+clk_gev_ibuf         BUFG                       O           Out     0.092     1.699       -         
+clk_gev_c            Net                        -           -       1.616     -           40        
+next_fb_cmd          FDS                        C           In      -         3.315       -         
+====================================================================================================
+
+
+End clock path:
+
+Instance / Net                                  Pin         Pin               Arrival     No. of    
+Name                 Type                       Name        Dir     Delay     Time        Fan Out(s)
+----------------------------------------------------------------------------------------------------
+Start Clock :        gvsp_ctrl_core|clk_gev                                                         
+------------                                                                                        
+clk_gev              Port                       clk_gev     In      -         0.000       -         
+clk_gev              Net                        -           -       0.000     -           1         
+clk_gev_ibuf_iso     IBUFG                      I           In      -         0.000       -         
+clk_gev_ibuf_iso     IBUFG                      O           Out     1.007     1.007       -         
+clk_gev_ibuf_iso     Net                        -           -       0.600     -           1         
+clk_gev_ibuf         BUFG                       I           In      -         1.607       -         
+clk_gev_ibuf         BUFG                       O           Out     0.092     1.699       -         
+clk_gev_c            Net                        -           -       1.616     -           40        
+add_cmd_reg[7]       FD                         C           In      -         3.315       -         
+====================================================================================================
+
+
+
+##### END OF TIMING REPORT #####]
+
+
+Finished final timing analysis (Real Time elapsed 0h:00m:02s; CPU Time elapsed 0h:00m:02s; Memory used current: 147MB peak: 162MB)
+
+
+Finished timing report (Real Time elapsed 0h:00m:02s; CPU Time elapsed 0h:00m:02s; Memory used current: 147MB peak: 162MB)
+
+---------------------------------------
+Resource Usage Report for gvsp_ctrl_core 
+
+Mapping to part: xc7a100tfgg484-2
+Cell usage:
+FD              12 uses
+FDR             12 uses
+FDRE            14 uses
+FDS             2 uses
+GND             1 use
+MUXF7           1 use
+VCC             1 use
+LUT2            17 uses
+LUT3            8 uses
+LUT4            16 uses
+LUT5            24 uses
+LUT6            69 uses
+
+I/O ports: 96
+I/O primitives: 38
+IBUF           20 uses
+IBUFG          1 use
+OBUF           17 uses
+
+BUFG           1 use
+
+I/O Register bits:                  0
+Register bits not including I/Os:   40 (0%)
+
+Global Clock Buffers: 1 of 32 (3%)
+
+Total load per clock:
+   gvsp_ctrl_core|clk_gev: 40
+
+Mapping Summary:
+Total  LUTs: 125 (0%)
+
+Distribution of All Consumed LUTs = LUT2 + LUT3 + LUT4 + LUT5 + LUT6- HLUTNM/2 
+Distribution of All Consumed Luts 125 = 17 + 8 + 16 + 24 + 69- 18/2 
+
+
+ Number of unique control sets:              8
+
+
+Region Summary:
+Mapper successful!
+
+At Mapper Exit (Real Time elapsed 0h:00m:03s; CPU Time elapsed 0h:00m:03s; Memory used current: 51MB peak: 162MB)
+
+Process took 0h:00m:03s realtime, 0h:00m:03s cputime
+# Fri Feb 15 13:24:04 2019
+
+###########################################################]
