@@ -1,13 +1,12 @@
 /L16"Python" PYTHON_LANG Line Comment = # Escape Char = \ String Literal Prefix = r File Extensions = PY PYW
-/LanguageMarker = "python"
 /TGBegin "Classes"
 /TGFindStr = "^[ \t]*class[ \t]+([^:\r\n]*)\("
+/TGFindStr = "^[ \t]*class[ \t]+([^:\r\n]*):"
 /TGBegin "Parameters"
 /TGFindStr = "[ \t\n]*([^,]+)"
 /TGFindBStart = "\("
 /TGFindBEnd = "\)"
 /TGEnd
-/TGFindStr = "^[ \t]*class[ \t]+([^:\r\n]*):"
 /TGEnd
 /TGBegin "Functions"
 /TGFindStr = "^[ \t]*def[ \t]+([^:\r\n]*)\("
@@ -17,6 +16,7 @@
 /TGFindBEnd = "\)"
 /TGEnd
 /TGEnd
+/LanguageMarker = "python"
 /Regexp Type = Perl
 /Delimiters = ! "	%&'()*+,-./:;<=>@[\]^`{|}
 /Indent Strings = ":"

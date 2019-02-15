@@ -1,5 +1,4 @@
 /L28"Markdown" Nocase EnableSpellasYouType Line Comment Num = 4     Line Comment Valid Columns = [1] Line Comment Alt = > Line Comment Valid Columns Alt = [1] Block Comment On Alt = ``` String Chars = " EnableMLS File Extensions = MD MARKDOWN
-/Delimiters = ! "	$%&'()*+,./:;<>?@[\]^_`{|}~
 /TGBegin "Heading 1"
 /TGFindStr = "%# ^(?+^)$"
 /TGFindStr = "%^(?+^)^p====+$"
@@ -20,6 +19,7 @@
 /TGBegin "Heading 6"
 /TGFindStr = "%###### ^(*^)$"
 /TGEnd
+/Delimiters = ! "	$%&'()*+,./:;<>?@[\]^_`{|}~
 /Open Brace Strings = "<" "(" "[" "{"
 /Close Brace Strings = ">" ")" "]" "}"
 /Open Fold Strings = "#" "===="
