@@ -1,0 +1,646 @@
+//-------------------------------------------------------------------------------------------------
+//  -- 版权所有者   : 中国大恒（集团）有限公司北京图像视觉技术分公司, 2010 -2015.
+//  -- 保密级别     ：绝密.
+//  -- 部门         : 硬件部，FPGA工作组
+//  -- 模块名       : u3v_format
+//  -- 设计者       : 邢海涛
+//-------------------------------------------------------------------------------------------------
+//
+//  -- 版本记录 :
+//
+//  -- 作者         :| 修改日期				:|  修改说明
+//-------------------------------------------------------------------------------------------------
+//  -- 邢海涛       :| 2015/10/21 15:25:14	:|  初始版本
+//  -- 邢海涛       :| 2016/4/25 17:40:31	:|  1.添加 FVAL_TS_STABLE_NS 参数
+//												2.解决时钟超过60MHz时，chunk中的时间戳采不稳的问题
+//-------------------------------------------------------------------------------------------------
+//
+//  -- 模块描述     :
+//              1)  : ... ...
+//
+//              2)  : ... ...
+//
+//              3)  : ... ...
+//
+//-------------------------------------------------------------------------------------------------
+//仿真单位/精度
+`timescale 1ns/1ps
+//-------------------------------------------------------------------------------------------------
+
+module u3v_format # (
+	parameter	PIX_CLK_FREQ_KHZ	= 65000	,	//像素时钟的频率，以khz为单位
+	parameter	FVAL_TS_STABLE_NS	= 95	,	//从fval发出到稳定接收时间戳的时间
+	parameter	DATA_WD				= 64	,	//输入输出数据位宽，这里使用同一宽度
+	parameter	SHORT_REG_WD 		= 16	,	//短寄存器位宽
+	parameter	REG_WD 				= 32	,	//寄存器位宽
+	parameter	LONG_REG_WD 		= 64		//长寄存器位宽
+	)
+	(
+	//  ===============================================================================================
+	//  第一部分：时钟复位
+	//  ===============================================================================================
+	input								clk						,	//时钟信号，像素时钟时钟域，同内部像素时钟
+	input								reset					,	//复位信号，高电平有效，像素时钟时钟域
+	//  ===============================================================================================
+	//  第二部分：行、场、数据、数据有效
+	//  ===============================================================================================
+	input								i_fval					,	//数据通路输出的场信号，像素时钟时钟域,fval的信号是经过数据通道加宽过的场信号，场头可以添加leader、并包含有效的图像数据，停采期间保持低电平
+	input								i_data_valid			,	//数据通路输出的数据有效信号，标志32位数据为有效数据
+	input	[DATA_WD-1:0]				iv_data					,	//数据通路拼接好的32bit数据，与数据有效对齐，与像素时钟对齐
+	//  ===============================================================================================
+	//  第三部分：控制寄存器、chunk信息和只读寄存器
+	//  ===============================================================================================
+	input								i_stream_enable			,	//流使能信号，像素时钟时钟域，=0，后端流立即停止，chunk中的BLOCK ID为0
+	input								i_acquisition_start     ,	//开采信号，像素时钟时钟域，=0，标志完整帧，需等添加完尾包后才能停止
+	input	[REG_WD-1:0]				iv_pixel_format         ,	//像素格式，用于添加在leader中,数据通路已做生效时机控制，本模块不需再进行生效时机控制
+	input								i_chunk_mode_active     ,	//chunk总开关，开关打开Payload Type使用为image extend chunk 类型，chunk关闭为image类型
+	input								i_chunkid_en_ts         ,	//时间戳chunk使能
+	input								i_chunkid_en_fid        ,	//frame id chunk使能
+	input	[REG_WD-1:0]				iv_chunk_size_img       ,	//图像长度，以字节为单位，当pixel format为8bit时，一个像素占一个字节，当pixel format 10 bit时，一个像素占用两个字节。
+	input	[LONG_REG_WD-1:0]			iv_timestamp			,	//头包中的时间戳字段,由控制通道传送过来,iv_timestamp在场信号上升沿8个时钟之后才能稳定
+	input	[SHORT_REG_WD-1:0]			iv_size_x				,	//头包中的窗口宽度
+	input	[SHORT_REG_WD-1:0]			iv_size_y				,	//头包中的窗口高度
+	input	[SHORT_REG_WD-1:0]			iv_offset_x				,	//头包中的水平偏移
+	input	[SHORT_REG_WD-1:0]			iv_offset_y				,	//头包中的垂直便宜
+	input	[REG_WD-1:0]				iv_trailer_size_y		,	//尾包中的有效高度字段
+	//  ===============================================================================================
+	//  第四部分：行、数据有效、数据
+	//  ===============================================================================================
+	output								o_trailer_flag          ,	//尾包标志
+	output								o_fval					,	//添加完头尾的场信号，且需要场信号的上升沿领先第一个有效10个clk，下降沿要滞后于最后一个有效数据10个时钟以上，以保证帧存正常工作。
+	output								o_data_valid			,	//添加完头尾的数据有效信号
+	output	[DATA_WD-1:0]				ov_data
+	);
+
+	//	ref signals
+	//FSM Parameter Define
+	parameter	S_IDLE		= 3'd0;
+	parameter	S_TIMESTAMP	= 3'd1;
+	parameter	S_LEADER	= 3'd2;
+	parameter	S_IMAGE		= 3'd3;
+	parameter	S_CHUNK		= 3'd4;
+	parameter	S_TRAILER	= 3'd5;
+	parameter	S_EXT		= 3'd6;
+
+	reg		[2:0]	current_state	= S_IDLE;
+	reg		[2:0]	next_state		= S_IDLE;
+
+	//FSM for sim
+	// synthesis translate_off
+	reg		[63:0]			state_ascii;
+	always @ ( * ) begin
+		case(current_state)
+			3'd0 :	state_ascii	<= "S_IDLE";
+			3'd1 :	state_ascii	<= "S_TIMESTAMP";
+			3'd2 :	state_ascii	<= "S_LEADER";
+			3'd3 :	state_ascii	<= "S_IMAGE";
+			3'd4 :	state_ascii	<= "S_CHUNK";
+			3'd5 :	state_ascii	<= "S_TRAILER";
+			3'd6 :	state_ascii	<= "S_EXT";
+		endcase
+	end
+	// synthesis translate_on
+
+	//	-------------------------------------------------------------------------------------
+	//	取对数，上取整
+	//	-------------------------------------------------------------------------------------
+	function integer log2 (input integer xx);
+		integer x;
+		begin
+			x	= xx-1 ;
+			for (log2=0;x>0;log2=log2+1) begin
+				x	= x >> 1;
+			end
+		end
+	endfunction
+
+	//像素时钟周期，以 ns 为单位
+	parameter		CLK_PERIOD_NS		= 1000000/PIX_CLK_FREQ_KHZ;
+
+	//fval边沿 FVAL_TS_STABLE_NS 之后，在本时钟域内，timestamp才能稳定
+	//在fval的上升沿和下降沿都会采样时间戳，上升沿是把时间戳放到leader当中，下降沿是把时间戳放入chunk当中
+	localparam		TIMESTAMP_DELAY		= (FVAL_TS_STABLE_NS/CLK_PERIOD_NS)+1;
+	//此处用 TIMESTAMP_DELAY+5 的原因是 CHUNK_SIZE = TIMESTAMP_DELAY+5
+	localparam		PIPE_DELAY_WIDTH	= log2(TIMESTAMP_DELAY+5+1);
+	//保护最小的宽度，3
+	localparam		PIPE_WIDTH			= (PIPE_DELAY_WIDTH > 3) ? PIPE_DELAY_WIDTH : 3;
+	localparam		FID_LENTH			= 32'h8	;	//frameid 长度
+	localparam		TS_LENTH			= 32'h8	;	//timestamp 长度
+
+	localparam		PAYLOAD_SHIFT_NUM		= log2(DATA_WD/8);
+
+	localparam		LEADER_SIZE			= 7;	//LEADER SIZE 52BYTE，多了4byte
+	localparam		TRAILER_SIZE_CHUNK	= 7;	//CHUNK模式下，TRAILER SIZE 56BYTE ，与最大的36byte相比，多了20byte，相当于多了2拍半
+	localparam		CHUNK_SIZE			= TIMESTAMP_DELAY+5;	//CHUNK数据最多40byte
+	localparam		EXT_SIZE			= 10;	//fval lval 下降沿延时
+
+	reg									fval_dly				= 1'b0;
+	wire								fval_rise				;
+	wire								fval_fall				;
+	reg									stream_enable_dly		= 1'b0;
+	wire								se_rise					;
+	reg		[PIPE_DELAY_WIDTH-1:0]		pipe_cnt				= {PIPE_DELAY_WIDTH{1'b0}};
+	reg		[3:0]						ext_cnt					= 4'b0;
+	wire	[63:0]						blockid					;
+	wire	[46:0]						blockid_low47			;
+	reg		[63:0]						data_reg				= 64'b0;
+	reg									data_valid				= 1'b0;
+	reg									fval_reg				= 1'b0;
+	reg									trailer_flag			= 1'b0;
+	reg									chunk_mode_active_dly	;
+	reg									chunkid_en_ts_dly		;
+	reg									chunkid_en_fid_dly		;
+	reg		[7:0]						chunk_layout_id			= 8'h0;
+	reg									chunk_mode_active_latch	= 1'b0;
+
+	reg 	[REG_WD-1:0]				payload_cnt				;	//发送图像大小计数器
+	reg 	[REG_WD-1:0]				act_payload_cnt			;
+	reg		[15:0]						status					= 16'b0;
+	wire	[REG_WD-1:0]				valid_payload_size_tmp	;	//有效的图像数据
+	reg		[REG_WD-1:0]				valid_payload_size		;	//有效的图像数据
+
+
+	//	ref ARCHITECTURE
+
+	//	===============================================================================================
+	//	ref ***提取边沿 锁存***
+	//	===============================================================================================
+	//	-------------------------------------------------------------------------------------
+	//	fval 提取边沿
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk ) begin
+		fval_dly	<= i_fval;
+	end
+	assign	fval_rise	= (fval_dly==1'b0 && i_fval==1'b1) ? 1'b1 : 1'b0;
+	assign	fval_fall	= (fval_dly==1'b1 && i_fval==1'b0) ? 1'b1 : 1'b0;
+
+	//	-------------------------------------------------------------------------------------
+	//	se 提取边沿
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		stream_enable_dly	<= i_stream_enable;
+	end
+	assign	se_rise	= (stream_enable_dly==1'b0 && i_stream_enable==1'b1) ? 1'b1 : 1'b0;
+
+	//	//	-------------------------------------------------------------------------------------
+	//	//	锁存chunk使能信号
+	//	//	-------------------------------------------------------------------------------------
+	//	always @ (posedge clk) begin
+	//		if(se_rise) begin
+	//			chunk_mode_active_latch	<= i_chunk_mode_active	;
+	//			chunkid_en_ts_latch		<= i_chunkid_en_ts		;
+	//			chunkid_en_fid_latch	<= i_chunkid_en_fid	;
+	//		end
+	//	end
+
+	//	===============================================================================================
+	//	ref ***计数器动作***
+	//	===============================================================================================
+	//	-------------------------------------------------------------------------------------
+	//	pipe_cnt 每个状态下，以pipe_cnt作为数据添加的计数器
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		case(current_state)
+			//	-------------------------------------------------------------------------------------
+			//	TIMESTAMP 状态下，等待 timestamp 数据稳定
+			//	--timestamp需要经过110ns才能稳定
+			//	-------------------------------------------------------------------------------------
+			S_TIMESTAMP	:
+			if(pipe_cnt==(TIMESTAMP_DELAY-1)) begin
+				pipe_cnt	<= 'b0;
+			end
+			else begin
+				pipe_cnt	<= pipe_cnt + 1'b1;
+			end
+			//	-------------------------------------------------------------------------------------
+			//	LEADER 状态下，计数器达到 LEADER_SIZE pipe_cnt清零
+			//	-------------------------------------------------------------------------------------
+			S_LEADER	:
+			if(pipe_cnt==(LEADER_SIZE-1)) begin
+				pipe_cnt	<= 'b0;
+			end
+			else begin
+				pipe_cnt	<= pipe_cnt + 1'b1;
+			end
+			//	-------------------------------------------------------------------------------------
+			//	S_TRAILER 状态下，有2种trailer长度
+			//	-- 达到 TRAILER_SIZE_CHUNK 时，pipe_cnt清零，不区分chunk是否使能，trailer写入多一点数据是没有问题的
+			//	-------------------------------------------------------------------------------------
+			S_TRAILER	:
+			if(pipe_cnt==(TRAILER_SIZE_CHUNK-1)) begin
+				pipe_cnt	<= 'b0;
+			end
+			else begin
+				pipe_cnt	<= pipe_cnt + 1'b1;
+			end
+			//	-------------------------------------------------------------------------------------
+			//	CHUNK 状态下，计数器达到 CHUNK_SIZE pipe_cnt清零
+			//	-------------------------------------------------------------------------------------
+			S_CHUNK	:
+			if(pipe_cnt==(CHUNK_SIZE-1)) begin
+				pipe_cnt	<= 'b0;
+			end
+			else begin
+				pipe_cnt	<= pipe_cnt + 1'b1;
+			end
+			//	-------------------------------------------------------------------------------------
+			//	其他 状态下，计数器 pipe_cnt 清零
+			//	-------------------------------------------------------------------------------------
+			default	:
+			pipe_cnt	<= 'b0;
+		endcase
+	end
+
+	//	-------------------------------------------------------------------------------------
+	//	延时计数器，用于展宽 fval下降沿和 lval下降沿之间的距离
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		if(current_state==S_EXT) begin
+			ext_cnt	<= ext_cnt + 1'b1;
+		end
+		else begin
+			ext_cnt	<= 'b0;
+		end
+	end
+
+	//  ===============================================================================================
+	//  ref ***block_id***
+	//  ===============================================================================================
+	//	-------------------------------------------------------------------------------------
+	//	blockid
+	//	--用dsp实现 47bit 加法，每秒1000帧计算，47bit能够计数 4462 年，足够了
+	//	-------------------------------------------------------------------------------------
+	reg		[46:0]		adder_a		= 47'b0;
+	reg					adder_ce	= 1'b0;
+	wire	[46:0]		adder_sum	;
+	//	reg		[46:0]		blockid_low47_reg	= 47'h7fff_ffff_ffff;
+	reg		[46:0]		blockid_low47_reg	= 47'h0;
+
+	//	-------------------------------------------------------------------------------------
+	//	例化 dsp加法器模块
+	//	-------------------------------------------------------------------------------------
+	u3v_adder_47 u3v_adder_47_inst (
+	.clk	(clk				),
+	.ce		(adder_ce			),
+	.sclr	(!i_stream_enable | fval_rise	),
+	.a		(adder_a			),
+	.s		(adder_sum			)
+	);
+
+	//	-------------------------------------------------------------------------------------
+	//	切换需要累加的数据
+	//	-------------------------------------------------------------------------------------
+	always @ (*) begin
+		if(current_state==S_EXT) begin
+			adder_a	<= blockid_low47_reg;
+		end
+		else begin
+			adder_a	<= adder_sum;
+		end
+	end
+
+	//	-------------------------------------------------------------------------------------
+	//	dsp加法器使能开关
+	//	-------------------------------------------------------------------------------------
+	always @ (*) begin
+		if(current_state==S_EXT && ext_cnt==(EXT_SIZE-1)) begin
+			adder_ce	<= 1'b1;
+		end
+		else if(current_state==S_IMAGE && i_data_valid==1'b1) begin
+			adder_ce	<= 1'b1;
+		end
+		else begin
+			adder_ce	<= 1'b0;
+		end
+	end
+
+	//	-------------------------------------------------------------------------------------
+	//	block id 拼接
+	//	--blockid只有47bit位宽，这个已经最够了
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		if(current_state==S_IDLE) begin
+			blockid_low47_reg	<= adder_sum;
+		end
+	end
+	assign	blockid	= {17'h0,blockid_low47_reg};
+
+	//	===============================================================================================
+	//	ref ***chunk_layoutid***
+	//	===============================================================================================
+	//	-------------------------------------------------------------------------------------
+	//	对chunk使能信号打拍
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		chunk_mode_active_dly	<= i_chunk_mode_active	;
+		chunkid_en_ts_dly		<= i_chunkid_en_ts		;
+		chunkid_en_fid_dly		<= i_chunkid_en_fid		;
+	end
+	//	-------------------------------------------------------------------------------------
+	//	chunk_layoutid
+	//	--当chunk使能信号有改变的时候， id++
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		if(chunk_mode_active_dly^i_chunk_mode_active || chunkid_en_ts_dly^i_chunkid_en_ts || chunkid_en_fid_dly^i_chunkid_en_fid) begin
+			chunk_layout_id	<= chunk_layout_id + 1'b1;
+		end
+	end
+
+	//	===============================================================================================
+	//	ref ***ov_status ov_valid_payload_size***
+	//	===============================================================================================
+	//  ===============================================================================================
+	//  数据计数，输出的图像数据期间的实际个数，与设置的iv_chunk_size_img比较判断是否overrun
+	//  ===============================================================================================
+	//	统计image_flag期间的数据有效个数
+	always @ (posedge clk) begin
+		if(fval_rise) begin
+			act_payload_cnt	<= 0;
+		end
+		else if(fval_fall) begin
+			act_payload_cnt	<= adder_sum<<PAYLOAD_SHIFT_NUM;
+		end
+	end
+
+	//当实际字节数大于iv_chunk_size_img时说明数据溢出，需要置错误状态位
+	always @ (posedge clk) begin
+		if(act_payload_cnt[REG_WD-1:3]>iv_chunk_size_img[REG_WD-1:3]) begin
+			status	<= 16'hA101;
+		end
+		else begin
+			status	<= 16'H0000;
+		end
+	end
+
+	//取实际字节数与iv_chunk_size_img两个值中的最小值作为valid payloadsize
+	assign	valid_payload_size_tmp	= (act_payload_cnt[REG_WD-1:3]>iv_chunk_size_img[REG_WD-1:3]) ? iv_chunk_size_img : act_payload_cnt;
+
+	always @ (posedge clk) begin
+		case({i_chunk_mode_active,i_chunkid_en_ts,i_chunkid_en_fid})
+			3'b100	: valid_payload_size	<= valid_payload_size_tmp + 8;
+			3'b110	: valid_payload_size	<= valid_payload_size_tmp + 24;
+			3'b101	: valid_payload_size	<= valid_payload_size_tmp + 24;
+			3'b111	: valid_payload_size	<= valid_payload_size_tmp + 40;
+			default	: valid_payload_size	<= valid_payload_size_tmp;
+		endcase
+	end
+
+	//	always @ (posedge clk) begin
+	//		valid_payload_size	<= 32'h0;
+	//	end
+
+	//	===============================================================================================
+	//	ref ***数据输出***
+	//	===============================================================================================
+	//	-------------------------------------------------------------------------------------
+	//	***非CHUNK传输模式***
+	//	STREAM	:	LEADER	|	IMAGE	|	TRAILER
+	//					|	|			|		|
+	//				52byte	|			|	32byte
+	//						|--payload--|
+	//
+	//
+	//	***CHUNK传输模式***
+	//	STREAM	:	LEADER	|	IMAGE 	ID1 LENGTH1		FRAMEID	ID2	LENGTH2		TIMESTAMP	ID3	LENGTH3		|	TRAILER
+	//					|	|			|		|			|	|		|			|		|		|		|		|
+	//				52byte	|			4byte	4byte	8byte	4byte	4byte		8byte	4byte	4byte	|	36byte
+	//						|																				|
+	//						|-------------------------------    payload    ---------------------------------|
+	//
+	//	与非CHUNK模式相比，CHUNK 模式下，payload要多出40byte
+	//
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		case(current_state)
+			S_LEADER	:
+			case(pipe_cnt)
+				//{{leader_size,reserved},magic_key}=={{leader_size,0},LV3U}
+				0		: data_reg	<= {{16'd52,16'd0},32'h4c563355};
+				//blockid
+				1		: data_reg	<= blockid[63:0];
+				//{timestamp[31:0],payload_type,reserved} payload_type-这里只支持Image（0x0001）和Image Extended Chunk（0x4001）
+				2		: data_reg	<= {iv_timestamp[31:0],{1'b0,i_chunk_mode_active,{14'h0001},16'h0000}};
+				//{pixel_format,timestamp[63:32]}
+				3		: data_reg	<= {iv_pixel_format,iv_timestamp[63:32]};
+				//{size_y,size_x}
+				4		: data_reg	<= {{16'h00,iv_size_y},{16'h00,iv_size_x}};
+				//{offset_y,offset_x}
+				5		: data_reg	<= {{16'h00,iv_offset_y},{16'h00,iv_offset_x}};
+				//{dummy_word_by_dh,reserved,padding_x} dummy_word_by_dh是dh自己添加的数据，为了填充8byte的空间
+				6		: data_reg	<= {32'h0,32'h0};
+				default	: data_reg	<= {32'h0,32'h0};
+				//				default	: data_reg	<= iv_data;
+			endcase
+
+			S_TRAILER	:
+			case(pipe_cnt)
+				//trailer开头要多写入一些数据
+				0		: data_reg	<= {32'h0,32'h0};
+				//{{trailer_size,reserved},magic_key}=={{trailer_size,0},TV3U} //利用使能位做了一个拼接，当i_chunk_mode_active使能，长度为36，否则为32
+				1		: data_reg	<= {{13'h4,i_chunk_mode_active,2'b00,16'd0},32'h54563355};
+				//blockid
+				2		: data_reg	<= blockid[63:0];
+				//{valid_payload_size[31:0],{reserved,status}} status-这里只支持Image（0x0001）和Image Extended Chunk（0x4001）
+				3		: data_reg	<= {valid_payload_size[31:0],{16'h00,status}}	;
+				//{size_y,valid_payload_size[63:32]}
+				4		: data_reg	<= {{16'h00,iv_trailer_size_y},32'h0};
+				//{dummy_word_by_dh,chunk_layout_id} chunk_layout_id为0 dummy_word_by_dh是dh自己添加的数据，为了填充8byte的空间
+				5		: data_reg	<= {32'h0,{24'h0,chunk_layout_id}};
+				//trailer结尾要多写入一些数据
+				6		: data_reg	<= {32'h0,32'h0};
+				default	: data_reg	<= {32'h0,32'h0};
+				//				default	: data_reg	<= iv_data;
+			endcase
+
+			S_CHUNK		:
+			case(pipe_cnt)
+				//image id length
+				TIMESTAMP_DELAY		: data_reg	<= {iv_chunk_size_img,32'h1};
+				//frameid
+				TIMESTAMP_DELAY+1	: data_reg	<= blockid[63:0];
+				//frameid id length
+				TIMESTAMP_DELAY+2	: data_reg	<= {FID_LENTH,32'h2};
+				//timestamp
+				TIMESTAMP_DELAY+3	: data_reg	<= iv_timestamp[63:0];
+				//timestamp id length
+				TIMESTAMP_DELAY+4	: data_reg	<= {TS_LENTH,32'h3};
+				default	: data_reg	<= {32'h0,32'h0};
+				//				default	: data_reg	<= iv_data;
+			endcase
+
+			default	:
+			data_reg	<= iv_data;
+		endcase
+	end
+	assign	ov_data	= data_reg	;
+
+	//	-------------------------------------------------------------------------------------
+	//	数据有效信号
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		case(current_state)
+			//	-------------------------------------------------------------------------------------
+			//	空闲状态 时间戳状态 展宽状态 数据都无效
+			//	-------------------------------------------------------------------------------------
+			S_IDLE,S_TIMESTAMP,S_EXT	:
+			data_valid	<= 1'b0;
+			//	-------------------------------------------------------------------------------------
+			//	leader trailer 状态 数据一直有效
+			//	-------------------------------------------------------------------------------------
+			S_LEADER,S_TRAILER	:
+			data_valid	<= 1'b1;
+			//	-------------------------------------------------------------------------------------
+			//	chunk 状态 ，根据使能信号，选择合适的有效区间
+			//	-------------------------------------------------------------------------------------
+			S_CHUNK	:
+			case(pipe_cnt)
+				//image id length
+				TIMESTAMP_DELAY		: data_valid	<= i_chunk_mode_active;
+				//frameid
+				TIMESTAMP_DELAY+1	: data_valid	<= i_chunk_mode_active&i_chunkid_en_fid;
+				//frameid id length
+				TIMESTAMP_DELAY+2	: data_valid	<= i_chunk_mode_active&i_chunkid_en_fid;
+				//timestamp
+				TIMESTAMP_DELAY+3	: data_valid	<= i_chunk_mode_active&i_chunkid_en_ts;
+				//timestamp id length
+				TIMESTAMP_DELAY+4	: data_valid	<= i_chunk_mode_active&i_chunkid_en_ts;
+				default	: data_valid	<= 1'b0;
+			endcase
+
+			//	-------------------------------------------------------------------------------------
+			//	图像传输时，根据输入的使能信号，判断输出有效
+			//	-------------------------------------------------------------------------------------
+			S_IMAGE	:
+			data_valid	<= i_data_valid;
+			//	-------------------------------------------------------------------------------------
+			//	其他状态，无效
+			//	-------------------------------------------------------------------------------------
+			default	:
+			data_valid	<= 1'b0;
+		endcase
+	end
+	assign	o_data_valid	= data_valid;
+
+
+	//	-------------------------------------------------------------------------------------
+	//	输出 fval
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		if(current_state==S_IDLE) begin
+			fval_reg	<= 1'b0;
+		end
+		else if(current_state==S_TIMESTAMP) begin
+			fval_reg	<= 1'b1;
+		end
+	end
+	assign	o_fval	= fval_reg;
+
+	//	-------------------------------------------------------------------------------------
+	//	输出 trailer flag
+	//	-- trailer_flag 比 data_valid 提前结束一拍
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		if(current_state==S_TRAILER && pipe_cnt<=(TRAILER_SIZE_CHUNK-2)) begin
+			trailer_flag	<= 1'b1;
+		end
+		else begin
+			trailer_flag	<= 1'b0;
+		end
+	end
+	assign	o_trailer_flag	= trailer_flag;
+
+	//	===============================================================================================
+	//	ref ***FSM***
+	//	===============================================================================================
+	//FSM Sequential Logic
+	always @ (posedge clk) begin
+		current_state	<= next_state;
+	end
+
+	//FSM Conbinatial Logic
+	always @ ( * ) begin
+		case(current_state)
+			//	-------------------------------------------------------------------------------------
+			//	空闲状态
+			//	-------------------------------------------------------------------------------------
+			S_IDLE	:
+			if(fval_rise) begin
+				next_state	= S_TIMESTAMP;
+			end
+			else begin
+				next_state	= S_IDLE;
+			end
+			//	-------------------------------------------------------------------------------------
+			//	等待时间戳状态
+			//	--fval上升沿之后110ns，时间戳才能稳定
+			//	-------------------------------------------------------------------------------------
+			S_TIMESTAMP	:
+			if(pipe_cnt==(TIMESTAMP_DELAY-1)) begin
+				next_state	= S_LEADER;
+			end
+			else begin
+				next_state	= S_TIMESTAMP;
+			end
+			//	-------------------------------------------------------------------------------------
+			//	leader状态
+			//	--在这个状态添加leader数据
+			//	-------------------------------------------------------------------------------------
+			S_LEADER	:
+			if(pipe_cnt==(LEADER_SIZE-1)) begin
+				next_state	= S_IMAGE;
+			end
+			else begin
+				next_state	= S_LEADER;
+			end
+			//	-------------------------------------------------------------------------------------
+			//	image状态
+			//	--在这个状态添加图像数据
+			//	-------------------------------------------------------------------------------------
+			S_IMAGE	:
+			if(fval_fall) begin
+				next_state	= S_CHUNK;
+			end
+			else begin
+				next_state	= S_IMAGE;
+			end
+			//	-------------------------------------------------------------------------------------
+			//	chunk状态
+			//	--在这个状态添加 chunk 数据
+			//	-------------------------------------------------------------------------------------
+			S_CHUNK	:
+			if(pipe_cnt==(CHUNK_SIZE-1)) begin
+				next_state	= S_TRAILER;
+			end
+			else begin
+				next_state	= S_CHUNK;
+			end
+			//	-------------------------------------------------------------------------------------
+			//	trailer状态
+			//	--在这个状态添加trailer数据，不区分chunk是否使能
+			//	-------------------------------------------------------------------------------------
+			S_TRAILER	:
+			if(pipe_cnt==(TRAILER_SIZE_CHUNK-1)) begin
+				next_state	= S_EXT;
+			end
+			else begin
+				next_state	= S_TRAILER;
+			end
+			//	-------------------------------------------------------------------------------------
+			//	ext状态
+			//	--用于展宽fval，使得fval和lval下降沿之间保持一段距离
+			//	-------------------------------------------------------------------------------------
+			S_EXT	:
+			if(ext_cnt==(EXT_SIZE-1)) begin
+				next_state	= S_IDLE;
+			end
+			else begin
+				next_state	= S_EXT;
+			end
+
+			default	:
+			next_state	= S_IDLE;
+		endcase
+	end
+
+
+endmodule

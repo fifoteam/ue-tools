@@ -1,0 +1,645 @@
+//-------------------------------------------------------------------------------------------------
+//  -- 版权所有者   : 中国大恒（集团）有限公司北京图像视觉技术分公司, 2010 -2015.
+//  -- 保密级别     ：绝密.
+//  -- 部门         : 硬件部，FPGA工作组
+//  -- 模块名       : gvsp_ctrl_core
+//  -- 设计者       : 张少强
+//-------------------------------------------------------------------------------------------------
+//
+//  -- 版本记录 :
+//
+//  -- 作者         :| 版本号	:| 修改日期				:|  修改说明
+//-------------------------------------------------------------------------------------------------
+//  -- 张少强       :| V1.0		:| 2018/10/06 11:51:13	:|  初始版本
+//-------------------------------------------------------------------------------------------------
+//
+//  -- 模块描述     :
+//              1)  :
+//
+//              2)  :
+//
+//              3)  :
+//
+//-------------------------------------------------------------------------------------------------
+//`include			"gvsp_ctrl_core_def.v"
+//仿真单位/精度
+`timescale 1ns/1ps
+//-------------------------------------------------------------------------------------------------
+
+module gvsp_ctrl_core # (
+	parameter	SHORT_REG_WD   								= 16		,	//短寄存器位宽
+	parameter	REG_WD  						 			= 32		,	//寄存器位宽
+	parameter	LONG_REG_WD  						 		= 64		,	//长寄存器位宽
+	parameter	GEV_DE_WD									= 2			,	//数据单元使能位宽，4byte数据使用一个使能位
+	parameter	GEV_BE_WD									= 8			,	//字节使能位宽，1byte数据使用一个使能位
+	parameter	GEV_DATA_WD									= 64			//数据位宽，支持32、64、128
+	)
+	(
+	//  -------------------------------------------------------------------------------------
+	//  时钟和复位信号
+	//  -------------------------------------------------------------------------------------
+	input							clk_gev								,	//gev工作时钟
+	input							reset_gev							,	//gev工作时钟域的复位信号，高有效
+	//	-------------------------------------------------------------------------------------
+	//	寄存器模块信号
+	//	-------------------------------------------------------------------------------------
+	input							i_ge_transfer_start					,	//clk_gev时钟域，ge传输有效信号，高有效，以一个完整帧为单位，有效时允许数据从帧存读出，无效时不能读出数据，但是不会复位读帧号，在读一帧开始时生效
+	input							i_test_pkt_enable					,	//clk_gev时钟域，测试包发送使能
+	output							o_test_pkt_over						,	//clk_gev时钟域，测试包发送完成，1个clk的高脉冲，寄存器模块接收到该信号后清i_test_pkt_enable
+	//  -------------------------------------------------------------------------------------
+	//  与 frame buffer 交互
+	//  -------------------------------------------------------------------------------------
+	input							i_fb_rd_data						,	//clk_gev时钟域，其它模块输出的读帧存后端fifo信号，读数据
+	output							o_fb_rd_cmd							,	//clk_gev时钟域，本模块输出的读帧存后端fifo信号，读指令
+	input							i_fb_empty							,	//clk_gev时钟域，帧存后端fifo空信号，高有效
+	input							i_fb_busy							,	//clk_gev时钟域，帧存后端busy信号，当为1时不能读
+	input	[GEV_DE_WD-1:0]			iv_data_is_cmd						,	//clk_gev时钟域，帧存后端fifo输出数据是命令数据，单bit代表4byte，1-表示是命令数据，0-表示是图像数据
+	input	[GEV_DE_WD-1:0]			iv_dval								,	//clk_gev时钟域，帧存后端fifo输出数据有效信号，单bit代表4byte，1-表示数据有效，0-表示数据无效
+	input	[GEV_DATA_WD-1:0]		iv_data								,	//clk_gev时钟域，帧存后端fifo输出数据，支持32、64、128
+	//	-------------------------------------------------------------------------------------
+	//	解析标志位
+	//	-------------------------------------------------------------------------------------
+	output	reg						o_info_flag				=1'b0		,	//clk_gev时钟域，表示当前是信息段，高有效;dh vision analysis模块使用
+	output	reg						o_statis_flag			=1'b0		,	//clk_gev时钟域，表示当前是统计段，高有效;dh vision analysis模块使用
+	output	reg						o_leader_flag			=1'b0		,	//clk_gev时钟域，表示当前是leader包，高有效;ip udp gvsp format和gev format模块使用
+	output	reg						o_image_flag			=1'b0		,	//clk_gev时钟域，表示当前是payload包添加图像数据阶段，高有效
+	output	reg						o_chunk_flag			=1'b0		,	//clk_gev时钟域，表示当前是payload包添加chunk信息阶段，高有效;gev format模块使用
+	output	reg						o_trailer_flag			=1'b0		,	//clk_gev时钟域，表示当前是trailer包，高有效;ip udp gvsp format和gev format模块使用
+	output	reg						o_test_flag				=1'b0		,	//clk_gev时钟域，表示当前是test包，高有效;ip udp gvsp format模块使用
+	output							o_new_resd_frm_flag					,	//clk_gev时钟域，表示新的重传帧开始
+	output							o_new_norm_frm_flag					,	//clk_gev时钟域，表示新的正常帧开始
+	output							o_fval_flag							,	//clk_gev时钟域，表示处于重传帧或正常帧有效状态
+	input							i_packet_over						,	//clk_gev时钟域，包尾标志
+	//	-------------------------------------------------------------------------------------
+	//	控制信号
+	//	-------------------------------------------------------------------------------------
+	input							i_done								,	//clk_gev时钟域，单脉冲高电平done信号表示当前模块执行完成，可以进行下一步
+	input							i_again								,	//clk_gev时钟域，单脉冲高电平again信号表示当前模块需要被再次执行
+	input							i_not_exist							,	//clk_gev时钟域，单脉冲高电平not_exist信号表示不需要执行下一步，可以直接跳过
+	output							o_gev_start							,	//clk_gev时钟域，单脉冲高电平gev_format模块开始信号
+	output							o_ip_start							,	//clk_gev时钟域，单脉冲高电平ip_udp_format模块开始信号
+	output							o_resend_start						,	//clk_gev时钟域，单脉冲信号启动frame_info_analysis_ctrl
+	output							o_analysis_start					,	//clk_gev时钟域，单脉冲信号启动frame_info_analysis_ctrl
+	output							o_image_start							//clk_gev时钟域，单脉冲信号启动
+	);
+
+	//	ref paramters
+	localparam		NORMAL_START		=	8'd0			;//正常帧开始命令
+	localparam		NORMAL_END			=	8'd1			;//正常帧结束命令
+	localparam		RESEND_START		=	8'd2			;//重传帧开始命令
+	localparam		RESEND_END			=	8'd3			;//重传帧结束命令
+	localparam		INFO_START			=	8'd4			;//INFO段开始命令
+	localparam		IMAGE_START			=	8'd5			;//IMAGE段开始命令
+	localparam		STATIS_START		=	8'd6			;//STATIS段开始命令
+	//	localparam		PACKET_START		=	8'd7			;//包开始命令
+	localparam		TEST_START			=	8'd128			;//测试包开始命令
+
+	localparam		NORMAL_START_LAST_STEP	=	0			;//正常帧开始命令最后一步为步骤0
+	localparam		NORMAL_END_LAST_STEP	=	4			;//正常帧结束命令最后一步为步骤4
+	localparam		RESEND_START_LAST_STEP	=	0			;//重传帧开始命令最后一步为步骤0
+	localparam		RESEND_END_LAST_STEP	=	4			;//重传帧结束命令最后一步为步骤4
+	localparam		INFO_START_LAST_STEP	=	2			;//INFO段开始命令最后一步为步骤0
+	localparam		IMAGE_START_LAST_STEP	=	1			;//IMAGE开始命令最后一步为步骤1
+	//	localparam		PACKET_START_LAST_STEP	=	1			;//包开始命令最后一步为步骤1
+	localparam		TEST_START_LAST_STEP	=	1			;//在帧间隔阶段响应测试包最后一步为2
+
+
+	//	ref signals
+	reg								gev_enable				;
+	reg								ip_enable				;
+	reg								resend_enable			;
+	reg								image_enable			;
+	reg								analysis_enable			;
+	reg								start_en=0				;//指示当前可以发出o_start
+	reg		[2:0]					step_cnt				;//记录每个命令执行的步骤数
+	reg		[2:0]					step_cnt_dly			;
+	wire	[8:0]					fb_cmd_latch			;
+	wire							fb_cmd_end				;//当前命令所有步骤执行完成
+	wire							fb_cmd_hold				;//当cmd_hold为1时主控逻辑使用cmd_hold为0时的命令
+	reg								fb_cmd_hold_reg			;
+	reg								next_fb_cmd				;
+	wire							add_cmd_end				;
+	reg								add_cmd_en				;
+	reg		[7:0]					add_cmd_reg				;
+	wire							fb_rd_data				;//resend_flag模块、packet_image模块、frame_info_analysis_ctrl读信号的“或”，这些模块是读帧存后端fifo的数据的
+	wire							fb_rd_cmd				;//目前仅主控逻辑可以从帧存中读取指令
+	wire	[8:0]					fb_cmd_input			;//输入命令,bit8为命令有效位
+	reg		[8:0]					fb_cmd_reg				;
+	wire	[8:0]					cmd						;
+	reg								resending_fval			;//重传帧有效状态
+	reg								normal_fval				;//正常帧有效状态
+	reg								new_norm_frm_flag=0		;
+	reg								new_norm_frm_flag_dly=0	;
+	reg								new_resd_frm_flag=0		;
+	reg								new_resd_frm_flag_dly=0	;
+	reg								cmd_end_dly	= 0 		;
+
+
+	//	ref ARCHITECTURE
+
+	//	===============================================================================================
+	//	ref 指令提取
+	//	请注意，以下add_cmd与上文的fb_cmd的不同之处在于:
+	//	fb_cmd为从帧存fifo中获取的指令
+	//	add_cmd为本模块新插入的指令（如发送测试包）
+	//	===============================================================================================
+
+	//	-------------------------------------------------------------------------------------
+	//	-- ref 读 frame buffer
+	//	-------------------------------------------------------------------------------------
+	//	-------------------------------------------------------------------------------------
+	//	从帧存中读出的命令
+	//	-------------------------------------------------------------------------------------
+	//	fb_cmd_end
+	//	当每一个命令的最后一步的模块发出done信号时,表示当前命令执行完成
+	//	******************************************************************************
+	//	fb指令扩展：每增加一条fb指令，fb_cmd_end需要“或”上一部分逻辑，具体请参照“NORMAL_END”等指令
+	//	******************************************************************************
+	//	比如“正常帧结束”命令需要执行5步（NORMAL_END_LAST_STEP=4，从0开始算），那么执行到最后一步的模块“resend_status”发出o_done后，本命令终止，fb_cmd_end置位1
+	assign	fb_cmd_end	=	(cmd[7:0] == NORMAL_START && step_cnt == NORMAL_START_LAST_STEP && i_done)
+	||(cmd[7:0] == NORMAL_END && step_cnt == NORMAL_END_LAST_STEP && i_done)
+	||(cmd[7:0] == RESEND_START && step_cnt == RESEND_START_LAST_STEP && i_done)
+	||(cmd[7:0] == RESEND_END && step_cnt == RESEND_END_LAST_STEP && i_done)
+	||(cmd[7:0] == INFO_START && step_cnt == INFO_START_LAST_STEP && i_done)
+	||(cmd[7:0] == INFO_START && step_cnt == 1 && i_not_exist)
+	||(cmd[7:0] == IMAGE_START && step_cnt == IMAGE_START_LAST_STEP && i_done)
+	||(cmd[7:0] == STATIS_START);
+
+	//	next_fb_cmd:next_fb_cmd为1表示本模块要从帧存中取出一条新的指令
+	always @ (posedge clk_gev) begin
+		//next_fb_cmd上电初始值为1,默认一上电后就进入取指令状态
+		if(reset_gev) begin
+			next_fb_cmd <= 1'b1;
+		end
+		//fb_cmd_end为1表示一条指令已经执行完成，此时需要判断新的指令有没有被读出
+		else if(fb_cmd_end) begin
+			//观察下一条命令是否被读出，同时满足如下条件时说明命令已经被读出,此时next_fb_cmd不能置1
+			//1.其它模块执行过读fb操作（fb_cmd_hold=1）
+			//2.当前端口上是一条有效命令（iv_data_is_cmd[0]==1'b1 && iv_dval[0]==1'b1）
+			if(fb_cmd_hold && iv_data_is_cmd[0]==1'b1 && iv_dval[0]==1'b1) begin
+				next_fb_cmd <= 1'b0;
+			end
+			//如果下一条指令没有被读出，就将next_fb_cmd置1，从fb中取一条新的命令
+			else begin
+				next_fb_cmd <= 1'b1;
+			end
+		end
+		//当一条新（o_fb_rd_cmd）的有效（iv_dval[0]==1'b1）命令（iv_data_is_cmd[0]==1'b1）呈现在端口上时next_fb_cmd应该被拉低
+		else if(o_fb_rd_cmd && iv_data_is_cmd[0]==1'b1 && iv_dval[0]==1'b1) begin
+			next_fb_cmd <= 1'b0;
+		end
+	end
+
+	//	当next_fb_cmd为1且帧存fifo非空时，就要执行读帧存操作以获取新的指令
+	assign	o_fb_rd_cmd = next_fb_cmd && ~i_fb_busy && ~i_fb_empty; //当next_fb_cmd为1且fifo非空非忙时置1
+
+
+
+	//	===============================================================================================
+	//	-- ref 命令latch
+	//	===============================================================================================
+	//	-------------------------------------------------------------------------------------
+	//	fb_cmd_hold
+	//	作用:gvsp_ctrl_core模块在执行"命令1"时，一些从属模块（如packet_image）可以主动从帧存buffer中读取数据，遇到一个新的命令（命令2）才会停止，但
+	//		gvsp_ctrl_core还没有执行完“命令1”的剩余步骤，不能让新的命令字出现在本模块端口上，于是引入fb_cmd_hold，一旦外部模块读帧存（i_fb_rd_data=1）,就将
+	//		fb_cmd_hold置1，锁定端口上的命令；当fb_cmd_hold为1时，主控状态机要使用fb_cmd_hold为0时锁存的命令字（“命令1”）响应
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk_gev) begin
+		if(reset_gev) begin
+			fb_cmd_hold_reg <= 1'b0;
+		end
+		//当一条命令的最后一步都执行完成了,就可以解除锁定状态
+		else if(fb_cmd_end) begin
+			fb_cmd_hold_reg <= 1'b0;
+		end
+		//当外部模块执行读帧存，就要开启锁定
+		else if(i_fb_rd_data) begin
+			fb_cmd_hold_reg <= 1'b1;
+		end
+	end
+	assign fb_cmd_hold = fb_cmd_hold_reg || i_fb_rd_data;//“或”上i_fb_rd_data的目的是为了使fb_cmd_hold随i_fb_rd_data在同一拍拉高，让锁定立即生效
+
+	//	-------------------------------------------------------------------------------------
+	//	fb_cmd_latch:当模块进入锁定状态（fb_cmd_hold=1）,fb_cmd_latch使用锁定前（fb_cmd_hold=0）的数据
+	//	当cmd_hold为0时，cmd_latch使用iv_data值（组合逻辑）
+	//	当cmd_hold为1时，cmd_latch使用当hold=0时寄存的值
+	//	fb_cmd_latch最高位表示当前cmd为一条有效的命令
+	//	-------------------------------------------------------------------------------------
+	assign	fb_cmd_input = {iv_data_is_cmd[0]&iv_dval[0],iv_data[15:8]};
+	always @ (posedge clk_gev) begin
+		if(reset_gev) begin
+			fb_cmd_reg <= 9'b0;
+		end
+		else if(~fb_cmd_hold) begin
+			fb_cmd_reg <= fb_cmd_input;
+		end
+	end
+	assign fb_cmd_latch = fb_cmd_hold ? fb_cmd_reg : fb_cmd_input;
+
+	//	-------------------------------------------------------------------------------------
+	//	-- ref 命令选择
+	//	-------------------------------------------------------------------------------------
+	//	-------------------------------------------------------------------------------------
+	//	add_cmd_en/add_cmd_reg
+	//	add_cmd_en是add_cmd与fb_cmd的选择开关：当add_cmd_en为1时执行add_cmd，当add_cmd_en为0时执行fb_cmd
+	//	add_cmd_reg为添加的指令,与add_cmd_en同步，目前仅有一个“TEST_START”
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk_gev) begin
+		if(reset_gev) begin
+			add_cmd_en <= 1'b0;
+			add_cmd_reg<= 'b0;
+		end
+		//	-------------------------------------------------------------------------------------
+		//	当一条新添加的指令执行完成，就拉低add_cmd_en
+		//	-------------------------------------------------------------------------------------
+		else if(add_cmd_end) begin
+			add_cmd_en <= 1'b0;
+			add_cmd_reg<= 'b0;
+		end
+		//	-------------------------------------------------------------------------------------
+		//	因为add_cmd_en一旦为1,就会打断当前的fb_cmd，所以add_cmd_en为1的时机必须在一条fb_cmd执行完成后；下一条fb_cmd执行前
+		//	1.当fb_cmd_end为1，说明一条fb命令被执行完成，此时可以添加add_cmd
+		//	2.当next_fb_cmd为1且o_fb_rd_cmd为0时，说明下一条新的命令还没有被取出，此时可以添加add_cmd
+		//	-------------------------------------------------------------------------------------
+		else if(fb_cmd_end || (next_fb_cmd && ~o_fb_rd_cmd)) begin
+			//	-------------------------------------------------------------------------------------
+			//	添加测试包,在以下两个地方可以添加测试包
+			//	1.一个完整包结束且i_test_pkt_enable为1时
+			//	2.帧消隐阶段且i_test_pkt_enable为1时
+			//	-------------------------------------------------------------------------------------
+			if(i_packet_over && i_test_pkt_enable) begin
+				add_cmd_en <= 1'b1;
+				add_cmd_reg<= TEST_START;
+			end
+			else if(~o_fval_flag && i_test_pkt_enable) begin
+				add_cmd_en <= 1'b1;
+				add_cmd_reg<= TEST_START;
+			end
+			//	-------------------------------------------------------------------------------------
+			//	add指令扩展：以下请插入add指令的时机和内容
+			//	-------------------------------------------------------------------------------------
+			//	请插入新内容
+		end
+	end
+
+	//	-------------------------------------------------------------------------------------
+	//	add_cmd_end
+	//	add_cmd_end与fb_cmd_end相似设计，当新添加的指令执行到最后一步且执行完成后就将add_cmd_end拉高1个clk
+	//	-------------------------------------------------------------------------------------
+	//	******************************************************************************
+	//	add指令扩展：每增加一条add指令，add_cmd_end需要“或”上一部分逻辑，具体请参照“TEST_START”指令
+	//	******************************************************************************
+	assign add_cmd_end = (cmd[7:0] == TEST_START && step_cnt == TEST_START_LAST_STEP && i_done) ;
+
+	//	-------------------------------------------------------------------------------------
+	//	cmd
+	//	选出当前需要处理的命令是来自于帧存还是来自于本模块额外添加
+	//	-------------------------------------------------------------------------------------
+	assign cmd = add_cmd_en ? {1'b1,add_cmd_reg}//当add_cmd_en为1时，当前命令来自于本模块添加
+	: (next_fb_cmd && ~o_fb_rd_cmd) ? 9'b0 //欲从帧存中读指令，但因为帧存空等原因没有读出指令，此时端口上存在的是旧指令，应该屏蔽
+	: fb_cmd_latch;
+
+
+	//	===============================================================================================
+	//	ref	指令拆解
+	//	===============================================================================================
+	//	-------------------------------------------------------------------------------------
+	//	step_cnt
+	//	用于流程控制
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk_gev) begin
+		if(reset_gev) begin
+			step_cnt <= 3'd0;
+		end
+		else if(cmd[8]) begin
+			case(cmd[7:0])
+				NORMAL_END,RESEND_END: begin
+					if(step_cnt==3'd0 && i_done) begin
+						step_cnt <= 3'd2;
+					end
+					else if(step_cnt==3'd0 && i_again) begin
+						step_cnt <= 3'd1;
+					end
+					else if(step_cnt==3'd1 && i_done) begin
+						step_cnt <= 3'd0;
+					end
+					else if(step_cnt==3'd2 && i_done) begin
+						step_cnt <= 3'd3;
+					end
+					else if(step_cnt==3'd2 && i_not_exist) begin
+						step_cnt <= 3'd4;
+					end
+					else if(step_cnt==3'd3 && i_done) begin
+						step_cnt <= 3'd4;
+					end
+					else if(step_cnt==3'd4 && i_done) begin
+						step_cnt <= 3'd0;
+					end
+				end
+				INFO_START: begin
+					if(step_cnt==3'd0 && i_done) begin
+						step_cnt <= 3'd1;
+					end
+					else if(step_cnt==3'd1 && i_done) begin
+						step_cnt <= 3'd2;
+					end
+					else if(step_cnt==3'd2 && i_done) begin
+						step_cnt <= 3'd0;
+					end
+					else if(step_cnt==3'd1 && i_not_exist) begin
+						step_cnt <= 3'd0;
+					end
+				end
+				IMAGE_START: begin
+					if(step_cnt==3'd0 && i_done) begin
+						step_cnt <= 3'd1;
+					end
+					else if(step_cnt==3'd1 && i_done) begin
+						step_cnt <= 3'd0;
+					end
+					else if(step_cnt==3'd1 && i_again) begin
+						step_cnt <= 3'd0;
+					end
+				end
+				TEST_START: begin
+					if(step_cnt==3'd0 && i_done) begin
+						step_cnt <= 3'd1;
+					end
+					else if(step_cnt==3'd1 && i_done) begin
+						step_cnt <= 3'd0;
+					end
+				end
+				//	******************************************************************************
+				//	add指令扩展/fb指令扩展：每增加一条新的add指令或者fb指令，请在以下增加指令的跳转步骤
+				//	******************************************************************************
+				//	请插入新内容
+				default: begin
+					step_cnt <= 3'd0;
+				end
+			endcase
+		end
+	end
+
+	//	-------------------------------------------------------------------------------------
+	//	1.发出模块使能信号
+	//	2.生成标志位
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk_gev) begin
+		gev_enable 		<= 1'b0	;
+		ip_enable		<= 1'b0	;
+		resend_enable	<= 1'b0	;
+		image_enable	<= 1'b0	;
+		analysis_enable	<= 1'b0	;
+		o_info_flag		<= 1'b0	;
+		o_statis_flag	<= 1'b0	;
+		o_leader_flag	<= 1'b0	;
+		o_chunk_flag	<= 1'b0	;
+		o_image_flag	<= 1'b0	;
+		o_trailer_flag	<= 1'b0	;
+		o_test_flag		<= 1'b0	;
+		new_norm_frm_flag <= 1'b0;
+		new_resd_frm_flag <= 1'b0;
+		if(cmd[8]) begin //最高位为命令有效位
+			case(cmd[7:0])
+				NORMAL_START: begin
+					if(i_ge_transfer_start) begin
+						resend_enable <= 1'b1	;
+						new_norm_frm_flag <= 1'b1;
+					end
+					else begin//停止传输时不执行此命令
+						resend_enable <= 1'b0	;
+						new_norm_frm_flag <= 1'b0;
+					end
+				end
+				RESEND_START: begin
+					if(i_ge_transfer_start) begin
+						resend_enable <= 1'b1	;
+						new_resd_frm_flag <= 1'b1;
+					end
+					else begin//停止传输时不执行此命令
+						resend_enable <= 1'b0	;
+						new_resd_frm_flag <= 1'b0;
+					end
+				end
+				NORMAL_END,RESEND_END: begin
+					//发出o_start给gev_format模块，同时拉高o_chunk_flag标志位
+					if(step_cnt==3'd0) begin
+						gev_enable <= 1'b1	;
+						o_chunk_flag<= 1'b1;
+					end
+					//发出o_start给ip_udp_format模块，同时拉高o_chunk_flag标志位
+					else if(step_cnt==3'd1) begin
+						ip_enable	<= 1'b1	;
+						o_chunk_flag<= 1'b1;
+					end
+					//发出o_start给ip_udp_format模块，同时拉高o_trailer_flag标志位；
+					else if(step_cnt==3'd2) begin
+						ip_enable	<= 1'b1	;
+						o_trailer_flag<= 1'b1;
+					end
+					//发出o_start给gev_format模块，同时拉高o_trailer_flag标志位
+					else if(step_cnt==3'd3) begin
+						gev_enable 	<= 1'b1	;
+						o_trailer_flag<= 1'b1;
+					end
+					//发出o_start给resend_status模块
+					else if(step_cnt==3'd4) begin
+						resend_enable<= 1'b1	;
+					end
+				end
+				INFO_START: begin
+					//发出o_start给frame_info_analysis_ctrl模块
+					if(step_cnt==3'd0) begin
+						analysis_enable <= 1'b1	;
+						o_info_flag <= 1'b1;
+					end
+					//发出o_start给ip_udp_format模块，同时拉高o_leader_flag标志位
+					else if(step_cnt==3'd1) begin
+						ip_enable	<= 1'b1	;
+						o_leader_flag<= 1'b1;
+					end
+					//发出o_start给gev_format模块，同时拉高o_leader_flag标志位；
+					else if(step_cnt==3'd2) begin
+						gev_enable	<= 1'b1	;
+						o_leader_flag<= 1'b1;
+					end
+				end
+				IMAGE_START: begin
+					//发出o_start给ip_udp_format模块，同时拉高image_flag标志位
+					if(step_cnt==3'd0) begin
+						ip_enable	<= 1'b1	;
+						o_image_flag<= 1'b1	;
+					end
+					//发出o_start给packet_image模块，同时拉高image_flag标志位
+					else if(step_cnt==3'd1) begin
+						image_enable<= 1'b1	;
+						o_image_flag<= 1'b1	;
+					end
+				end
+				TEST_START: begin
+					//发出o_start给ip_udp_format模块，同时拉高o_test_flag标志位；
+					if(step_cnt==3'd0) begin
+						ip_enable	<= 1'b1	;
+						o_test_flag<= 1'b1;
+					end
+					//发出o_start给gev_format模块，同时拉高o_test_flag标志位；
+					else if(step_cnt==3'd1) begin
+						gev_enable<= 1'b1	;
+						o_test_flag<= 1'b1;
+					end
+				end
+				//	******************************************************************************
+				//	add指令扩展/fb指令扩展：每增加一条新的add指令或者fb指令，请在以下加入该指令每个步骤所控制的模块
+				//	******************************************************************************
+				//	请插入新内容
+
+				default: begin
+					gev_enable 		<= 1'b0	;
+					ip_enable		<= 1'b0	;
+					resend_enable	<= 1'b0	;
+					image_enable	<= 1'b0	;
+					analysis_enable	<= 1'b0	;
+					o_info_flag		<= 1'b0	;
+					o_statis_flag	<= 1'b0	;
+					o_leader_flag	<= 1'b0	;
+					o_chunk_flag	<= 1'b0	;
+					o_trailer_flag	<= 1'b0	;
+					o_test_flag		<= 1'b0	;
+					new_norm_frm_flag <= 1'b0;
+					new_resd_frm_flag <= 1'b0;
+				end
+			endcase
+		end
+	end
+
+	//每条命令的步骤跳转,请参加详细设计跳转图
+
+	//	===============================================================================================
+	//	ref 模块控制
+	//	===============================================================================================
+	//start_en在每一个新的命令或者每一个新的步骤开始时拉高1个clk(请注意start_en的初始值是1),
+	//start_en的作用是使每一个XXX模块接收到的XXX_start都只有1个clk
+	//cmd					|	命令1		|	命令2		|	命令3		|
+	//step_cnt				| 0	| 1	| 2	| 3	| 0	| 0	| 0	| 0	| 0	| 1	| 2	| 3	|
+	//cmd_end				______________|-|_____________|-|_____________|
+	//cmd_end_dly			________________|-|_____________|-|_____________|
+	//step_cnt!=.._dly		____|-|_|-|_|-|_____________________|-|_|-|_|-|__
+	//start_en				------|_|-|_|-|_|-|_____________|-|_|-|_|-|_|-|__
+	//gev_enable			________________|---|___________|---|____________
+	//gev_start				________________|-|_____________|-|______________
+	//ip_enable				____|---|___________________________|---|________
+	//ip_start				____|-|_____________________________|-|__________
+	//resend_en				________|---|___________________________|---|____
+	//resend_st				________|-|_____________________________|-|______
+	//ip_enable				____________|---|___________________________|---|
+	//ip_start				____________|-|_____________________________|-|__
+
+	//	-------------------------------------------------------------------------------------
+	//	-- ref  start 模块开始工作
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk_gev) begin
+		if(reset_gev) begin
+			step_cnt_dly <= 'b0;
+			cmd_end_dly	<= 'b0;
+		end
+		else begin
+			step_cnt_dly <= step_cnt;
+			cmd_end_dly <= add_cmd_end || fb_cmd_end;
+		end
+	end
+
+	//	-------------------------------------------------------------------------------------
+	//	start_en
+	//	模块开始工作
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk_gev) begin
+		//请注意start_en的初始值是1,确保本模块可以被启动
+		if(reset_gev) begin
+			start_en <= 1'b1;
+		end
+		//	******************************************************************************
+		//	被控子模块扩展：每增加一个被控模块，以下if中的条件就要“或”上该模块的start
+		//	******************************************************************************
+		//	请注意，不要用start_en来替换掉以下括号里的逻辑，否则本模块无法被启动
+		else if(o_gev_start||o_ip_start||o_resend_start||o_resend_start||o_analysis_start||o_image_start) begin //每一个命令的某一个步骤仅能发出一个start，之后start_en就变为0直到下一个步骤或者新命令的到来
+			start_en <= 1'b0;
+		end
+		//当一条旧命令结束或者步骤发生变化就置起标志位
+		else if(cmd_end_dly || step_cnt_dly!=step_cnt) begin
+			start_en <= 1'b1;
+		end
+	end
+	assign o_gev_start 		= gev_enable && start_en;//在每一个新步骤的第一个周期发出start，下同
+	assign o_ip_start 		= ip_enable && start_en;
+	assign o_resend_start	= resend_enable && start_en;
+	assign o_analysis_start	= analysis_enable && start_en;
+	assign o_image_start	= image_enable && start_en;
+
+	//	===============================================================================================
+	//	ref 标志位产生
+	//	===============================================================================================
+	//	-------------------------------------------------------------------------------------
+	//	-- ref o_fval_flag
+	//	当o_resend_start=1且检测到“重传帧开始”命令时，resending_fval=1
+	//	当o_resend_start=1且检测到“重传帧结束”命令时，resending_fval=0
+	//	当o_resend_start=1且检测到“正常帧开始”命令时，normal_fval=1
+	//	当o_resend_start=1且检测到“重传帧结束”命令时，normal_fval=0
+	//	输出o_fval_flag= resending_fval || normal_fval
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk_gev) begin
+		if(reset_gev) begin
+			resending_fval <= 1'b0;
+		end
+		else if(o_resend_start && cmd[7:0] == RESEND_START) begin
+			resending_fval <= 1'b1;
+		end
+		else if(o_resend_start && cmd[7:0] == RESEND_END) begin
+			resending_fval <= 1'b0;
+		end
+	end
+
+	always @ (posedge clk_gev) begin
+		if(reset_gev) begin
+			normal_fval <= 1'b0;
+		end
+		else if(o_resend_start && cmd[7:0] == NORMAL_START) begin
+			normal_fval <= 1'b1;
+		end
+		else if(o_resend_start && cmd[7:0] == NORMAL_END) begin
+			normal_fval <= 1'b0;
+		end
+	end
+	assign o_fval_flag = resending_fval || normal_fval;
+
+
+	//	-------------------------------------------------------------------------------------
+	//	包结束标志
+	//	1.gev_format模块发出o_again信号或o_done信号
+	//	2.packet_image模块发出o_done信号且出现在端口上的新命令不是“正常帧结束”和“重传帧结束”命令
+	//  同时，当出现以上两种情况之一时一定出现某种包的包尾
+	//	-------------------------------------------------------------------------------------
+
+	//	assign o_packet_over = (gev_enable && i_done) || (gev_enable && i_again) || (image_enable && i_done && (fb_cmd_input[7:0] != NORMAL_END) && (fb_cmd_input[7:0] != RESEND_END) && (fb_cmd_input[7:0] != STATIS_START));
+	//	-------------------------------------------------------------------------------------
+	//	-- ref o_test_pkt_over
+	//	-------------------------------------------------------------------------------------
+	//  请注意这里是step_cnt == TEST_START_LAST_STEP-1而不是等到最后一步（step_cnt == TEST_START_LAST_STEP），这样做可以使o_test_pkt_over提前发出，
+	//	防止寄存器模块在接收到o_test_pkt_over后没有立即拉低i_test_pkt_enable导致TEST_START命令被执行多次
+	assign o_test_pkt_over = (add_cmd_reg == TEST_START && step_cnt == TEST_START_LAST_STEP-1 && i_done) ;
+	//	-------------------------------------------------------------------------------------
+	//	-- ref o_new_norm_frm_flag o_new_resd_frm_flag
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk_gev) begin
+		if(reset_gev) begin
+			new_norm_frm_flag_dly <=1'b0;
+			new_resd_frm_flag_dly<= 1'b0;
+		end
+		else begin
+			new_norm_frm_flag_dly <=new_norm_frm_flag;
+			new_resd_frm_flag_dly<= new_resd_frm_flag;
+		end
+	end
+	assign o_new_norm_frm_flag = {new_norm_frm_flag_dly,new_norm_frm_flag} == 2'b10 ? 1'b1 : 1'b0;
+	assign o_new_resd_frm_flag = {new_resd_frm_flag_dly,new_resd_frm_flag} == 2'b10 ? 1'b1 : 1'b0;
+
+endmodule
