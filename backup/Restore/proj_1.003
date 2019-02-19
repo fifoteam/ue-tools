@@ -1,0 +1,763 @@
+#Build: Synplify Pro J-2015.03, Build 120R, Feb 24 2012
+#install: d:\tools\Synopsys\fpga_J-2015.03
+#OS: Windows 7 6.1
+#Hostname: XHT-PC
+
+#Implementation: rev_2
+
+$ Start of Compile
+#Tue Feb 19 15:54:24 2019
+
+Synopsys Verilog Compiler, version comp201503rc, Build 056R, built Feb 25 2015
+@N|Running in 64-bit mode
+Copyright (C) 1994-2015 Synopsys, Inc. This software and the associated documentation are proprietary to Synopsys, Inc. This software may only be used in accordance with the terms and conditions of a written license agreement with Synopsys, Inc.  All other use, reproduction, or distribution of this software is strictly prohibited.
+
+@N:: Running Verilog Compiler in System Verilog mode
+@N:: Running Verilog Compiler in Multiple File Compilation Unit mode
+@I::"d:\tools\Synopsys\fpga_J-2015.03\lib\xilinx\unisim_m10i.v"
+@I::"d:\tools\Synopsys\fpga_J-2015.03\lib\xilinx\unisim.v"
+@I::"d:\tools\Synopsys\fpga_J-2015.03\lib\vlog\hypermods.v"
+@I::"d:\tools\Synopsys\fpga_J-2015.03\lib\vlog\umr_capim.v"
+@I::"d:\tools\Synopsys\fpga_J-2015.03\lib\vlog\scemi_objects.v"
+@I::"d:\tools\Synopsys\fpga_J-2015.03\lib\vlog\scemi_pipes.svh"
+@I::"F:\DAHENG\hw_mars\mars_platform\TD\Development_Phase\003_develop_phase\fpga_platform\ver10\src\frame_buffer\fb_read\fb_read_init.v"
+@N: CG334 :"F:\DAHENG\hw_mars\mars_platform\TD\Development_Phase\003_develop_phase\fpga_platform\ver10\src\frame_buffer\fb_read\fb_read_init.v":112:14:112:26|Read directive translate_off 
+@N: CG333 :"F:\DAHENG\hw_mars\mars_platform\TD\Development_Phase\003_develop_phase\fpga_platform\ver10\src\frame_buffer\fb_read\fb_read_init.v":126:14:126:25|Read directive translate_on 
+Verilog syntax check successful!
+Selecting top level module fb_read_init
+@N: CG364 :"F:\DAHENG\hw_mars\mars_platform\TD\Development_Phase\003_develop_phase\fpga_platform\ver10\src\frame_buffer\fb_read\fb_read_init.v":29:7:29:18|Synthesizing module fb_read_init
+
+@N: CL201 :"F:\DAHENG\hw_mars\mars_platform\TD\Development_Phase\003_develop_phase\fpga_platform\ver10\src\frame_buffer\fb_read\fb_read_init.v":344:1:344:6|Trying to extract state machine for register current_state
+Extracted state machine for register current_state
+State machine has 7 reachable states with original encodings of:
+   0000001
+   0000010
+   0000100
+   0001000
+   0010000
+   0100000
+   1000000
+@W: CL249 :"F:\DAHENG\hw_mars\mars_platform\TD\Development_Phase\003_develop_phase\fpga_platform\ver10\src\frame_buffer\fb_read\fb_read_init.v":344:1:344:6|Initial value is not supported on state machine current_state
+@END
+
+At c_ver Exit (Real Time elapsed 0h:00m:00s; CPU Time elapsed 0h:00m:00s; Memory used current: 103MB peak: 105MB)
+
+Process took 0h:00m:01s realtime, 0h:00m:01s cputime
+# Tue Feb 19 15:54:25 2019
+
+###########################################################]
+Pre-mapping Report
+
+Synopsys Xilinx Technology Pre-mapping, Version maprc, Build 2608R, Built Feb 25 2015 15:38:49
+Copyright (C) 1994-2015, Synopsys, Inc. This software and the associated documentation are proprietary to Synopsys, Inc. This software may only be used in accordance with the terms and conditions of a written license agreement with Synopsys, Inc.  All other use, reproduction, or distribution of this software is strictly prohibited.
+Product Version J-2015.03
+
+Mapper Startup Complete (Real Time elapsed 0h:00m:00s; CPU Time elapsed 0h:00m:00s; Memory used current: 98MB peak: 99MB)
+
+@L: C:\ue\synplify\rev_2\fb_read_init_scck.rpt 
+Printing clock  summary report in "C:\ue\synplify\rev_2\fb_read_init_scck.rpt" file 
+@N: MF248 |Running in 64-bit mode.
+@N: MF666 |Clock conversion enabled 
+
+Design Input Complete (Real Time elapsed 0h:00m:00s; CPU Time elapsed 0h:00m:00s; Memory used current: 98MB peak: 101MB)
+
+
+Mapper Initialization Complete (Real Time elapsed 0h:00m:00s; CPU Time elapsed 0h:00m:00s; Memory used current: 99MB peak: 101MB)
+
+
+Start loading timing files (Real Time elapsed 0h:00m:00s; CPU Time elapsed 0h:00m:00s; Memory used current: 100MB peak: 101MB)
+
+
+Finished loading timing files (Real Time elapsed 0h:00m:00s; CPU Time elapsed 0h:00m:00s; Memory used current: 100MB peak: 102MB)
+
+@W: FX474 |User-specified initial value defined for some sequential elements which can prevent optimum synthesis results from being achieved. 
+ICG Latch Removal Summary:
+Number of ICG latches removed:	0
+Number of ICG latches not removed:	0
+syn_allowed_resources : blockrams=270  set on top level netlist fb_read_init
+
+Finished netlist restructuring (Real Time elapsed 0h:00m:00s; CPU Time elapsed 0h:00m:00s; Memory used current: 128MB peak: 130MB)
+
+
+
+@S |Clock Summary
+*****************
+
+Start                Requested     Requested     Clock        Clock                
+Clock                Frequency     Period        Type         Group                
+-----------------------------------------------------------------------------------
+fb_read_init|clk     697.6 MHz     1.433         inferred     Autoconstr_clkgroup_0
+===================================================================================
+
+@W: MT529 :"f:\daheng\hw_mars\mars_platform\td\development_phase\003_develop_phase\fpga_platform\ver10\src\frame_buffer\fb_read\fb_read_init.v":149:1:149:6|Found inferred clock fb_read_init|clk which controls 26 sequential elements including acquisition_start_dly. This clock has no specified timing constraint which may prevent conversion of gated or generated clocks and may adversely impact design performance. 
+
+Finished Pre Mapping Phase.
+@N: BN225 |Writing default property annotation file C:\ue\synplify\rev_2\fb_read_init.sap.
+Pre-mapping successful!
+
+At Mapper Exit (Real Time elapsed 0h:00m:00s; CPU Time elapsed 0h:00m:00s; Memory used current: 65MB peak: 130MB)
+
+Process took 0h:00m:01s realtime, 0h:00m:01s cputime
+# Tue Feb 19 15:54:27 2019
+
+###########################################################]
+Map & Optimize Report
+
+Synopsys Xilinx Technology Mapper, Version maprc, Build 2608R, Built Feb 25 2015 15:38:49
+Copyright (C) 1994-2015, Synopsys, Inc. This software and the associated documentation are proprietary to Synopsys, Inc. This software may only be used in accordance with the terms and conditions of a written license agreement with Synopsys, Inc.  All other use, reproduction, or distribution of this software is strictly prohibited.
+Product Version J-2015.03
+
+Mapper Startup Complete (Real Time elapsed 0h:00m:00s; CPU Time elapsed 0h:00m:00s; Memory used current: 98MB peak: 99MB)
+
+@N: MF248 |Running in 64-bit mode.
+@N: MF666 |Clock conversion enabled 
+
+Design Input Complete (Real Time elapsed 0h:00m:00s; CPU Time elapsed 0h:00m:00s; Memory used current: 98MB peak: 100MB)
+
+
+Mapper Initialization Complete (Real Time elapsed 0h:00m:00s; CPU Time elapsed 0h:00m:00s; Memory used current: 98MB peak: 100MB)
+
+
+Start loading timing files (Real Time elapsed 0h:00m:00s; CPU Time elapsed 0h:00m:00s; Memory used current: 100MB peak: 100MB)
+
+
+Finished loading timing files (Real Time elapsed 0h:00m:00s; CPU Time elapsed 0h:00m:00s; Memory used current: 100MB peak: 102MB)
+
+
+
+Starting Optimization and Mapping (Real Time elapsed 0h:00m:00s; CPU Time elapsed 0h:00m:00s; Memory used current: 128MB peak: 130MB)
+
+
+Available hyper_sources - for debug and ip models
+	None Found
+
+@N: MT206 |Auto Constrain mode is enabled
+@N: FX493 |Applying initial value "00" on instance calib_done_shift[1:0] 
+
+Finished RTL optimizations (Real Time elapsed 0h:00m:00s; CPU Time elapsed 0h:00m:00s; Memory used current: 128MB peak: 130MB)
+
+Encoding state machine current_state[6:0] (view:work.fb_read_init(verilog))
+original code -> new code
+   0000001 -> 0000001
+   0000010 -> 0000010
+   0000100 -> 0000100
+   0001000 -> 0001000
+   0010000 -> 0010000
+   0100000 -> 0100000
+   1000000 -> 1000000
+
+Finished factoring (Real Time elapsed 0h:00m:00s; CPU Time elapsed 0h:00m:00s; Memory used current: 129MB peak: 130MB)
+
+
+Finished gated-clock and generated-clock conversion (Real Time elapsed 0h:00m:00s; CPU Time elapsed 0h:00m:00s; Memory used current: 129MB peak: 130MB)
+
+
+Clock Buffers:
+  Inserting Clock buffer for port clk,
+
+
+Finished generic timing optimizations - Pass 1 (Real Time elapsed 0h:00m:00s; CPU Time elapsed 0h:00m:00s; Memory used current: 130MB peak: 130MB)
+
+
+Starting Early Timing Optimization (Real Time elapsed 0h:00m:00s; CPU Time elapsed 0h:00m:00s; Memory used current: 130MB peak: 131MB)
+
+
+Finished Early Timing Optimization (Real Time elapsed 0h:00m:00s; CPU Time elapsed 0h:00m:00s; Memory used current: 130MB peak: 131MB)
+
+
+Finished generic timing optimizations - Pass 2 (Real Time elapsed 0h:00m:00s; CPU Time elapsed 0h:00m:00s; Memory used current: 130MB peak: 131MB)
+
+
+Finished preparing to map (Real Time elapsed 0h:00m:00s; CPU Time elapsed 0h:00m:00s; Memory used current: 130MB peak: 131MB)
+
+
+Finished technology mapping (Real Time elapsed 0h:00m:00s; CPU Time elapsed 0h:00m:00s; Memory used current: 130MB peak: 131MB)
+
+Pass		 CPU time		Worst Slack		Luts / Registers
+------------------------------------------------------------
+   1		0h:00m:00s		    -0.69ns		  77 /        26
+   2		0h:00m:00s		    -0.69ns		  77 /        26
+   3		0h:00m:00s		    -0.69ns		  77 /        26
+@N: FX271 :"f:\daheng\hw_mars\mars_platform\td\development_phase\003_develop_phase\fpga_platform\ver10\src\frame_buffer\fb_read\fb_read_init.v":205:1:205:6|Instance "fval_dly_cnt[0]" with 7 loads replicated 1 times to improve timing 
+@N: FX271 :"f:\daheng\hw_mars\mars_platform\td\development_phase\003_develop_phase\fpga_platform\ver10\src\frame_buffer\fb_read\fb_read_init.v":205:1:205:6|Instance "fval_dly_cnt[1]" with 6 loads replicated 1 times to improve timing 
+@N: FX271 :"f:\daheng\hw_mars\mars_platform\td\development_phase\003_develop_phase\fpga_platform\ver10\src\frame_buffer\fb_read\fb_read_init.v":205:1:205:6|Instance "fval_dly_cnt[2]" with 5 loads replicated 1 times to improve timing 
+@N: FX271 :"f:\daheng\hw_mars\mars_platform\td\development_phase\003_develop_phase\fpga_platform\ver10\src\frame_buffer\fb_read\fb_read_init.v":205:1:205:6|Instance "fval_dly_cnt[3]" with 4 loads replicated 1 times to improve timing 
+@N: FX271 :"f:\daheng\hw_mars\mars_platform\td\development_phase\003_develop_phase\fpga_platform\ver10\src\frame_buffer\fb_read\fb_read_init.v":344:1:344:6|Instance "current_state[2]" with 5 loads replicated 1 times to improve timing 
+Timing driven replication report
+Added 5 Registers via timing driven replication
+Added 5 LUTs via timing driven replication
+
+
+
+   4		0h:00m:00s		    -0.65ns		  82 /        31
+
+
+   5		0h:00m:00s		    -0.65ns		  82 /        31
+
+Finished technology timing optimizations and critical path resynthesis (Real Time elapsed 0h:00m:00s; CPU Time elapsed 0h:00m:00s; Memory used current: 131MB peak: 132MB)
+
+@N: FX164 |The option to pack registers in the IOB has not been specified. Please set syn_useioff attribute.  
+@N: FX623 |Packing into LUT6_2
+
+Finished restoring hierarchy (Real Time elapsed 0h:00m:00s; CPU Time elapsed 0h:00m:00s; Memory used current: 131MB peak: 132MB)
+
+
+
+#### START OF CLOCK OPTIMIZATION REPORT #####[
+
+1 non-gated/non-generated clock tree(s) driving 31 clock pin(s) of sequential element(s)
+0 gated/generated clock tree(s) driving 0 clock pin(s) of sequential element(s)
+0 instances converted, 0 sequential instances remain driven by gated/generated clocks
+
+=========================== Non-Gated/Non-Generated Clocks ============================
+Clock Tree ID     Driving Element     Drive Element Type     Fanout     Sample Instance
+---------------------------------------------------------------------------------------
+@K:CKID0001       clk                 port                   31         fval_dly_cnt[0]
+=======================================================================================
+
+
+##### END OF CLOCK OPTIMIZATION REPORT ######]
+
+
+Start Writing Netlists (Real Time elapsed 0h:00m:00s; CPU Time elapsed 0h:00m:00s; Memory used current: 108MB peak: 132MB)
+
+Writing Analyst data base C:\ue\synplify\rev_2\fb_read_init.srm
+
+Finished Writing Netlist Databases (Real Time elapsed 0h:00m:00s; CPU Time elapsed 0h:00m:00s; Memory used current: 129MB peak: 132MB)
+
+Writing EDIF Netlist and constraint files
+Writing XDC file C:\ue\synplify\rev_2\proj_1_edif.xdc
+Starting XDC forward annotation..
+J-2015.03
+
+Finished Writing EDIF Netlist and constraint files (Real Time elapsed 0h:00m:01s; CPU Time elapsed 0h:00m:01s; Memory used current: 130MB peak: 132MB)
+
+Writing Verilog Simulation files
+
+Finished Writing Verilog Simulation files (Real Time elapsed 0h:00m:01s; CPU Time elapsed 0h:00m:01s; Memory used current: 130MB peak: 132MB)
+
+
+Start final timing analysis (Real Time elapsed 0h:00m:01s; CPU Time elapsed 0h:00m:01s; Memory used current: 131MB peak: 132MB)
+
+@W: MT420 |Found inferred clock fb_read_init|clk with period 1.66ns. Please declare a user-defined clock on object "p:clk"
+
+
+
+@S |##### START OF TIMING REPORT #####[
+# Timing Report written on Tue Feb 19 15:54:29 2019
+#
+
+
+Top view:               fb_read_init
+Requested Frequency:    602.0 MHz
+Wire load mode:         top
+Paths requested:        5
+Constraint File(s):    
+@N: MT320 |Timing report estimates place and route data. Please look at the place and route timing report for final timing.
+
+@N: MT322 |Clock constraints cover only FF-to-FF paths associated with the clock.
+
+
+
+Performance Summary 
+*******************
+
+
+Worst slack in design: -0.293
+
+                     Requested     Estimated     Requested     Estimated                Clock        Clock                
+Starting Clock       Frequency     Frequency     Period        Period        Slack      Type         Group                
+--------------------------------------------------------------------------------------------------------------------------
+fb_read_init|clk     602.0 MHz     511.7 MHz     1.661         1.954         -0.293     inferred     Autoconstr_clkgroup_0
+==========================================================================================================================
+
+
+
+
+
+Clock Relationships
+*******************
+
+Clocks                              |    rise  to  rise    |    fall  to  fall   |    rise  to  fall   |    fall  to  rise 
+---------------------------------------------------------------------------------------------------------------------------
+Starting          Ending            |  constraint  slack   |  constraint  slack  |  constraint  slack  |  constraint  slack
+---------------------------------------------------------------------------------------------------------------------------
+fb_read_init|clk  fb_read_init|clk  |  1.661       -0.293  |  No paths    -      |  No paths    -      |  No paths    -    
+===========================================================================================================================
+ Note: 'No paths' indicates there are no paths in the design for that pair of clock edges.
+       'Diff grp' indicates that paths exist but the starting clock and ending clock are in different clock groups.
+
+
+
+Interface Information 
+*********************
+
+No IO constraint found
+
+
+
+====================================
+Detailed Report for Clock: fb_read_init|clk
+====================================
+
+
+
+Starting Points with Worst Slack
+********************************
+
+                          Starting                                                        Arrival           
+Instance                  Reference            Type     Pin     Net                       Time        Slack 
+                          Clock                                                                             
+------------------------------------------------------------------------------------------------------------
+current_state[6]          fb_read_init|clk     FD       Q       current_state[6]          3.694       -0.293
+fval_dly_cnt_fast[0]      fb_read_init|clk     FD       Q       fval_dly_cnt_fast[0]      3.694       -0.214
+fval_dly_cnt_fast[1]      fb_read_init|clk     FD       Q       fval_dly_cnt_fast[1]      3.694       -0.214
+rd_ptr[0]                 fb_read_init|clk     FDR      Q       rd_ptr[0]                 3.694       -0.213
+rd_ptr[1]                 fb_read_init|clk     FDR      Q       rd_ptr[1]                 3.694       -0.213
+fval_dly_cnt_fast[2]      fb_read_init|clk     FD       Q       fval_dly_cnt_fast[2]      3.694       -0.183
+fval_dly_cnt_fast[3]      fb_read_init|clk     FD       Q       fval_dly_cnt_fast[3]      3.694       -0.183
+fb_transfer_start_int     fb_read_init|clk     FD       Q       fb_transfer_start_int     3.694       -0.182
+fval_dly_cnt[2]           fb_read_init|clk     FD       Q       fval_dly_cnt[2]           3.694       -0.122
+interrupt_reading         fb_read_init|clk     FD       Q       interrupt_reading         3.694       -0.113
+============================================================================================================
+
+
+Ending Points with Worst Slack
+******************************
+
+                     Starting                                                         Required           
+Instance             Reference            Type     Pin     Net                        Time         Slack 
+                     Clock                                                                               
+---------------------------------------------------------------------------------------------------------
+current_state[6]     fb_read_init|clk     FD       D       N_210_i_0                  5.039        -0.293
+fval_reg             fb_read_init|clk     FD       D       N_16_0                     5.039        -0.170
+current_state[3]     fb_read_init|clk     FD       D       N_216_i_0                  5.039        -0.099
+current_state[1]     fb_read_init|clk     FD       D       N_219_i_0                  5.039        -0.090
+current_state[5]     fb_read_init|clk     FD       D       N_212_i_0_e                5.039        -0.035
+current_state[4]     fb_read_init|clk     FD       D       N_214_i_0_e                5.039        -0.023
+rd_ptr[0]            fb_read_init|clk     FDR      D       rd_ptr_5[0]                5.039        0.001 
+rd_ptr[1]            fb_read_init|clk     FDR      D       rd_ptr_5[1]                5.039        0.001 
+current_state[0]     fb_read_init|clk     FD       D       current_state_nss_0[0]     5.039        0.006 
+fval_dly_cnt[3]      fb_read_init|clk     FD       D       SUM3_0_e                   5.039        0.211 
+=========================================================================================================
+
+
+
+Worst Path Information
+***********************
+
+
+Path information for path number 1: 
+      Requested Period:                      1.661
+    - Setup time:                            -0.063
+    + Clock delay at ending point:           3.315
+    = Required time:                         5.039
+
+    - Propagation time:                      2.017
+    - Clock delay at starting point:         3.315
+    = Slack (critical) :                     -0.293
+
+    Number of logic level(s):                2
+    Starting point:                          current_state[6] / Q
+    Ending point:                            current_state[6] / D
+    The start point is clocked by            fb_read_init|clk [rising] on pin C
+    The end   point is clocked by            fb_read_init|clk [rising] on pin C
+
+Instance / Net                             Pin      Pin               Arrival     No. of    
+Name                            Type       Name     Dir     Delay     Time        Fan Out(s)
+--------------------------------------------------------------------------------------------
+current_state[6]                FD         Q        Out     0.379     3.694       -         
+current_state[6]                Net        -        -       0.584     -           13        
+current_state_srsts_i_o2[6]     LUT6_L     I5       In      -         4.277       -         
+current_state_srsts_i_o2[6]     LUT6_L     LO       Out     0.520     4.797       -         
+N_228                           Net        -        -       0.243     -           1         
+current_state_RNO[6]            LUT6       I0       In      -         5.040       -         
+current_state_RNO[6]            LUT6       O        Out     0.292     5.332       -         
+N_210_i_0                       Net        -        -       0.000     -           1         
+current_state[6]                FD         D        In      -         5.332       -         
+============================================================================================
+Total path delay (propagation time + setup) of 1.954 is 1.128(57.7%) logic and 0.826(42.3%) route.
+Path delay compensated for clock skew. Clock skew is added to clock-to-out value, and is subtracted from setup time value
+
+
+Start clock path:
+
+Instance / Net                            Pin      Pin               Arrival     No. of    
+Name                 Type                 Name     Dir     Delay     Time        Fan Out(s)
+-------------------------------------------------------------------------------------------
+Start Clock :        fb_read_init|clk                                                      
+------------                                                                               
+clk                  Port                 clk      In      -         0.000       -         
+clk                  Net                  -        -       0.000     -           1         
+clk_ibuf_iso         IBUFG                I        In      -         0.000       -         
+clk_ibuf_iso         IBUFG                O        Out     1.007     1.007       -         
+clk_ibuf_iso         Net                  -        -       0.600     -           1         
+clk_ibuf             BUFG                 I        In      -         1.607       -         
+clk_ibuf             BUFG                 O        Out     0.092     1.699       -         
+clk_c                Net                  -        -       1.616     -           31        
+current_state[6]     FD                   C        In      -         3.315       -         
+===========================================================================================
+
+
+End clock path:
+
+Instance / Net                            Pin      Pin               Arrival     No. of    
+Name                 Type                 Name     Dir     Delay     Time        Fan Out(s)
+-------------------------------------------------------------------------------------------
+Start Clock :        fb_read_init|clk                                                      
+------------                                                                               
+clk                  Port                 clk      In      -         0.000       -         
+clk                  Net                  -        -       0.000     -           1         
+clk_ibuf_iso         IBUFG                I        In      -         0.000       -         
+clk_ibuf_iso         IBUFG                O        Out     1.007     1.007       -         
+clk_ibuf_iso         Net                  -        -       0.600     -           1         
+clk_ibuf             BUFG                 I        In      -         1.607       -         
+clk_ibuf             BUFG                 O        Out     0.092     1.699       -         
+clk_c                Net                  -        -       1.616     -           31        
+current_state[6]     FD                   C        In      -         3.315       -         
+===========================================================================================
+
+
+Path information for path number 2: 
+      Requested Period:                      1.661
+    - Setup time:                            -0.063
+    + Clock delay at ending point:           3.315
+    = Required time:                         5.039
+
+    - Propagation time:                      1.938
+    - Clock delay at starting point:         3.315
+    = Slack (non-critical) :                 -0.214
+
+    Number of logic level(s):                2
+    Starting point:                          fval_dly_cnt_fast[0] / Q
+    Ending point:                            current_state[6] / D
+    The start point is clocked by            fb_read_init|clk [rising] on pin C
+    The end   point is clocked by            fb_read_init|clk [rising] on pin C
+
+Instance / Net                             Pin      Pin               Arrival     No. of    
+Name                            Type       Name     Dir     Delay     Time        Fan Out(s)
+--------------------------------------------------------------------------------------------
+fval_dly_cnt_fast[0]            FD         Q        Out     0.379     3.694       -         
+fval_dly_cnt_fast[0]            Net        -        -       0.424     -           3         
+current_state_srsts_i_o2[6]     LUT6_L     I3       In      -         4.118       -         
+current_state_srsts_i_o2[6]     LUT6_L     LO       Out     0.599     4.718       -         
+N_228                           Net        -        -       0.243     -           1         
+current_state_RNO[6]            LUT6       I0       In      -         4.960       -         
+current_state_RNO[6]            LUT6       O        Out     0.292     5.253       -         
+N_210_i_0                       Net        -        -       0.000     -           1         
+current_state[6]                FD         D        In      -         5.253       -         
+============================================================================================
+Total path delay (propagation time + setup) of 1.875 is 1.207(64.4%) logic and 0.667(35.6%) route.
+Path delay compensated for clock skew. Clock skew is added to clock-to-out value, and is subtracted from setup time value
+
+
+Start clock path:
+
+Instance / Net                                Pin      Pin               Arrival     No. of    
+Name                     Type                 Name     Dir     Delay     Time        Fan Out(s)
+-----------------------------------------------------------------------------------------------
+Start Clock :            fb_read_init|clk                                                      
+------------                                                                                   
+clk                      Port                 clk      In      -         0.000       -         
+clk                      Net                  -        -       0.000     -           1         
+clk_ibuf_iso             IBUFG                I        In      -         0.000       -         
+clk_ibuf_iso             IBUFG                O        Out     1.007     1.007       -         
+clk_ibuf_iso             Net                  -        -       0.600     -           1         
+clk_ibuf                 BUFG                 I        In      -         1.607       -         
+clk_ibuf                 BUFG                 O        Out     0.092     1.699       -         
+clk_c                    Net                  -        -       1.616     -           31        
+fval_dly_cnt_fast[0]     FD                   C        In      -         3.315       -         
+===============================================================================================
+
+
+End clock path:
+
+Instance / Net                            Pin      Pin               Arrival     No. of    
+Name                 Type                 Name     Dir     Delay     Time        Fan Out(s)
+-------------------------------------------------------------------------------------------
+Start Clock :        fb_read_init|clk                                                      
+------------                                                                               
+clk                  Port                 clk      In      -         0.000       -         
+clk                  Net                  -        -       0.000     -           1         
+clk_ibuf_iso         IBUFG                I        In      -         0.000       -         
+clk_ibuf_iso         IBUFG                O        Out     1.007     1.007       -         
+clk_ibuf_iso         Net                  -        -       0.600     -           1         
+clk_ibuf             BUFG                 I        In      -         1.607       -         
+clk_ibuf             BUFG                 O        Out     0.092     1.699       -         
+clk_c                Net                  -        -       1.616     -           31        
+current_state[6]     FD                   C        In      -         3.315       -         
+===========================================================================================
+
+
+Path information for path number 3: 
+      Requested Period:                      1.661
+    - Setup time:                            -0.063
+    + Clock delay at ending point:           3.315
+    = Required time:                         5.039
+
+    - Propagation time:                      1.938
+    - Clock delay at starting point:         3.315
+    = Slack (non-critical) :                 -0.214
+
+    Number of logic level(s):                2
+    Starting point:                          fval_dly_cnt_fast[1] / Q
+    Ending point:                            current_state[6] / D
+    The start point is clocked by            fb_read_init|clk [rising] on pin C
+    The end   point is clocked by            fb_read_init|clk [rising] on pin C
+
+Instance / Net                             Pin      Pin               Arrival     No. of    
+Name                            Type       Name     Dir     Delay     Time        Fan Out(s)
+--------------------------------------------------------------------------------------------
+fval_dly_cnt_fast[1]            FD         Q        Out     0.379     3.694       -         
+fval_dly_cnt_fast[1]            Net        -        -       0.424     -           3         
+current_state_srsts_i_o2[6]     LUT6_L     I4       In      -         4.118       -         
+current_state_srsts_i_o2[6]     LUT6_L     LO       Out     0.599     4.718       -         
+N_228                           Net        -        -       0.243     -           1         
+current_state_RNO[6]            LUT6       I0       In      -         4.960       -         
+current_state_RNO[6]            LUT6       O        Out     0.292     5.253       -         
+N_210_i_0                       Net        -        -       0.000     -           1         
+current_state[6]                FD         D        In      -         5.253       -         
+============================================================================================
+Total path delay (propagation time + setup) of 1.875 is 1.207(64.4%) logic and 0.667(35.6%) route.
+Path delay compensated for clock skew. Clock skew is added to clock-to-out value, and is subtracted from setup time value
+
+
+Start clock path:
+
+Instance / Net                                Pin      Pin               Arrival     No. of    
+Name                     Type                 Name     Dir     Delay     Time        Fan Out(s)
+-----------------------------------------------------------------------------------------------
+Start Clock :            fb_read_init|clk                                                      
+------------                                                                                   
+clk                      Port                 clk      In      -         0.000       -         
+clk                      Net                  -        -       0.000     -           1         
+clk_ibuf_iso             IBUFG                I        In      -         0.000       -         
+clk_ibuf_iso             IBUFG                O        Out     1.007     1.007       -         
+clk_ibuf_iso             Net                  -        -       0.600     -           1         
+clk_ibuf                 BUFG                 I        In      -         1.607       -         
+clk_ibuf                 BUFG                 O        Out     0.092     1.699       -         
+clk_c                    Net                  -        -       1.616     -           31        
+fval_dly_cnt_fast[1]     FD                   C        In      -         3.315       -         
+===============================================================================================
+
+
+End clock path:
+
+Instance / Net                            Pin      Pin               Arrival     No. of    
+Name                 Type                 Name     Dir     Delay     Time        Fan Out(s)
+-------------------------------------------------------------------------------------------
+Start Clock :        fb_read_init|clk                                                      
+------------                                                                               
+clk                  Port                 clk      In      -         0.000       -         
+clk                  Net                  -        -       0.000     -           1         
+clk_ibuf_iso         IBUFG                I        In      -         0.000       -         
+clk_ibuf_iso         IBUFG                O        Out     1.007     1.007       -         
+clk_ibuf_iso         Net                  -        -       0.600     -           1         
+clk_ibuf             BUFG                 I        In      -         1.607       -         
+clk_ibuf             BUFG                 O        Out     0.092     1.699       -         
+clk_c                Net                  -        -       1.616     -           31        
+current_state[6]     FD                   C        In      -         3.315       -         
+===========================================================================================
+
+
+Path information for path number 4: 
+      Requested Period:                      1.661
+    - Setup time:                            -0.063
+    + Clock delay at ending point:           3.315
+    = Required time:                         5.039
+
+    - Propagation time:                      1.937
+    - Clock delay at starting point:         3.315
+    = Slack (non-critical) :                 -0.213
+
+    Number of logic level(s):                2
+    Starting point:                          rd_ptr[0] / Q
+    Ending point:                            current_state[6] / D
+    The start point is clocked by            fb_read_init|clk [rising] on pin C
+    The end   point is clocked by            fb_read_init|clk [rising] on pin C
+
+Instance / Net                    Pin      Pin               Arrival     No. of    
+Name                     Type     Name     Dir     Delay     Time        Fan Out(s)
+-----------------------------------------------------------------------------------
+rd_ptr[0]                FDR      Q        Out     0.379     3.694       -         
+rd_ptr[0]                Net      -        -       0.486     -           5         
+next_state14             LUT5     I3       In      -         4.180       -         
+next_state14             LUT5     O        Out     0.337     4.517       -         
+next_state14             Net      -        -       0.363     -           2         
+current_state_RNO[6]     LUT6     I5       In      -         4.879       -         
+current_state_RNO[6]     LUT6     O        Out     0.373     5.252       -         
+N_210_i_0                Net      -        -       0.000     -           1         
+current_state[6]         FD       D        In      -         5.252       -         
+===================================================================================
+Total path delay (propagation time + setup) of 1.874 is 1.025(54.7%) logic and 0.849(45.3%) route.
+Path delay compensated for clock skew. Clock skew is added to clock-to-out value, and is subtracted from setup time value
+
+
+Start clock path:
+
+Instance / Net                          Pin      Pin               Arrival     No. of    
+Name               Type                 Name     Dir     Delay     Time        Fan Out(s)
+-----------------------------------------------------------------------------------------
+Start Clock :      fb_read_init|clk                                                      
+------------                                                                             
+clk                Port                 clk      In      -         0.000       -         
+clk                Net                  -        -       0.000     -           1         
+clk_ibuf_iso       IBUFG                I        In      -         0.000       -         
+clk_ibuf_iso       IBUFG                O        Out     1.007     1.007       -         
+clk_ibuf_iso       Net                  -        -       0.600     -           1         
+clk_ibuf           BUFG                 I        In      -         1.607       -         
+clk_ibuf           BUFG                 O        Out     0.092     1.699       -         
+clk_c              Net                  -        -       1.616     -           31        
+rd_ptr[0]          FDR                  C        In      -         3.315       -         
+=========================================================================================
+
+
+End clock path:
+
+Instance / Net                            Pin      Pin               Arrival     No. of    
+Name                 Type                 Name     Dir     Delay     Time        Fan Out(s)
+-------------------------------------------------------------------------------------------
+Start Clock :        fb_read_init|clk                                                      
+------------                                                                               
+clk                  Port                 clk      In      -         0.000       -         
+clk                  Net                  -        -       0.000     -           1         
+clk_ibuf_iso         IBUFG                I        In      -         0.000       -         
+clk_ibuf_iso         IBUFG                O        Out     1.007     1.007       -         
+clk_ibuf_iso         Net                  -        -       0.600     -           1         
+clk_ibuf             BUFG                 I        In      -         1.607       -         
+clk_ibuf             BUFG                 O        Out     0.092     1.699       -         
+clk_c                Net                  -        -       1.616     -           31        
+current_state[6]     FD                   C        In      -         3.315       -         
+===========================================================================================
+
+
+Path information for path number 5: 
+      Requested Period:                      1.661
+    - Setup time:                            -0.063
+    + Clock delay at ending point:           3.315
+    = Required time:                         5.039
+
+    - Propagation time:                      1.937
+    - Clock delay at starting point:         3.315
+    = Slack (non-critical) :                 -0.213
+
+    Number of logic level(s):                2
+    Starting point:                          rd_ptr[1] / Q
+    Ending point:                            current_state[6] / D
+    The start point is clocked by            fb_read_init|clk [rising] on pin C
+    The end   point is clocked by            fb_read_init|clk [rising] on pin C
+
+Instance / Net                    Pin      Pin               Arrival     No. of    
+Name                     Type     Name     Dir     Delay     Time        Fan Out(s)
+-----------------------------------------------------------------------------------
+rd_ptr[1]                FDR      Q        Out     0.379     3.694       -         
+rd_ptr[1]                Net      -        -       0.486     -           5         
+next_state14             LUT5     I4       In      -         4.180       -         
+next_state14             LUT5     O        Out     0.337     4.517       -         
+next_state14             Net      -        -       0.363     -           2         
+current_state_RNO[6]     LUT6     I5       In      -         4.879       -         
+current_state_RNO[6]     LUT6     O        Out     0.373     5.252       -         
+N_210_i_0                Net      -        -       0.000     -           1         
+current_state[6]         FD       D        In      -         5.252       -         
+===================================================================================
+Total path delay (propagation time + setup) of 1.874 is 1.025(54.7%) logic and 0.849(45.3%) route.
+Path delay compensated for clock skew. Clock skew is added to clock-to-out value, and is subtracted from setup time value
+
+
+Start clock path:
+
+Instance / Net                          Pin      Pin               Arrival     No. of    
+Name               Type                 Name     Dir     Delay     Time        Fan Out(s)
+-----------------------------------------------------------------------------------------
+Start Clock :      fb_read_init|clk                                                      
+------------                                                                             
+clk                Port                 clk      In      -         0.000       -         
+clk                Net                  -        -       0.000     -           1         
+clk_ibuf_iso       IBUFG                I        In      -         0.000       -         
+clk_ibuf_iso       IBUFG                O        Out     1.007     1.007       -         
+clk_ibuf_iso       Net                  -        -       0.600     -           1         
+clk_ibuf           BUFG                 I        In      -         1.607       -         
+clk_ibuf           BUFG                 O        Out     0.092     1.699       -         
+clk_c              Net                  -        -       1.616     -           31        
+rd_ptr[1]          FDR                  C        In      -         3.315       -         
+=========================================================================================
+
+
+End clock path:
+
+Instance / Net                            Pin      Pin               Arrival     No. of    
+Name                 Type                 Name     Dir     Delay     Time        Fan Out(s)
+-------------------------------------------------------------------------------------------
+Start Clock :        fb_read_init|clk                                                      
+------------                                                                               
+clk                  Port                 clk      In      -         0.000       -         
+clk                  Net                  -        -       0.000     -           1         
+clk_ibuf_iso         IBUFG                I        In      -         0.000       -         
+clk_ibuf_iso         IBUFG                O        Out     1.007     1.007       -         
+clk_ibuf_iso         Net                  -        -       0.600     -           1         
+clk_ibuf             BUFG                 I        In      -         1.607       -         
+clk_ibuf             BUFG                 O        Out     0.092     1.699       -         
+clk_c                Net                  -        -       1.616     -           31        
+current_state[6]     FD                   C        In      -         3.315       -         
+===========================================================================================
+
+
+
+##### END OF TIMING REPORT #####]
+
+
+Finished final timing analysis (Real Time elapsed 0h:00m:01s; CPU Time elapsed 0h:00m:01s; Memory used current: 131MB peak: 132MB)
+
+
+Finished timing report (Real Time elapsed 0h:00m:01s; CPU Time elapsed 0h:00m:01s; Memory used current: 131MB peak: 132MB)
+
+---------------------------------------
+Resource Usage Report for fb_read_init 
+
+Mapping to part: xc7a100tfgg484-2
+Cell usage:
+FD              29 uses
+FDR             2 uses
+GND             1 use
+VCC             1 use
+LUT2            32 uses
+LUT3            10 uses
+LUT4            10 uses
+LUT5            8 uses
+LUT6            15 uses
+
+I/O ports: 102
+I/O primitives: 102
+IBUF           40 uses
+IBUFG          1 use
+OBUF           61 uses
+
+BUFG           1 use
+
+I/O Register bits:                  0
+Register bits not including I/Os:   31 (0%)
+
+Global Clock Buffers: 1 of 32 (3%)
+
+Total load per clock:
+   fb_read_init|clk: 31
+
+Mapping Summary:
+Total  LUTs: 59 (0%)
+
+Distribution of All Consumed LUTs = LUT2 + LUT3 + LUT4 + LUT5 + LUT6- HLUTNM/2 
+Distribution of All Consumed Luts 59 = 32 + 10 + 10 + 8 + 15- 32/2 
+
+
+ Number of unique control sets:              2
+
+
+Region Summary:
+Mapper successful!
+
+At Mapper Exit (Real Time elapsed 0h:00m:01s; CPU Time elapsed 0h:00m:01s; Memory used current: 50MB peak: 132MB)
+
+Process took 0h:00m:01s realtime, 0h:00m:01s cputime
+# Tue Feb 19 15:54:29 2019
+
+###########################################################]
