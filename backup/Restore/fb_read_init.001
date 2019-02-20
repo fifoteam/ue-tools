@@ -1,0 +1,485 @@
+//-------------------------------------------------------------------------------------------------
+//  -- 版权所有者   : 中国大恒（集团）有限公司北京图像视觉技术分公司, 2010 -2015.
+//  -- 保密级别     ：绝密.
+//  -- 部门         : 硬件部，FPGA工作组
+//  -- 模块名       : fb_read_init
+//  -- 设计者       : 邢海涛
+//-------------------------------------------------------------------------------------------------
+//
+//  -- 版本记录 :
+//
+//  -- 作者         :| 版本号	:| 修改日期				:|  修改说明
+//-------------------------------------------------------------------------------------------------
+//  -- 邢海涛       :| V1.0		:| 2018/7/17 11:14:07	:|  划分模块端口
+//	-- 张希伦       :| V1.1		:| 2018/8/17 16:35:44	:|  添加逻辑
+//-------------------------------------------------------------------------------------------------
+//
+//  -- 模块描述     :
+//              1)  :
+//
+//              2)  :
+//
+//              3)  :
+//
+//-------------------------------------------------------------------------------------------------
+//`include			"fb_read_init_def.v"
+//仿真单位/精度
+`timescale 1ns/1ps
+//-------------------------------------------------------------------------------------------------
+module fb_read_init # (
+	parameter	INFO_FLAG_ADDR								= 0			,	//INFO段首地址
+	parameter	INFO_SIZE									= 256		,	//INFO段数据量，以byte为单位
+	parameter	IMAGE_FLAG_ADDR								= 2			,	//IMAGE段首地址
+	parameter	STATIS_FLAG_ADDR							= 4			,	//STATIS段首地址
+	parameter	STATIS_SIZE									= 256		,	//STATIS段数据量，以byte为单位
+	parameter	PTR_WD										= 2			,	//读写指针的位宽
+	parameter	IMAGE_SIZE_WD								= 27		,	//图像数据大小位宽，以字节为单位
+	parameter	FRAME_BYTE_ADDR_WD   						= 27			//帧内有效地址位宽，以字节为单位
+	)
+	(
+	//  -------------------------------------------------------------------------------------
+	//  时钟和复位信号
+	//  -------------------------------------------------------------------------------------
+	input								clk								,	//帧存模块工作时钟
+	input								reset							,	//帧存模块工作时钟域的复位信号，高有效
+	//  -------------------------------------------------------------------------------------
+	//  控制数据
+	//  -------------------------------------------------------------------------------------
+	input								i_acquisition_start				,	//clk_sensor时钟域，开采信号，1开始采集，0停止采集
+	input								i_stream_enable					,	//clk时钟域，流停止信号，高有效，有效时允许数据从帧存读出，无效时立即停止读出，并复位读写地址指针，清帧存
+	input								i_fb_transfer_start				,	//clk时钟域，帧存传输有效信号，高有效，以一个完整帧为单位，有效时允许数据从帧存读出，无效时不能读出数据，但是不会复位读帧号
+	input	[PTR_WD-1:0]				iv_frame_depth					,	//clk时钟域，帧缓存深度，0-单帧，1-2帧，2-3帧，3-4帧，经过生效时机控制
+	input								i_calib_done					,	//时钟域未知，DDR3校准完成信号，高有效
+	input	[IMAGE_SIZE_WD-1:0]			iv_image_size					,	//clk时钟域，帧存写入的一帧图像的大小，以byte为单位
+	//  -------------------------------------------------------------------------------------
+	//  与 fb_write 交互
+	//  -------------------------------------------------------------------------------------
+	input								i_wr_ptr_changing				,	//clk时钟域，写帧号正在变化信号，高有效，当该信号有效时，读帧号不能变化
+	input	[PTR_WD-1:0]				iv_wr_ptr						,	//clk时钟域，写帧号，表示当前正在写的帧号
+	output	[PTR_WD-1:0]				ov_rd_ptr_normal				,	//clk时钟域，读帧号，表示当前正常读的帧号
+	//  -------------------------------------------------------------------------------------
+	//  与 fb_read_resend 交互
+	//  -------------------------------------------------------------------------------------
+	input								i_normal_read_repeat			,	//clk时钟域，正常读停止标志，高有效
+	//  -------------------------------------------------------------------------------------
+	//  与 fb_read_core 交互
+	//  -------------------------------------------------------------------------------------
+	input								i_normal_frame_done				,	//clk时钟域，core模块输出，一帧正常流图像读取完成标志，高有效，单bit脉冲
+	//  -------------------------------------------------------------------------------------
+	//  与 fb_read_plugins 交互
+	//  -------------------------------------------------------------------------------------
+	input								i_ardy							,	//clk时钟域，地址准备好信号，高有效，有效时表示可以接受下一个地址
+	output								o_fval							,	//clk时钟域，场有效信号，高有效
+	output								o_aval							,	//clk时钟域，地址有效信号，高有效
+	output								o_info_flag						,	//clk时钟域，信息段标志，高有效
+	output								o_image_flag					,	//clk时钟域，图像段标志，高有效
+	output								o_statis_flag					,	//clk时钟域，统计段标志，高有效
+	output	[FRAME_BYTE_ADDR_WD-1:0]	ov_rd_addr						,	//clk时钟域，读地址
+	output	[FRAME_BYTE_ADDR_WD-1:0]	ov_rd_length						//clk时钟域，读长度，以byte为单位
+	);
+
+	//	ref functions
+	//	-------------------------------------------------------------------------------------
+	//	取对数，上取整
+	//	-------------------------------------------------------------------------------------
+	function integer log2 (input integer xx);
+		integer x;
+		begin
+			x	= xx-1 ;
+			for (log2=0;x>0;log2=log2+1) begin
+				x	= x >> 1;
+			end
+		end
+	endfunction
+
+	//	ref paramters
+	localparam 	FVAL_DELAY_NUM 			= 10;
+	localparam	FVAL_DELAY_NUM_WD		= log2(FVAL_DELAY_NUM);
+
+	//FSM Parameter Define
+	localparam	S_IDLE			= 7'b0000001;
+	localparam	S_PTR			= 7'b0000010;
+	localparam	S_INTERRUPT		= 7'b0000100;
+	localparam	S_INFO			= 7'b0001000;
+	localparam	S_IMAGE			= 7'b0010000;
+	localparam	S_STATIS		= 7'b0100000;
+	localparam	S_FVAL_DLY		= 7'b1000000;
+
+	reg		[6:0]	current_state	= S_IDLE;
+	reg		[6:0]	next_state		= S_IDLE;
+
+	//FSM for sim
+	// synthesis translate_off
+	reg		[127:0]			state_ascii;
+	always @ ( * ) begin
+		case(current_state)
+			7'b0000001 :	state_ascii	= "S_IDLE";
+			7'b0000010 :	state_ascii	= "S_PTR";
+			7'b0000100 :	state_ascii	= "S_INTERRUPT";
+			7'b0001000 :	state_ascii	= "S_INFO";
+			7'b0010000 :	state_ascii	= "S_IMAGE";
+			7'b0100000 :	state_ascii	= "S_STATIS";
+			7'b1000000 :	state_ascii	= "S_FVAL_DLY";
+			default	   :	state_ascii	= "ERROR";
+		endcase
+	end
+	// synthesis translate_on
+
+	//	ref signals
+	reg									fval_reg				= 1'b0	;
+	reg		[1:0]						calib_done_shift		= 2'b00	;
+	reg									fb_transfer_start_int	= 1'b0	;
+	reg		[PTR_WD-1:0]				rd_ptr					= {PTR_WD{1'b0}};
+	reg									interrupt_reading		= 1'b0	;
+	wire								normal_rd_ready			;
+	reg		[1:0]						info_ack_cnt			= 2'b0	;
+	reg		[1:0]						image_ack_cnt			= 2'b0	;
+	reg		[1:0]						statis_ack_cnt			= 2'b0	;
+	reg		[FVAL_DELAY_NUM_WD-1:0]		fval_dly_cnt			= {FVAL_DELAY_NUM_WD{1'b0}};
+	reg									acquisition_start_dly	= 1'b0	;
+	reg									acquisition_start_dly2	= 1'b0	;
+
+	//	ref ARCHITECTURE
+	//	===============================================================================================
+	//	ref ***edge、delay、divide channel***
+	//	===============================================================================================
+	//	-------------------------------------------------------------------------------------
+	//	开采信号同步时钟域
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		acquisition_start_dly 	<= i_acquisition_start;
+		acquisition_start_dly2 	<= acquisition_start_dly;
+	end
+	//	-------------------------------------------------------------------------------------
+	//	i_calib_done 时钟域未知，需要打2拍处理
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		calib_done_shift	<= {calib_done_shift[0],i_calib_done};
+	end
+
+	//	-------------------------------------------------------------------------------------
+	//	INFO 状态响应地址ready信号次数
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		if(current_state==S_INFO) begin
+			if(i_ardy==1'b1) begin
+				info_ack_cnt	<= info_ack_cnt + 1'b1;
+			end
+		end
+		else begin
+			info_ack_cnt	<= 2'b0;
+		end
+	end
+
+	//	-------------------------------------------------------------------------------------
+	//	IMAGE 状态响应地址ready信号次数
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		if(current_state==S_IMAGE) begin
+			if(i_ardy==1'b1) begin
+				image_ack_cnt	<= image_ack_cnt + 1'b1;
+			end
+		end
+		else begin
+			image_ack_cnt	<= 2'b0;
+		end
+	end
+
+	//	-------------------------------------------------------------------------------------
+	//	STATIS 状态响应地址ready信号次数
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		if(current_state==S_STATIS) begin
+			if(i_ardy==1'b1) begin
+				statis_ack_cnt	<= statis_ack_cnt + 1'b1;
+			end
+		end
+		else begin
+			statis_ack_cnt	<= 2'b0;
+		end
+	end
+
+	//	-------------------------------------------------------------------------------------
+	//	场头延迟计数器计数
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		if(current_state==S_FVAL_DLY) begin
+			fval_dly_cnt	<= fval_dly_cnt + 1'b1;
+		end
+		else begin
+			fval_dly_cnt	<= {FVAL_DELAY_NUM_WD{1'b0}};
+		end
+	end
+	//	===============================================================================================
+	//	ref ***ptr addr cnt***
+	//	===============================================================================================
+	//	-------------------------------------------------------------------------------------
+	//	正常流读ready信号，表示可以开始一帧正常流图像的读出，需要满足以下条件
+	//	1.在 PTR 状态 2.i_wr_ptr_changing=0 3.读写指针不相等 4.读操作过程被中断标志无效
+	//	-------------------------------------------------------------------------------------
+	assign normal_rd_ready = (current_state==S_PTR && i_wr_ptr_changing==1'b0 && rd_ptr!=iv_wr_ptr && fb_transfer_start_int==1'b1 && i_normal_read_repeat==1'b0 && i_ardy==1'b1) ? 1'b1 : 1'b0;
+
+	//	-------------------------------------------------------------------------------------
+	//	判断重传中断产生的位置是传输过程中还是空闲过程中，
+	//	0--空闲状态下被中断
+	//	1--传输过程中被中断
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		//	-------------------------------------------------------------------------------------
+		//	当复位信号有效或者停流时，中断位置标记拉低
+		//	-------------------------------------------------------------------------------------
+		if(reset==1'b1 || i_stream_enable==1'b0 || (current_state==S_PTR && i_normal_read_repeat==1'b0)) begin
+			interrupt_reading	<= 0;
+		end
+		else if(current_state==S_INTERRUPT) begin
+			interrupt_reading <= 1'b1;
+		end
+	end
+
+	//	-------------------------------------------------------------------------------------
+	//	判断本次被动传输是否可以生效
+	//
+	//	这里使用开采信号做跳转条件，是由于目前停采时可能不停流，如果不用开采信号限制，会造成
+	//	停采期间，状态机也会跳转，造成被动传输第一帧与期望不符，目前只是一个临时方案
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		if(acquisition_start_dly2==1'b1) begin
+			if(i_fb_transfer_start==1'b1) begin
+				fb_transfer_start_int	<= 1'b1;
+			end
+			else if(i_normal_frame_done==1'b1) begin
+				fb_transfer_start_int	<= 1'b0;
+			end
+		end
+		else begin
+			fb_transfer_start_int	<= 1'b0;
+		end
+	end
+	//	-------------------------------------------------------------------------------------
+	//	读指针逻辑
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		//	-------------------------------------------------------------------------------------
+		//	当帧存深度是1帧或者复位信号有效或者停流时，读指针复位
+		//	-------------------------------------------------------------------------------------
+		if(iv_frame_depth==0 || reset==1'b1 || i_stream_enable==1'b0) begin
+			rd_ptr	<= 0;
+		end
+		else begin
+			//	-------------------------------------------------------------------------------------
+			//	1.正常流读ready信号有效 2.传输过程中中断标志无效
+			//	才能改变读指针
+			//	-------------------------------------------------------------------------------------
+			if(normal_rd_ready==1'b1 && interrupt_reading==1'b0) begin
+				if(rd_ptr==iv_frame_depth) begin
+					rd_ptr	<= 0;
+				end
+				else begin
+					rd_ptr	<= rd_ptr + 1'b1;
+				end
+			end
+		end
+	end
+	assign	ov_rd_ptr_normal	= rd_ptr;
+	//	-------------------------------------------------------------------------------------
+	//	读地址逻辑
+	//	-------------------------------------------------------------------------------------
+	assign	ov_rd_addr	= (current_state==S_IDLE || current_state==S_INFO) ? INFO_FLAG_ADDR	 			:
+												  (current_state==S_IMAGE) ? IMAGE_FLAG_ADDR 			:
+												 (current_state==S_STATIS) ? STATIS_FLAG_ADDR			:
+												 							 {FRAME_BYTE_ADDR_WD{1'b0}}	;
+
+	//	-------------------------------------------------------------------------------------
+	//	读长度逻辑，以字节为单位
+	//	-------------------------------------------------------------------------------------
+	assign	ov_rd_length	= (current_state==S_IDLE || current_state==S_INFO) ? INFO_SIZE	 							:
+													  (current_state==S_IMAGE) ? iv_image_size[FRAME_BYTE_ADDR_WD-1:0] 	:
+												 	 (current_state==S_STATIS) ? STATIS_SIZE							:
+												 								 {FRAME_BYTE_ADDR_WD{1'b0}}				;
+
+	//	===============================================================================================
+	//	ref ***数据段标志***
+	//	===============================================================================================
+	//	-------------------------------------------------------------------------------------
+	//	输出读info标志脉冲
+	//	-------------------------------------------------------------------------------------
+	assign o_info_flag = (current_state==S_INFO && info_ack_cnt==2'd0) ? 1'b1 : 1'b0;
+	//	-------------------------------------------------------------------------------------
+	//	输出读image标志脉冲
+	//	-------------------------------------------------------------------------------------
+	assign o_image_flag = (current_state==S_IMAGE && image_ack_cnt==2'd0) ? 1'b1 : 1'b0;
+
+	//	-------------------------------------------------------------------------------------
+	//	输出读statis标志脉冲
+	//	-------------------------------------------------------------------------------------
+	assign o_statis_flag = (current_state==S_STATIS && statis_ack_cnt==2'd0) ? 1'b1 : 1'b0;
+
+	//	-------------------------------------------------------------------------------------
+	//	输出地址有效标志，单bit脉冲
+	//	-------------------------------------------------------------------------------------
+	assign	o_aval	= (((current_state==S_INFO&&info_ack_cnt==2'd0)||(current_state==S_IMAGE&&image_ack_cnt==2'd0)||(current_state==S_STATIS&&statis_ack_cnt==2'd0))&&i_ardy==1'b1);
+
+	//	-------------------------------------------------------------------------------------
+	//	输出一帧地址有效场信号标志
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		if(current_state==S_IDLE || i_normal_read_repeat==1'b1) begin
+			fval_reg	<= 1'b0;
+		end
+		else if(current_state==S_FVAL_DLY && fval_dly_cnt==FVAL_DELAY_NUM-3 && i_normal_read_repeat==1'b0) begin
+			fval_reg	<= 1'b1;
+		end
+		else if(current_state==S_STATIS && statis_ack_cnt==2'd2) begin
+			fval_reg	<= 1'b0;
+		end
+	end
+	assign o_fval	= ~i_normal_read_repeat & fval_reg;
+
+	//	===============================================================================================
+	//	ref ***FSM***
+	//	===============================================================================================
+	//	-------------------------------------------------------------------------------------
+	//	FSM Sequential Logic
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		if(i_stream_enable==1'b0 || reset==1'b1) begin
+			current_state	<= S_IDLE;
+		end
+		else begin
+			current_state	<= next_state;
+		end
+	end
+
+	//	-------------------------------------------------------------------------------------
+	//	FSM Conbinatial Logic
+	//	-------------------------------------------------------------------------------------
+	always @ ( * ) begin
+		case(current_state)
+			S_IDLE	:
+			//	-------------------------------------------------------------------------------------
+			//	IDLE -> S_INFO
+			//	1.开采有效 2.校准完成 3.帧存传输有效信号有效 4.正常读停止标志生效有效
+			//	IDLE -> S_PTR
+			//	1.开采有效 2.校准完成 3.帧存传输有效信号有效 4.正常读停止标志生效无效
+			//	-------------------------------------------------------------------------------------
+			if(i_stream_enable==1'b1 && calib_done_shift[1]==1'b1) begin
+				if(i_normal_read_repeat==1'b1) begin
+					next_state	= S_INFO;
+				end
+				else begin
+					next_state	= S_PTR;
+				end
+			end
+			else begin
+				next_state	= S_IDLE;
+			end
+
+			S_PTR	:
+			//	-------------------------------------------------------------------------------------
+			//	PTR -> S_IDLE
+			//	1.停流
+			//	PTR -> S_FVAL_DLY
+			//	1.读操作过程被中断标志有效 或
+			//	2.正常读停止标志生效 或
+			//	3.写指针没有正在变化 4.读指针不等于写指针
+			//	-------------------------------------------------------------------------------------
+			if(i_normal_read_repeat==1'b1 || interrupt_reading==1'b1) begin
+				next_state	= S_FVAL_DLY;
+			end
+			else if(i_wr_ptr_changing==1'b0) begin
+				if(rd_ptr!=iv_wr_ptr && fb_transfer_start_int==1'b1) begin
+					next_state	= S_FVAL_DLY;
+				end
+				else begin
+					next_state	= S_PTR;
+				end
+			end
+			else begin
+				next_state	= S_PTR;
+			end
+
+			S_FVAL_DLY	:
+			//	-------------------------------------------------------------------------------------
+			//	S_FVAL_DLY -> S_INFO
+			//	1.直接跳转
+			//	-------------------------------------------------------------------------------------
+			if(i_normal_read_repeat == 1'b1) begin
+				next_state	= S_INTERRUPT;
+			end
+			else if(fval_dly_cnt == FVAL_DELAY_NUM-1) begin
+				next_state	= S_INFO;
+			end
+			else begin
+				next_state	= S_FVAL_DLY;
+			end
+
+			S_INTERRUPT	:
+			//	-------------------------------------------------------------------------------------
+			//	S_INTERRUPT -> S_INFO
+			//	1.直接跳转
+			//	-------------------------------------------------------------------------------------
+			next_state	= S_FVAL_DLY;
+
+			S_INFO	:
+			//	-------------------------------------------------------------------------------------
+			//	S_INFO -> S_IDLE
+			//	1.停流
+			//	S_INFO -> S_INTERRUPT
+			//	1.正常读停止标志生效
+			//	S_INFO -> S_IMAGE
+			//	1.地址ready信号上升沿生效
+			//	2.已经响应了一次地址ready信号
+			//	-------------------------------------------------------------------------------------
+			if(i_normal_read_repeat == 1'b1) begin
+				next_state	= S_INTERRUPT;
+			end
+			else if(info_ack_cnt==2'd2) begin
+				next_state	= S_IMAGE;
+			end
+			else begin
+				next_state	= S_INFO;
+			end
+			S_IMAGE	:
+			//	-------------------------------------------------------------------------------------
+			//	S_INFO -> S_IDLE
+			//	1.停流
+			//	S_IMAGE -> S_INTERRUPT
+			//	1.正常读停止标志生效
+			//	S_IMAGE -> S_STATIS
+			//	1.地址ready信号上升沿生效
+			//	2.已经响应了一次地址ready信号
+			//	-------------------------------------------------------------------------------------
+			if(i_normal_read_repeat == 1'b1) begin
+				next_state	= S_INTERRUPT;
+			end
+			else if(image_ack_cnt==2'd2) begin
+				next_state	= S_STATIS;
+			end
+			else begin
+				next_state	= S_IMAGE;
+			end
+			S_STATIS	:
+			//	-------------------------------------------------------------------------------------
+			//	S_INFO -> S_IDLE
+			//	1.停流
+			//	S_STATIS -> S_INTERRUPT
+			//	1.正常读停止标志生效
+			//	S_STATIS -> S_IDLE
+			//	1.地址ready信号上升沿生效
+			//	2.已经响应了一次地址ready信号
+			//	-------------------------------------------------------------------------------------
+			if(i_normal_read_repeat == 1'b1) begin
+				next_state	= S_INTERRUPT;
+			end
+			else if(statis_ack_cnt==2'd2) begin
+				next_state	= S_IDLE;
+			end
+			else begin
+				next_state	= S_STATIS;
+			end
+			default	:
+			next_state	= S_IDLE;
+		endcase
+	end
+
+endmodule
