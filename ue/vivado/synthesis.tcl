@@ -1,5 +1,5 @@
-read_verilog  F:/DAHENG/hw_mars/mars_platform/TD/Development_Phase/003_develop_phase/fpga_platform/ver10/src/frame_buffer/fb_read/fb_read_init.v
+read_verilog  F:/DAHENG/hw_mars/mars_platform/TD/Development_Phase/003_develop_phase/fpga_platform/ver10/src/frame_buffer/fb_read/fb_read_cmd.v
 read_xdc src/template.xdc 
-synth_design -top fb_read_init -part xc7a100tfgg484-2 
+synth_design -top fb_read_cmd -part xc7a100tfgg484-2 
 report_utilization -file utilization_summary.rpt 
 report_timing_summary -file timing_summary.rpt 
