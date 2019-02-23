@@ -1,0 +1,629 @@
+//-------------------------------------------------------------------------------------------------
+//  -- 版权所有者   : 中国大恒（集团）有限公司北京图像视觉技术分公司, 2010 -2018.
+//  -- 保密级别     ：绝密.
+//  -- 部门         : 硬件部，FPGA工作组
+//  -- 模块名       : fb_read_cut
+//  -- 设计者       : 张希伦
+//-------------------------------------------------------------------------------------------------
+//
+//  -- 版本记录 :
+//
+//  -- 作者         :| 版本号	:| 修改日期				:| 修改说明
+//-------------------------------------------------------------------------------------------------
+//  -- 张希伦       :| V1.0		:| 2018/10/25 17:18:34	:| 初始版本
+//-------------------------------------------------------------------------------------------------
+//
+//  -- 模块描述     :
+//              1)  : ... ...
+//
+//              2)  : ... ...
+//
+//              3)  : ... ...
+//
+//-------------------------------------------------------------------------------------------------
+//`include			"fb_read_cut_def.v"
+//仿真单位/精度
+`timescale 1ns/1ps
+//-------------------------------------------------------------------------------------------------
+module fb_read_cut # (
+	parameter	FRAME_BYTE_ADDR_WD							= 26				//帧内有效地址位宽，帧存深度不同，位宽不同
+	)
+	(
+	//	===============================================================================================
+	//	帧存时钟域
+	//	===============================================================================================
+	//  -------------------------------------------------------------------------------------
+	//  时钟和复位信号
+	//  -------------------------------------------------------------------------------------
+	input								clk									,	//帧存模块工作时钟
+	input								reset								,	//帧存模块工作时钟域的复位信号，高有效
+	//  -------------------------------------------------------------------------------------
+	//  与 fb_read_core 交互
+	//  -------------------------------------------------------------------------------------
+	input								i_resend_need_info					,	//clk时钟域，重传需要info段，高有效
+	input								i_resend_need_statis				,	//clk时钟域，重传需要statis段，高有效
+	input	[FRAME_BYTE_ADDR_WD-1:0]	iv_resend_invalid_length			,	//clk时钟域，重传部分不需要的数据长度，以byte为单位，只计算图像部分，在i_resend_valid有效时，该数据有效
+	input	[FRAME_BYTE_ADDR_WD-1:0]	iv_resend_require_length			,	//clk时钟域，重传部分请求的数据长度，以byte为单位，只计算图像部分，在i_resend_valid有效时，该数据有效
+	//  -------------------------------------------------------------------------------------
+	//  与 fb_read_plugins 交互协议 输入部分
+	//  -------------------------------------------------------------------------------------
+	output								o_ardy								,	//clk时钟域，地址准备好信号，高有效，有效时表示可以接受下一个地址
+	input								i_fval								,	//clk时钟域，场有效信号，高有效
+	input								i_aval								,	//clk时钟域，地址有效信号，高有效
+	input								i_info_flag							,	//clk时钟域，信息段标志，高有效
+	input								i_image_flag						,	//clk时钟域，图像段标志，高有效
+	input								i_statis_flag						,	//clk时钟域，统计段标志，高有效
+	input	[FRAME_BYTE_ADDR_WD-1:0]	iv_rd_addr							,	//clk时钟域，读地址
+	input	[FRAME_BYTE_ADDR_WD-1:0]	iv_rd_length						,	//clk时钟域，读长度，以byte为单位
+
+	//  -------------------------------------------------------------------------------------
+	//  与 fb_read_packet 交互协议 输出部分
+	//  -------------------------------------------------------------------------------------
+	input								i_ardy								,	//clk时钟域，地址准备好信号，高有效，有效时表示可以接受下一个地址
+	output								o_fval								,	//clk时钟域，场有效信号，高有效
+	output								o_aval								,	//clk时钟域，地址有效信号，高有效
+	output								o_info_flag							,	//clk时钟域，信息段标志，高有效
+	output								o_image_flag						,	//clk时钟域，图像段标志，高有效
+	output								o_statis_flag						,	//clk时钟域，统计段标志，高有效
+	output	[FRAME_BYTE_ADDR_WD-1:0]	ov_rd_addr							,	//clk时钟域，读地址
+	output	[FRAME_BYTE_ADDR_WD-1:0]	ov_rd_length							//clk时钟域，读长度，以byte为单位
+	);
+
+
+	//	ref paramters
+
+	//FSM Parameter Define
+	localparam	S_IDLE			= 5'b00001;
+	localparam	S_FLAG_ACK		= 5'b00010;
+	localparam	S_INFO			= 5'b00100;
+	localparam	S_IMAGE			= 5'b01000;
+	localparam	S_STATIS		= 5'b10000;
+
+	reg		[4:0]	current_state	= S_IDLE;
+	reg		[4:0]	next_state		= S_IDLE;
+
+	//FSM for sim
+	// synthesis translate_off
+	reg		[127:0]			state_ascii;
+	always @ ( * ) begin
+		case(current_state)
+			5'b00001 :	state_ascii	= "S_IDLE";
+			5'b00010 :	state_ascii	= "S_FLAG_ACK";
+			5'b00100 :	state_ascii	= "S_INFO";
+			5'b01000 :	state_ascii	= "S_IMAGE";
+			5'b10000 :	state_ascii	= "S_STATIS";
+			default	  :	state_ascii	= "ERROR";
+		endcase
+	end
+	// synthesis translate_on
+
+	//	ref signals
+	reg									fval_dly					= 1'b0;
+	wire								fval_rise					;
+
+	reg									fval_reg					= 1'b0;
+	reg									ardy_reg					= 1'b0;
+
+	reg									image_flag_reg				= 1'b0;
+	reg									image_valid_flag_first		= 1'b0;
+	reg									image_valid_flag_last		= 1'b0;
+	reg									valid_send_done				= 1'b0;
+	reg									image_valid_flag			= 1'b0;
+
+	reg		[FRAME_BYTE_ADDR_WD	-1:0]	require_length_latch		= {FRAME_BYTE_ADDR_WD{1'b0}};
+	reg		[FRAME_BYTE_ADDR_WD	-1:0]	invalid_length_latch		= {FRAME_BYTE_ADDR_WD{1'b0}};
+	reg		[FRAME_BYTE_ADDR_WD	-1:0]	rd_addr_latch				= {FRAME_BYTE_ADDR_WD{1'b0}};
+	reg		[FRAME_BYTE_ADDR_WD	-1:0]	rd_length_latch				= {FRAME_BYTE_ADDR_WD{1'b0}};
+
+	wire	[FRAME_BYTE_ADDR_WD	  :0]	image_length_calc			;
+
+	reg		[FRAME_BYTE_ADDR_WD	-1:0]	image_data_sum				= {FRAME_BYTE_ADDR_WD{1'b0}};
+	reg		[FRAME_BYTE_ADDR_WD	-1:0]	image_data_send				= {FRAME_BYTE_ADDR_WD{1'b0}};
+	reg		[FRAME_BYTE_ADDR_WD	-1:0]	image_need_cut				= {FRAME_BYTE_ADDR_WD{1'b0}};
+
+	reg									info_flag_dly				= 1'b0;
+	wire								info_flag_rise				;
+
+	reg									image_flag_dly				= 1'b0;
+	reg									image_flag_dly2				= 1'b0;
+
+	reg									aval_dly					= 1'b0;
+	reg									aval_dly2					= 1'b0;
+
+	wire								aval_info					;
+	wire								aval_image					;
+
+	reg		[1:0]						ack_cnt						= 2'b0;
+
+	wire	[FRAME_BYTE_ADDR_WD	-1:0]	rd_addr_info				;
+	reg		[FRAME_BYTE_ADDR_WD	-1:0]	rd_addr_image				= {FRAME_BYTE_ADDR_WD{1'b0}};
+	wire	[FRAME_BYTE_ADDR_WD	-1:0]	rd_addr_statis				;
+
+	wire	[FRAME_BYTE_ADDR_WD	-1:0]	rd_length_info				;
+	reg		[FRAME_BYTE_ADDR_WD	-1:0]	rd_length_image				= {FRAME_BYTE_ADDR_WD{1'b0}};
+	wire	[FRAME_BYTE_ADDR_WD	-1:0]	rd_length_statis			;
+
+	//	ref ARCHITECTURE
+	//	===============================================================================================
+	//	ref ***edge、delay、latch、divide channel***
+	//	===============================================================================================
+	//	-------------------------------------------------------------------------------------
+	//	i_fval 取上升沿
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		fval_dly	<= i_fval;
+	end
+	assign	fval_rise = (i_fval==1'b1 && fval_dly==1'b0) ? 1'b1 : 1'b0;
+	assign	fval_fall = (i_fval==1'b0 && fval_dly==1'b1) ? 1'b1 : 1'b0;
+	//	-------------------------------------------------------------------------------------
+	//	i_info_flag 延迟2拍
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		info_flag_dly	<= i_info_flag;
+	end
+	assign	info_flag_rise = i_info_flag & ~info_flag_dly;
+	//	-------------------------------------------------------------------------------------
+	//	i_image_flag 延迟2拍
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		image_flag_dly	<= i_image_flag;
+		image_flag_dly2	<= image_flag_dly;
+	end
+	//	-------------------------------------------------------------------------------------
+	//	i_aval 延迟2拍
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		aval_dly	<= i_aval;
+		aval_dly2	<= aval_dly;
+	end
+	//	-------------------------------------------------------------------------------------
+	//	在场信号上升沿，锁存需要扔掉的数据量
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		if(info_flag_rise==1'b1) begin
+			invalid_length_latch <= iv_resend_invalid_length;
+		end
+	end
+
+	//	-------------------------------------------------------------------------------------
+	//	在场信号上升沿，锁存需要传输的数据量
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		if(info_flag_rise==1'b1) begin
+			require_length_latch <= iv_resend_require_length;
+		end
+	end
+
+	//	-------------------------------------------------------------------------------------
+	//	在响应aval时，锁存地址
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		if(current_state==S_FLAG_ACK && (i_info_flag==1'b1||i_image_flag==1'b1||i_statis_flag==1'b1) && i_aval==1'b1) begin
+			rd_addr_latch <= iv_rd_addr;
+		end
+	end
+
+	//	-------------------------------------------------------------------------------------
+	//	在响应aval时，锁存数据量
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		if(current_state==S_FLAG_ACK && (i_info_flag==1'b1||i_image_flag==1'b1||i_statis_flag==1'b1) && i_aval==1'b1) begin
+			rd_length_latch <= iv_rd_length;
+		end
+	end
+
+	//	-------------------------------------------------------------------------------------
+	//	响应地址ready信号次数
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		if(current_state==S_INFO || current_state==S_IMAGE || current_state==S_STATIS) begin
+			if(i_ardy==1'b1) begin
+				ack_cnt	<= ack_cnt + 1'b1;
+			end
+		end
+		else begin
+			ack_cnt	<= 2'b0;
+		end
+	end
+
+	//	===============================================================================================
+	//	ref ***info***
+	//	===============================================================================================
+	//	-------------------------------------------------------------------------------------
+	//	info 段数据对应的起始地址、数据量、地址有效标志
+	//	-------------------------------------------------------------------------------------
+	assign rd_addr_info 	= (current_state==S_INFO && i_ardy==1'b1) ? rd_addr_latch : {FRAME_BYTE_ADDR_WD{1'b0}};
+	assign rd_length_info 	= (current_state==S_INFO && i_ardy==1'b1) ? rd_length_latch : {FRAME_BYTE_ADDR_WD{1'b0}};
+	assign aval_info 		= (current_state==S_INFO && i_ardy==1'b1 && ack_cnt<2'd1) ? 1'b1 : 1'b0;
+
+	//	===============================================================================================
+	//	ref ***image***
+	//	===============================================================================================
+	//	-------------------------------------------------------------------------------------
+	//	传输数据累加器，每响应一次IMAGE阶段的aval信号，累加器就进行累加，表示当前已经处理的数
+	//	据量
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		if(current_state==S_IDLE) begin
+			image_data_sum <= {FRAME_BYTE_ADDR_WD{1'b0}};
+		end
+		else if(current_state==S_FLAG_ACK && i_image_flag==1'b1 && i_aval==1'b1) begin
+			image_data_sum <= image_data_sum + iv_rd_length;
+		end
+	end
+
+	//	-------------------------------------------------------------------------------------
+	//	数据发送累加器，表示已经发送给后级的数据量，每输出一个o_aval，累加器进行累加
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		if(current_state==S_IDLE) begin
+			image_data_send <= {FRAME_BYTE_ADDR_WD{1'b0}};
+		end
+		else if(current_state==S_IMAGE && o_aval==1'b1) begin
+			image_data_send <= image_data_send + ov_rd_length;
+		end
+	end
+
+	//	-------------------------------------------------------------------------------------
+	//	扔掉无效数据后，响应的第一个有效数据标志，即从这次开始对有效数据进行传输
+	//	1、状态处于S_FLAG_ACK状态；
+	//	2、image flag延迟一拍有效；
+	//	3、aval延迟一拍有效；
+	//	4、有效数据发送完毕标志无效；
+	//	5、有效数据正在发送标志无效；
+	//	6、输入数据累加器大于需要扔掉的数据量。
+	//	满足以上条件时，标志置1
+	//	1、状态处于S_IMAGE状态；
+	//	2、输出的aval标志有效。
+	//	满足以上条件时，标志置0
+	//	S_IDLE状态下，标志清零
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		if(current_state==S_IDLE) begin
+			image_valid_flag_first <= 1'b0;
+		end
+		else if(current_state==S_IMAGE && o_aval==1'b1) begin
+			image_valid_flag_first <= 1'b0;
+		end
+		else if(current_state==S_FLAG_ACK && image_flag_dly==1'b1 && aval_dly==1'b1 && valid_send_done==1'b0 && image_valid_flag==1'b0 && image_data_sum>invalid_length_latch) begin
+			image_valid_flag_first <= 1'b1;
+		end
+	end
+
+	//	-------------------------------------------------------------------------------------
+	//	需要处理的最后一个aval数据的标志，即之后的数据都不再响应
+	//	1、状态处于S_FLAG_ACK状态；
+	//	2、image flag延迟一拍有效；
+	//	3、aval延迟一拍有效；
+	//	4、有效数据发送完毕标志无效；
+	//	5、输入数据累加器大于需要扔掉加上需要发送的数据量。
+	//	满足以上条件时，标志置1
+	//	1、状态处于S_IMAGE状态；
+	//	2、输出的aval标志有效。
+	//	满足以上条件时，标志置0
+	//	S_IDLE状态下，标志清零
+	//	-------------------------------------------------------------------------------------
+	assign	image_length_calc = invalid_length_latch+require_length_latch;
+
+	always @ (posedge clk) begin
+		if(current_state==S_IDLE) begin
+			image_valid_flag_last <= 1'b0;
+		end
+		else if(current_state==S_IMAGE && o_aval==1'b1) begin
+			image_valid_flag_last <= 1'b0;
+		end
+		else if(current_state==S_FLAG_ACK && image_flag_dly==1'b1 && aval_dly==1'b1 && valid_send_done==1'b0 && image_data_sum>image_length_calc) begin
+			image_valid_flag_last <= 1'b1;
+		end
+	end
+
+	//	-------------------------------------------------------------------------------------
+	//	有效数据处理标志，即在标志范围内，处理的数据为需要向后级传输的数据，
+	//	其中包含 image_valid_flag_first 和 image_valid_flag_last
+	//	1、状态处于S_FLAG_ACK状态；
+	//	2、image flag延迟一拍有效；
+	//	3、aval延迟一拍有效；
+	//	4、有效数据发送完毕标志无效；
+	//	5、输入数据累加器大于需要扔掉的数据量。
+	//	满足以上条件时，标志置1
+	//	1、状态处于S_IMAGE状态；
+	//	2、已经发送的数据量大于需要传输的数据量。
+	//	满足以上条件时，标志置0
+	//	S_IDLE状态下，标志清零
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		if(current_state==S_IDLE) begin
+			image_valid_flag <= 1'b0;
+		end
+		else if(image_data_send>=require_length_latch) begin
+			image_valid_flag <= 1'b0;
+		end
+		else if(current_state==S_FLAG_ACK && image_flag_dly==1'b1 && aval_dly==1'b1 && valid_send_done==1'b0 && image_data_sum>invalid_length_latch) begin
+			image_valid_flag <= 1'b1;
+		end
+	end
+
+	//	-------------------------------------------------------------------------------------
+	//	数据处理完毕标志
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		if(current_state==S_IDLE) begin
+			valid_send_done <= 1'b0;
+		end
+		else if(current_state==S_IMAGE && image_data_send>=require_length_latch) begin
+			valid_send_done <= 1'b1;
+		end
+	end
+
+	//	-------------------------------------------------------------------------------------
+	//	第一次处理有效数据时，需要从aval对应的数据中剪除的数据量
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		if(current_state==S_IDLE) begin
+			image_need_cut <= {FRAME_BYTE_ADDR_WD{1'b0}};
+		end
+		else if(current_state==S_FLAG_ACK && i_image_flag==1'b1 && i_aval==1'b1 && valid_send_done==1'b0 && image_valid_flag==1'b0) begin
+			image_need_cut <= invalid_length_latch - image_data_sum;
+		end
+	end
+
+	//	-------------------------------------------------------------------------------------
+	//	image段输出的地址
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		if(current_state==S_IDLE) begin
+			rd_addr_image <= {FRAME_BYTE_ADDR_WD{1'b0}};
+		end
+		if(current_state==S_FLAG_ACK && image_flag_dly2==1'b1 && aval_dly2==1'b1) begin
+			if(image_valid_flag_first==1'b1) begin
+				rd_addr_image <= rd_addr_latch + image_need_cut;
+			end
+			else begin
+				rd_addr_image <= rd_addr_latch;
+			end
+		end
+	end
+
+	//	-------------------------------------------------------------------------------------
+	//	image段输出的有效数据量
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		if(current_state==S_IDLE) begin
+			rd_length_image <= {FRAME_BYTE_ADDR_WD{1'b0}};
+		end
+		if(current_state==S_FLAG_ACK && image_flag_dly2==1'b1 && aval_dly2==1'b1) begin
+			if(image_valid_flag_last==1'b1) begin
+				rd_length_image <= require_length_latch - image_data_send;
+			end
+			else if(image_valid_flag_first==1'b1) begin
+				rd_length_image <= rd_length_latch - image_need_cut;
+			end
+			else begin
+				rd_length_image <= rd_length_latch;
+			end
+		end
+	end
+
+	//	-------------------------------------------------------------------------------------
+	//	image flag 赋值
+	//	在ACK状态响应到image段的aval时，image flag置1
+	//	在ACK状态响应到statis段标志时，image flag拉低
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		if(current_state==S_IDLE) begin
+			image_flag_reg <= 1'b0;
+		end
+		else if(current_state==S_FLAG_ACK && i_image_flag==1'b1 && i_aval==1'b1) begin
+			image_flag_reg <= 1'b1;
+		end
+		else if(current_state==S_FLAG_ACK && i_statis_flag==1'b1) begin
+			image_flag_reg <= 1'b0;
+		end
+	end
+
+	//	-------------------------------------------------------------------------------------
+	//	image 段数据对应的起始地址、数据量、地址有效标志
+	//	-------------------------------------------------------------------------------------
+	assign aval_image 		= (current_state==S_IMAGE && i_ardy==1'b1 && ack_cnt<2'd1) ? 1'b1 : 1'b0;
+	//	===============================================================================================
+	//	ref ***statis***
+	//	===============================================================================================
+	//	-------------------------------------------------------------------------------------
+	//	statis 段数据对应的起始地址、数据量、地址有效标志
+	//	-------------------------------------------------------------------------------------
+	assign rd_addr_statis 	= (current_state==S_STATIS && i_ardy==1'b1 && i_resend_need_statis==1'b1) ? rd_addr_latch : {FRAME_BYTE_ADDR_WD{1'b0}};
+	assign rd_length_statis = (current_state==S_STATIS && i_ardy==1'b1 && i_resend_need_statis==1'b1) ? rd_length_latch : {FRAME_BYTE_ADDR_WD{1'b0}};
+	assign aval_statis		= (current_state==S_STATIS && i_ardy==1'b1 && ack_cnt<2'd1) ? 1'b1 : 1'b0;
+
+	//	===============================================================================================
+	//	ref ***输出***
+	//	===============================================================================================
+	//	-------------------------------------------------------------------------------------
+	//	输出地址ready信号
+	//	1、在IDLE状态下，i_ardy有效时，输出o_ardy置1
+	//	2、在S_FLAG_ACK状态，需要传输info数据标志有效，i_info_flag有效，i_aval有效时，输出置0
+	//	3、在S_FLAG_ACK状态，正在传输有效数据标志有效，i_image_flag与其延迟1拍和两拍的信号做
+	//	或逻辑有效，i_aval与与其延迟1拍和两拍的信号做或逻辑有效时，输出置0
+	//	4、在S_FLAG_ACK状态，i_statis_flag有效，i_aval有效时，输出置0
+	//	5、除上述情况外，当状态处于S_FLAG_ACK，且i_ardy有效时，输出置1
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		if(current_state==S_IDLE && i_ardy==1'b1) begin
+			ardy_reg <= 1'b1;
+		end
+		else if(current_state==S_FLAG_ACK && i_resend_need_info==1'b1 && i_info_flag==1'b1 && i_aval==1'b1) begin
+			ardy_reg <= 1'b0;
+		end
+		else if(current_state==S_FLAG_ACK && ((i_image_flag|image_flag_dly|image_flag_dly2)&(i_aval|aval_dly|aval_dly2))==1'b1) begin
+			ardy_reg <= 1'b0;
+		end
+		else if(current_state==S_FLAG_ACK && i_statis_flag==1'b1 && i_aval==1'b1) begin
+			ardy_reg <= 1'b0;
+		end
+		else if(current_state==S_FLAG_ACK && i_ardy==1'b1) begin
+			ardy_reg <= 1'b1;
+		end
+		else begin
+			ardy_reg <= 1'b0;
+		end
+	end
+	assign o_ardy = ardy_reg;
+
+	//	-------------------------------------------------------------------------------------
+	//	输出地址场有效
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		if(current_state==S_IDLE && fval_rise==1'b0) begin
+			fval_reg <= 1'b0;
+		end
+		else if(fval_rise==1'b1) begin
+			fval_reg <= 1'b1;
+		end
+		else if(i_fval==1'b0) begin
+			fval_reg <= 1'b0;
+		end
+	end
+	assign o_fval = fval_reg;
+	//	-------------------------------------------------------------------------------------
+	//	image flag 赋值
+	//	-------------------------------------------------------------------------------------
+	assign o_info_flag 		= (current_state==S_INFO) ? 1'b1 : 1'b0;
+	assign o_image_flag 	= image_flag_reg;
+	assign o_statis_flag	= (current_state==S_STATIS) ? 1'b1 : 1'b0;
+	//	-------------------------------------------------------------------------------------
+	//	输出地址有效标志
+	//	-------------------------------------------------------------------------------------
+	assign o_aval	= aval_info | aval_image | aval_statis;
+	//	-------------------------------------------------------------------------------------
+	//	输出地址有效标志对应的地址
+	//	-------------------------------------------------------------------------------------
+	assign	ov_rd_addr 	= (o_info_flag==1'b1) 	? 	rd_addr_info 				:
+						  (o_image_flag==1'b1) 	? 	rd_addr_image 				:
+						  (o_statis_flag==1'b1) ? 	rd_addr_statis 				:
+						  							{FRAME_BYTE_ADDR_WD{1'b0}}	;
+	//	-------------------------------------------------------------------------------------
+	//	输出地址有效标志对应的数据量
+	//	-------------------------------------------------------------------------------------
+	assign	ov_rd_length = (o_info_flag==1'b1) 	 ? 	rd_length_info 				:
+						   (o_image_flag==1'b1)  ? 	rd_length_image				:
+						   (o_statis_flag==1'b1) ? 	rd_length_statis 			:
+						  							{FRAME_BYTE_ADDR_WD{1'b0}}	;
+
+	//	===============================================================================================
+	//	ref ***FSM***
+	//	===============================================================================================
+	//	-------------------------------------------------------------------------------------
+	//	FSM Sequential Logic
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		if(reset) begin
+			current_state	<= S_IDLE;
+		end
+		else begin
+			current_state	<= next_state;
+		end
+	end
+
+	//	-------------------------------------------------------------------------------------
+	//	FSM Conbinatial Logic
+	//	-------------------------------------------------------------------------------------
+	always @ ( * ) begin
+		case(current_state)
+			S_IDLE	:
+			//	-------------------------------------------------------------------------------------
+			//	IDLE -> S_FLAG_ACK
+			//		1.场信号上升沿
+			//	-------------------------------------------------------------------------------------
+			if(fval_rise==1'b1) begin
+				next_state	= S_FLAG_ACK;
+			end
+			else begin
+				next_state	= S_IDLE;
+			end
+			S_FLAG_ACK	:
+			//	-------------------------------------------------------------------------------------
+			//	S_FLAG_ACK -> S_IDLE
+			//		1.场信号下降沿
+			//	S_FLAG_ACK -> S_INFO
+			//		1.info flag有效
+			//		2.地址有效信号生效
+			//		3.需要重传info标志有效
+			//	S_FLAG_ACK -> S_IMAGE
+			//		1.image valid flag有效
+			//		2.地址有效信号生效
+			//		3.响应image数据标志有效
+			//	S_FLAG_ACK -> S_STATIS
+			//		1.statis flag有效
+			//		2.地址有效信号生效
+			//	-------------------------------------------------------------------------------------
+			if(fval_fall==1'b1) begin
+				next_state	= S_IDLE;
+			end
+			else if(i_info_flag==1'b1 && i_aval==1'b1 && i_resend_need_info==1'b1) begin
+				next_state	= S_INFO;
+			end
+			else if(image_flag_dly2==1'b1 && aval_dly2==1'b1 && image_valid_flag==1'b1) begin
+				next_state	= S_IMAGE;
+			end
+			else if(i_statis_flag==1'b1 && i_aval==1'b1) begin
+				next_state	= S_STATIS;
+			end
+			else begin
+				next_state	= S_FLAG_ACK;
+			end
+
+			S_INFO	:
+			//	-------------------------------------------------------------------------------------
+			//	S_INFO -> S_IDLE
+			//		1.场信号下降沿
+			//	S_INFO -> S_FLAG_ACK
+			//		1.info段地址ready信号长度计数器为2
+			//	-------------------------------------------------------------------------------------
+			if(fval_fall==1'b1) begin
+				next_state	= S_IDLE;
+			end
+			else if(ack_cnt==2'd2) begin
+				next_state	= S_FLAG_ACK;
+			end
+			else begin
+				next_state	= S_INFO;
+			end
+			S_IMAGE	:
+			//	-------------------------------------------------------------------------------------
+			//	S_STATIS -> S_IDLE
+			//		1.场信号下降沿
+			//	S_STATIS -> S_FLAG_ACK
+			//		1.image段地址ready信号长度计数器为2
+			//	-------------------------------------------------------------------------------------
+			if(fval_fall==1'b1) begin
+				next_state	= S_IDLE;
+			end
+			else if(ack_cnt==2'd2) begin
+				next_state	= S_FLAG_ACK;
+			end
+			else begin
+				next_state	= S_IMAGE;
+			end
+			S_STATIS	:
+			//	-------------------------------------------------------------------------------------
+			//	S_STATIS -> S_IDLE
+			//		1.场信号下降沿
+			//	S_STATIS -> S_FLAG_ACK
+			//		1.statis段地址ready信号长度计数器为2
+			//	-------------------------------------------------------------------------------------
+			if(fval_fall==1'b1) begin
+				next_state	= S_IDLE;
+			end
+			else if(ack_cnt==2'd2) begin
+				next_state	= S_FLAG_ACK;
+			end
+			else begin
+				next_state	= S_STATIS;
+			end
+			default	:
+			next_state	= S_IDLE;
+		endcase
+	end
+
+
+endmodule
