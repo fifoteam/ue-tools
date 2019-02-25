@@ -26,43 +26,43 @@
 `timescale 1ns/1ps
 //-------------------------------------------------------------------------------------------------
 module fb_packet_divide # (
-	parameter	BYTE_ADDR_WD								= 27		,	//有效地址位宽，DDR3容量不同，位宽不同
-	parameter	PKT_LENGTH_WD								= 13			//packet length 包长寄存器宽度
+	parameter	FRAME_BYTE_ADDR_WD							= 27			,	//有效地址位宽，DDR3容量不同，位宽不同
+	parameter	PKT_LENGTH_WD								= 13				//packet length 包长寄存器宽度
 	)
 	(
 	//  -------------------------------------------------------------------------------------
 	//  时钟和复位信号
 	//  -------------------------------------------------------------------------------------
-	input							clk									,	//帧存模块工作时钟
-	input							reset								,	//帧存模块工作时钟域的复位信号，高有效
+	input								clk									,	//帧存模块工作时钟
+	input								reset								,	//帧存模块工作时钟域的复位信号，高有效
 	//  -------------------------------------------------------------------------------------
 	//  控制数据
 	//  -------------------------------------------------------------------------------------
-	input  	[PKT_LENGTH_WD-1:0]		iv_pkt_length						,	//clk时钟域，packet length 正常包包长
+	input  	[PKT_LENGTH_WD-1:0]			iv_pkt_length						,	//clk时钟域，packet length 正常包包长
 	//  -------------------------------------------------------------------------------------
 	//  与 fb_read_plugins 交互协议 输入部分
 	//  -------------------------------------------------------------------------------------
-	output							o_ardy								,	//clk时钟域，地址准备好信号，高有效，有效时表示可以接受下一个地址
-	input							i_fval								,	//clk时钟域，场有效信号，高有效
-	input							i_aval								,	//clk时钟域，地址有效信号，高有效
-	input							i_info_flag							,	//clk时钟域，信息段标志，高有效
-	input							i_image_flag						,	//clk时钟域，图像段标志，高有效
-	input							i_statis_flag						,	//clk时钟域，统计段标志，高有效
-	input	[BYTE_ADDR_WD-1:0]		iv_rd_addr							,	//clk时钟域，读地址
-	input	[BYTE_ADDR_WD-1:0]		iv_rd_length						,	//clk时钟域，读长度，以byte为单位
+	output								o_ardy								,	//clk时钟域，地址准备好信号，高有效，有效时表示可以接受下一个地址
+	input								i_fval								,	//clk时钟域，场有效信号，高有效
+	input								i_aval								,	//clk时钟域，地址有效信号，高有效
+	input								i_info_flag							,	//clk时钟域，信息段标志，高有效
+	input								i_image_flag						,	//clk时钟域，图像段标志，高有效
+	input								i_statis_flag						,	//clk时钟域，统计段标志，高有效
+	input	[FRAME_BYTE_ADDR_WD-1:0]	iv_rd_addr							,	//clk时钟域，读地址
+	input	[FRAME_BYTE_ADDR_WD-1:0]	iv_rd_length						,	//clk时钟域，读长度，以byte为单位
 
 	//  -------------------------------------------------------------------------------------
 	//  与 fb_read_cmd 交互协议 输出部分
 	//  -------------------------------------------------------------------------------------
-	input							i_ardy								,	//clk时钟域，地址准备好信号，高有效，有效时表示可以接受下一个地址
-	output							o_fval								,	//clk时钟域，场有效信号，高有效
-	output							o_pval								,	//clk时钟域，一个网络包有效数据标志，是连续信号，期间发出的地址对应一个包长的数据
-	output							o_aval								,	//clk时钟域，地址有效信号，高有效
-	output							o_info_flag							,	//clk时钟域，信息段标志，高有效
-	output							o_image_flag						,	//clk时钟域，图像段标志，高有效
-	output							o_statis_flag						,	//clk时钟域，统计段标志，高有效
-	output	[BYTE_ADDR_WD-1:0]		ov_rd_addr							,	//clk时钟域，读地址
-	output	[BYTE_ADDR_WD-1:0]		ov_rd_length							//clk时钟域，读长度，以byte为单位
+	input								i_ardy								,	//clk时钟域，地址准备好信号，高有效，有效时表示可以接受下一个地址
+	output								o_fval								,	//clk时钟域，场有效信号，高有效
+	output								o_pval								,	//clk时钟域，一个网络包有效数据标志，是连续信号，期间发出的地址对应一个包长的数据
+	output								o_aval								,	//clk时钟域，地址有效信号，高有效
+	output								o_info_flag							,	//clk时钟域，信息段标志，高有效
+	output								o_image_flag						,	//clk时钟域，图像段标志，高有效
+	output								o_statis_flag						,	//clk时钟域，统计段标志，高有效
+	output	[FRAME_BYTE_ADDR_WD-1:0]	ov_rd_addr							,	//clk时钟域，读地址
+	output	[FRAME_BYTE_ADDR_WD-1:0]	ov_rd_length							//clk时钟域，读长度，以byte为单位
 	);
 
 
@@ -71,67 +71,67 @@ module fb_packet_divide # (
 	localparam	ADDER_TYPE_ACK 		= "LUT";
 
 	//FSM Parameter Define
-	localparam	S_IDLE			= 5'b00001;
-	localparam	S_FLAG_ACK		= 5'b00010;
-	localparam	S_INFO			= 5'b00100;
-	localparam	S_IMAGE			= 5'b01000;
-	localparam	S_STATIS		= 5'b10000;
+	localparam	S_IDLE			= 3'd0;
+	localparam	S_FLAG_ACK		= 3'd1;
+	localparam	S_INFO			= 3'd2;
+	localparam	S_IMAGE			= 3'd3;
+	localparam	S_STATIS		= 3'd4;
 
-	reg		[4:0]	current_state	= S_IDLE;
-	reg		[4:0]	next_state		= S_IDLE;
+	reg		[2:0]	current_state	= S_IDLE;
+	reg		[2:0]	next_state		= S_IDLE;
 
 	//FSM for sim
 	// synthesis translate_off
 	reg		[127:0]			state_ascii;
 	always @ ( * ) begin
 		case(current_state)
-			5'b00001 :	state_ascii	= "S_IDLE";
-			5'b00010 :	state_ascii	= "S_FLAG_ACK";
-			5'b00100 :	state_ascii	= "S_INFO";
-			5'b01000 :	state_ascii	= "S_IMAGE";
-			5'b10000 :	state_ascii	= "S_STATIS";
+			3'd0 :	state_ascii	= "S_IDLE";
+			3'd1 :	state_ascii	= "S_FLAG_ACK";
+			3'd2 :	state_ascii	= "S_INFO";
+			3'd3 :	state_ascii	= "S_IMAGE";
+			3'd4 :	state_ascii	= "S_STATIS";
 			default	  :	state_ascii	= "ERROR";
 		endcase
 	end
 	// synthesis translate_on
 
 	//	ref signals
-	reg								fval_dly					= 1'b0;
-	wire							fval_rise					;
+	reg									fval_dly					= 1'b0;
+	wire								fval_rise					;
 
-	reg								fval_reg					= 1'b0;
-	reg								pval_reg					= 1'b0;
-	reg								ardy_reg					= 1'b0;
+	reg									fval_reg					= 1'b0;
+	reg									pval_reg					= 1'b0;
+	reg									ardy_reg					= 1'b0;
 
-	reg		[BYTE_ADDR_WD	-1:0]	packet_divide_remain		= {BYTE_ADDR_WD{1'b0}};
-	reg		[PKT_LENGTH_WD	-1:0]	packet_byte_cnt				= {PKT_LENGTH_WD{1'b0}};
-	reg		[BYTE_ADDR_WD	-1:0]	packet_addr_cnt				= {BYTE_ADDR_WD{1'b0}};
-	reg		[PKT_LENGTH_WD	-1:0]	rd_length_image_reg			= {PKT_LENGTH_WD{1'b0}};
-	reg								image_flag_reg				= 1'b0;
+	reg		[FRAME_BYTE_ADDR_WD	-1:0]	packet_divide_remain		= {FRAME_BYTE_ADDR_WD{1'b0}};
+	reg		[PKT_LENGTH_WD	-1:0]		packet_byte_cnt				= {PKT_LENGTH_WD{1'b0}};
+	reg		[FRAME_BYTE_ADDR_WD	-1:0]	packet_addr_cnt				= {FRAME_BYTE_ADDR_WD{1'b0}};
+	reg		[PKT_LENGTH_WD	-1:0]		rd_length_image_reg			= {PKT_LENGTH_WD{1'b0}};
+	reg									image_flag_reg				= 1'b0;
 
-	reg		[BYTE_ADDR_WD	-1:0]	rd_addr_latch				= {BYTE_ADDR_WD{1'b0}};
-	reg		[BYTE_ADDR_WD	-1:0]	rd_length_latch				= {BYTE_ADDR_WD{1'b0}};
+	reg		[FRAME_BYTE_ADDR_WD	-1:0]	rd_addr_latch				= {FRAME_BYTE_ADDR_WD{1'b0}};
+	reg		[FRAME_BYTE_ADDR_WD	-1:0]	rd_length_latch				= {FRAME_BYTE_ADDR_WD{1'b0}};
 
-	wire							aval_info					;
-	wire							aval_image					;
-	reg								aval_image_dly				= 1'b0;
-	wire							aval_statis					;
+	wire								aval_info					;
+	wire								aval_image					;
+	reg									aval_image_dly				= 1'b0;
+	wire								aval_statis					;
 
-	reg		[1:0]					info_ack_cnt				= 2'b0	;
-	reg		[1:0]					statis_ack_cnt				= 2'b0	;
+	reg		[1:0]						info_ack_cnt				= 2'b0	;
+	reg		[1:0]						statis_ack_cnt				= 2'b0	;
 
-	wire	[BYTE_ADDR_WD	-1:0]	rd_addr_info				;
-	wire	[BYTE_ADDR_WD	-1:0]	rd_addr_image				;
-	wire	[BYTE_ADDR_WD	-1:0]	rd_addr_statis				;
+	wire	[FRAME_BYTE_ADDR_WD	-1:0]	rd_addr_info				;
+	wire	[FRAME_BYTE_ADDR_WD	-1:0]	rd_addr_image				;
+	wire	[FRAME_BYTE_ADDR_WD	-1:0]	rd_addr_statis				;
 
-	wire	[BYTE_ADDR_WD	-1:0]	rd_length_info				;
-	wire	[PKT_LENGTH_WD	-1:0]	rd_length_image				;
-	wire	[BYTE_ADDR_WD	-1:0]	rd_length_statis			;
+	wire	[FRAME_BYTE_ADDR_WD	-1:0]	rd_length_info				;
+	wire	[PKT_LENGTH_WD	-1:0]		rd_length_image				;
+	wire	[FRAME_BYTE_ADDR_WD	-1:0]	rd_length_statis			;
 
-	wire	[47:0]					adder_result_image			;
-	wire	[BYTE_ADDR_WD	-1:0]	packet_addr_prejudge_image	;
-	wire	[47:0]					adder_result_ack			;
-	wire	[BYTE_ADDR_WD	-1:0]	packet_addr_prejudge_ack	;
+	wire	[47:0]						adder_result_image			;
+	wire	[FRAME_BYTE_ADDR_WD	-1:0]	packet_addr_prejudge_image	;
+	wire	[47:0]						adder_result_ack			;
+	wire	[FRAME_BYTE_ADDR_WD	-1:0]	packet_addr_prejudge_ack	;
 
 
 	//	ref ARCHITECTURE
@@ -183,8 +183,8 @@ module fb_packet_divide # (
 	//	-------------------------------------------------------------------------------------
 	//	info 段数据对应的起始地址、数据量、地址有效标志
 	//	-------------------------------------------------------------------------------------
-	assign rd_addr_info 	= (current_state==S_INFO && i_ardy==1'b1) ? rd_addr_latch : {BYTE_ADDR_WD{1'b0}};
-	assign rd_length_info 	= (current_state==S_INFO && i_ardy==1'b1) ? rd_length_latch : {BYTE_ADDR_WD{1'b0}};
+	assign rd_addr_info 	= (current_state==S_INFO && i_ardy==1'b1) ? rd_addr_latch : {FRAME_BYTE_ADDR_WD{1'b0}};
+	assign rd_length_info 	= (current_state==S_INFO && i_ardy==1'b1) ? rd_length_latch : {FRAME_BYTE_ADDR_WD{1'b0}};
 	assign aval_info 		= (current_state==S_INFO && i_ardy==1'b1 && info_ack_cnt<2'd1) ? 1'b1 : 1'b0;
 	//	===============================================================================================
 	//	ref ***statis***
@@ -205,8 +205,8 @@ module fb_packet_divide # (
 	//	-------------------------------------------------------------------------------------
 	//	statis 段数据对应的起始地址、数据量、地址有效标志
 	//	-------------------------------------------------------------------------------------
-	assign rd_addr_statis 	= (current_state==S_STATIS && i_ardy==1'b1) ? rd_addr_latch : {BYTE_ADDR_WD{1'b0}};
-	assign rd_length_statis = (current_state==S_STATIS && i_ardy==1'b1) ? rd_length_latch : {BYTE_ADDR_WD{1'b0}};
+	assign rd_addr_statis 	= (current_state==S_STATIS && i_ardy==1'b1) ? rd_addr_latch : {FRAME_BYTE_ADDR_WD{1'b0}};
+	assign rd_length_statis = (current_state==S_STATIS && i_ardy==1'b1) ? rd_length_latch : {FRAME_BYTE_ADDR_WD{1'b0}};
 	assign aval_statis		= (current_state==S_STATIS && i_ardy==1'b1 && statis_ack_cnt<2'd1) ? 1'b1 : 1'b0;
 	//	===============================================================================================
 	//	ref ***packet divide***
@@ -224,7 +224,7 @@ module fb_packet_divide # (
 		if(current_state==S_IDLE) begin
 			pval_reg <= 1'b0;
 		end
-		else if(current_state==S_IMAGE && packet_byte_cnt=={PKT_LENGTH_WD{1'b0}} && packet_divide_remain!={BYTE_ADDR_WD{1'b0}} && i_ardy==1'b1) begin
+		else if(current_state==S_IMAGE && packet_byte_cnt=={PKT_LENGTH_WD{1'b0}} && packet_divide_remain!={FRAME_BYTE_ADDR_WD{1'b0}} && i_ardy==1'b1) begin
 			pval_reg <= 1'b1;
 		end
 		else if((current_state==S_IMAGE&&packet_byte_cnt==iv_pkt_length&&i_ardy==1'b1)||(current_state==S_FLAG_ACK&&i_statis_flag==1'b1)||i_fval==1'b0) begin
@@ -261,7 +261,7 @@ module fb_packet_divide # (
 	//	4.剩余量不等于0
 	//	5.后级模块输出的地址ready信号生效
 	//	-------------------------------------------------------------------------------------
-	assign aval_image = (current_state==S_IMAGE&&pval_reg==1'b1&&packet_byte_cnt!=iv_pkt_length&&packet_divide_remain!={BYTE_ADDR_WD{1'b0}}&&i_ardy==1'b1) ? 1'b1 : 1'b0;
+	assign aval_image = (current_state==S_IMAGE&&pval_reg==1'b1&&packet_byte_cnt!=iv_pkt_length&&packet_divide_remain!={FRAME_BYTE_ADDR_WD{1'b0}}&&i_ardy==1'b1) ? 1'b1 : 1'b0;
 	//	-------------------------------------------------------------------------------------
 	//	aval_image延迟1拍
 	//	-------------------------------------------------------------------------------------
@@ -275,19 +275,19 @@ module fb_packet_divide # (
 		if(ADDER_TYPE_IMAGE == "DSP48") begin
 			packet_divide_adder_dsp packet_divide_adder_dsp_image_inst (
 			.A		({{(47-PKT_LENGTH_WD){1'b0}},packet_byte_cnt}		),
-			.B		({{(47-BYTE_ADDR_WD){1'b0}},packet_divide_remain}	),
+			.B		({{(47-FRAME_BYTE_ADDR_WD){1'b0}},packet_divide_remain}	),
 			.S		(adder_result_image									)
 			);
 		end
 		else begin
 			packet_divide_adder_fabric packet_divide_adder_fabric_image_inst (
 			.A		({{(47-PKT_LENGTH_WD){1'b0}},packet_byte_cnt}		),
-			.B		({{(47-BYTE_ADDR_WD){1'b0}},packet_divide_remain}	),
+			.B		({{(47-FRAME_BYTE_ADDR_WD){1'b0}},packet_divide_remain}	),
 			.S		(adder_result_image									)
 			);
 		end
 	endgenerate
-	assign packet_addr_prejudge_image = adder_result_image[BYTE_ADDR_WD-1:0];
+	assign packet_addr_prejudge_image = adder_result_image[FRAME_BYTE_ADDR_WD-1:0];
 	//	-------------------------------------------------------------------------------------
 	//	S_FLAG_ACK阶段 发送一个包中数据的提前判断，用于判断是否要结束一个包
 	//	-------------------------------------------------------------------------------------
@@ -295,19 +295,19 @@ module fb_packet_divide # (
 		if(ADDER_TYPE_ACK == "DSP48") begin
 			packet_divide_adder_dsp packet_divide_adder_dsp_ack_inst (
 			.A		({{(47-PKT_LENGTH_WD){1'b0}},packet_byte_cnt}		),
-			.B		({{(47-BYTE_ADDR_WD){1'b0}},iv_rd_length}			),
+			.B		({{(47-FRAME_BYTE_ADDR_WD){1'b0}},iv_rd_length}			),
 			.S		(adder_result_ack									)
 			);
 		end
 		else begin
 			packet_divide_adder_fabric packet_divide_adder_fabric_ack_inst (
 			.A		({{(47-PKT_LENGTH_WD){1'b0}},packet_byte_cnt}		),
-			.B		({{(47-BYTE_ADDR_WD){1'b0}},iv_rd_length}			),
+			.B		({{(47-FRAME_BYTE_ADDR_WD){1'b0}},iv_rd_length}			),
 			.S		(adder_result_ack									)
 			);
 		end
 	endgenerate
-	assign packet_addr_prejudge_ack = adder_result_ack[BYTE_ADDR_WD-1:0];
+	assign packet_addr_prejudge_ack = adder_result_ack[FRAME_BYTE_ADDR_WD-1:0];
 
 	//	-------------------------------------------------------------------------------------
 	//	对应一个image段aval数据量，在发包阶段的剩余量，减少到0时，状态跳转，响应下个aval并更
@@ -315,14 +315,14 @@ module fb_packet_divide # (
 	//	-------------------------------------------------------------------------------------
 	always @ (posedge clk) begin
 		if(current_state==S_IDLE) begin
-			packet_divide_remain <= {BYTE_ADDR_WD{1'b0}};
+			packet_divide_remain <= {FRAME_BYTE_ADDR_WD{1'b0}};
 		end
 		else if(current_state==S_FLAG_ACK && i_image_flag==1'b1 && i_aval==1'b1) begin
 			packet_divide_remain <= iv_rd_length;
 		end
 		else if(current_state==S_IMAGE && aval_image==1'b1) begin
 			if(packet_addr_prejudge_image<iv_pkt_length) begin
-				packet_divide_remain <= {BYTE_ADDR_WD{1'b0}};
+				packet_divide_remain <= {FRAME_BYTE_ADDR_WD{1'b0}};
 			end
 			else begin
 				packet_divide_remain <= packet_addr_prejudge_image - iv_pkt_length;
@@ -379,7 +379,7 @@ module fb_packet_divide # (
 	//	-------------------------------------------------------------------------------------
 	always @ (posedge clk) begin
 		if(current_state==S_IDLE) begin
-			packet_addr_cnt <= {BYTE_ADDR_WD{1'b0}};
+			packet_addr_cnt <= {FRAME_BYTE_ADDR_WD{1'b0}};
 		end
 		else if(current_state==S_FLAG_ACK && i_image_flag==1'b1 && i_aval==1'b1) begin
 			packet_addr_cnt <= iv_rd_addr;
@@ -461,14 +461,14 @@ module fb_packet_divide # (
 	assign	ov_rd_addr 	= (o_info_flag==1'b1) 	? 	rd_addr_info 			:
 						  (o_image_flag==1'b1) 	? 	rd_addr_image 			:
 						  (o_statis_flag==1'b1) ? 	rd_addr_statis 			:
-						  							{BYTE_ADDR_WD{1'b0}}	;
+						  							{FRAME_BYTE_ADDR_WD{1'b0}}	;
 	//	-------------------------------------------------------------------------------------
 	//	输出地址有效标志对应的数据量
 	//	-------------------------------------------------------------------------------------
 	assign	ov_rd_length = (o_info_flag==1'b1) 	 ? 	rd_length_info 			:
-						   (o_image_flag==1'b1)  ? 	{{(BYTE_ADDR_WD-PKT_LENGTH_WD){1'b0}},rd_length_image} :
+						   (o_image_flag==1'b1)  ? 	{{(FRAME_BYTE_ADDR_WD-PKT_LENGTH_WD){1'b0}},rd_length_image} :
 						   (o_statis_flag==1'b1) ? 	rd_length_statis 		:
-						  							{BYTE_ADDR_WD{1'b0}}	;
+						  							{FRAME_BYTE_ADDR_WD{1'b0}}	;
 
 	//	===============================================================================================
 	//	ref ***FSM***
@@ -558,7 +558,7 @@ module fb_packet_divide # (
 			if(i_fval==1'b0) begin
 				next_state	= S_IDLE;
 			end
-			else if(i_ardy==1'b1 && packet_divide_remain=={BYTE_ADDR_WD{1'b0}}) begin
+			else if(i_ardy==1'b1 && packet_divide_remain=={FRAME_BYTE_ADDR_WD{1'b0}}) begin
 				next_state	= S_FLAG_ACK;
 			end
 			else begin
