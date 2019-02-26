@@ -24,6 +24,9 @@ function CompileSource (){
 	else if (UltraEdit.activeDocument.isExt("c")) {
 		UltraEdit.runTool("gcc");
 	}
+	else if (UltraEdit.activeDocument.isExt("cpp")) {
+		UltraEdit.runTool("gcc");
+	}
 	else if (UltraEdit.activeDocument.isExt("tcl")||UltraEdit.activeDocument.isExt("tk")||UltraEdit.activeDocument.isExt("do")) {
 		UltraEdit.runTool("tcl");
 	}
