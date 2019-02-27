@@ -26,16 +26,17 @@
 `timescale 1ns/1ps
 //-------------------------------------------------------------------------------------------------
 module frame_buffer # (
+	parameter	BID_WD										= 16		,	//BID的位宽，gev1.2 位宽是16，gev2.0 位宽是64
+	parameter	PID_WD										= 24		,	//PID的位宽，gev1.2 位宽是24，gev2.0 位宽是32
 	parameter	DATA_WD										= 256		,	//输出数据位宽
-	parameter	MASK_WD										= 32		,	//数据屏蔽信号位宽
 	parameter	IMAGE_SIZE_WD								= 32		,	//图像数据大小位宽，以字节为单位
-	parameter	BYTE_ADDR_WD								= 28		,	//有效地址位宽，DDR3容量不同，位宽不同。1Gbit-27 2Gbit-28 4Gbit-29
+	parameter	MEM_SIZE_MBIT								= 2048		,	//DDR3 存储容量，以MBIT为单位，支持 512、1024、2048、4096
 	parameter	SHORT_REG_WD   								= 16		,	//短寄存器位宽
 	parameter	REG_WD  						 			= 32		,	//寄存器位宽
 	parameter	LONG_REG_WD  						 		= 64		,	//长寄存器位宽
-	parameter	FBOUT_DATA_WD								= 64		,	//输出数据位宽，支持32、64、128...，最小是32。每32位数据，有3个使能信号。
-	parameter	FBOUT_DE_WD									= 2			,	//帧存输出数据使能位宽，4byte数据使用一个使能位
-	parameter	MAX_FRAME_DEPTH								= 2			,	//最大的帧存深度，最小是1帧。可设置为 1 2 3 4 5 6 ......
+	parameter	GEV_DATA_WD									= 64		,	//输出数据位宽，支持32、64、128...，最小是32。每32位数据，有3个使能信号。
+	parameter	GEV_DE_WD									= 2			,	//帧存输出数据使能位宽，4byte数据使用一个使能位
+	parameter	FRAME_DEPTH_MAX								= 2			,	//最大的帧存深度，最小是1帧。可设置为 1 2 3 4 5 6 ......
 	parameter	MEM_DQ_WD									= 32		,	//DDR3 数据宽度
 	parameter	MEM_ADDR_WD									= 14		,	//DDR3 地址宽度
 	parameter	MEM_BANKADDR_WD								= 3			,	//DDR3 bank地址宽度
@@ -58,7 +59,6 @@ module frame_buffer # (
 	input							i_image_flag						,	//clk_in时钟域，图像段标志，高有效
 	input							i_statis_flag						,	//clk_in时钟域，统计段标志，高有效
 	input	[DATA_WD-1:0]			iv_data								,	//clk_in时钟域，图像数据，位宽可变，支持32 64 128 256
-	input	[IMAGE_SIZE_WD-1:0]		iv_image_size						,	//clk时钟域，帧存写入的一帧图像的大小，以byte为单位
 	output							o_fb_fifo_overflow					,	//clk_in时钟域，帧存前端FIFO溢出，高有效，调试使用
 	//	===============================================================================================
 	//	重传命令写入时钟域
@@ -81,29 +81,31 @@ module frame_buffer # (
 	//  -------------------------------------------------------------------------------------
 	//  图像输出数据
 	//  -------------------------------------------------------------------------------------
-	input							clk_out								,	//后端FIFO读出时钟
-	input							i_fb_rd								,	//clk_out时钟域，后端fifo读出使能信号，高有效
-	output							o_fb_empty							,	//clk_out时钟域，后端fifo空信号，高有效
-	output	[FBOUT_DE_WD-1:0]		ov_data_is_cmd						,	//clk_out时钟域，帧存后端fifo输出数据是命令数据，单bit代表4byte，1-表示是命令数据，0-表示是图像数据
-	output	[FBOUT_DE_WD-1:0]		ov_dval								,	//clk_out时钟域，帧存后端fifo输出数据有效信号，单bit代表4byte，1-表示数据有效，0-表示数据无效
-	output	[FBOUT_DATA_WD-1:0]		ov_data								,	//clk_out时钟域，后端fifo输出数据
+	input							i_fb_rd								,	//clk_gev时钟域，后端fifo读出使能信号，高有效
+	output							o_fb_empty							,	//clk_gev时钟域，后端fifo空信号，高有效
+	output	[GEV_DE_WD-1:0]			ov_data_is_cmd						,	//clk_gev时钟域，帧存后端fifo输出数据是命令数据，单bit代表4byte，1-表示是命令数据，0-表示是图像数据
+	output	[GEV_DE_WD-1:0]			ov_dval								,	//clk_gev时钟域，帧存后端fifo输出数据有效信号，单bit代表4byte，1-表示数据有效，0-表示数据无效
+	output	[GEV_DATA_WD-1:0]		ov_data								,	//clk_gev时钟域，后端fifo输出数据
 	//	===============================================================================================
 	//	帧缓存工作时钟域
 	//	===============================================================================================
 	//  -------------------------------------------------------------------------------------
 	//  控制数据
 	//  -------------------------------------------------------------------------------------
+	input							i_acquisition_start					,	//clk_sensor时钟域，开采信号，1开始采集，0停止采集
 	input							i_stream_enable						,	//clk_fb时钟域，流停止信号，高有效，有效时允许数据从帧存读出，无效时立即停止读出，并复位读写地址指针，清帧存
 	input							i_fb_transfer_start					,	//clk_fb时钟域，帧存传输有效信号，高有效，以一个完整帧为单位，有效时允许数据从帧存读出，无效时不能读出数据，但是不会复位读帧号，在读一帧开始时生效
 	input	[SHORT_REG_WD-1:0]		iv_frame_depth						,	//clk_fb时钟域，帧缓存深度，0-单帧，1-2帧，2-3帧，3-4帧，在 i_stream_enable 上升沿生效
 	input							i_fb_overwrite						,	//clk_fb时钟域，帧存覆盖使能，高有效，写帧号追上读帧号时，如果帧覆盖使能，则写帧号会跳过读帧号，否则写帧号不变重新刷新当前帧，，在 i_stream_enable 上升沿生效
-	input  	[PKT_LENGTH_WD-1:0]		iv_pkt_length						,	//clk时钟域，packet length 正常包包长
-	input	[PKT_CNT_WD-1:0]		iv_pic_pkt_cnt						,	//clk时钟域，图像包含的完整数据包个数
-	input							i_mroi_global_en					,	//clk时钟域，multi-roi全局打开使能，高有效
-	input	[REG_WD-1:0]			iv_mroi_num_en						,	//clk时钟域，roi使能个数，0表示1个roi或者multi-roi没有使能，最大是31表示32个roi使能
-	output	[REG_WD-1:0]			ov_mroi_num_resend					,	//clk时钟域，重传帧是mroi的第几个，按位有效
-	output							o_frame_cover_event					,	//clk时钟域，帧覆盖事件，单bit脉冲，高有效
-	output							o_frame_not_empty_event				,	//clk时钟域，帧存不为空事件，单bit脉冲，高有效
+	input	[IMAGE_SIZE_WD-1:0]		iv_image_size						,	//clk_fb时钟域，帧存写入的一帧图像的大小，以byte为单位
+	input  	[PKT_LENGTH_WD-1:0]		iv_pkt_length						,	//clk_fb时钟域，packet length 正常包包长
+	input  	[PKT_LENGTH_WD-1:0]		iv_remain_pkt_length				,	//clk_fb时钟域，remain packet length 残包包长(包含帧信息部分)
+	input	[PKT_CNT_WD-1:0]		iv_pic_pkt_cnt						,	//clk_fb时钟域，图像包含的完整数据包个数
+	input							i_mroi_global_en					,	//clk_fb时钟域，multi-roi全局打开使能，高有效
+	input	[REG_WD-1:0]			iv_mroi_num_en						,	//clk_fb时钟域，roi使能个数，0表示1个roi或者multi-roi没有使能，最大是31表示32个roi使能
+	output	[REG_WD-1:0]			ov_mroi_num_resend					,	//clk_fb时钟域，重传帧是mroi的第几个，按位有效
+	output							o_frame_cover_event					,	//clk_fb时钟域，帧覆盖事件，单bit脉冲，高有效
+	output							o_frame_not_empty_event				,	//clk_fb时钟域，帧存不为空事件，单bit脉冲，高有效
 	//	===============================================================================================
 	//	MIG相关
 	//	===============================================================================================
@@ -113,6 +115,8 @@ module frame_buffer # (
 	input							clk_mig								,	//MIG输入时钟，该时钟经过内部MMCM之后，生成高速时钟
 	input							reset_mig							,	//MIG复位信号，高有效
 	input							clk_ref								,	//MIG参考时钟
+	output							clk_fb								,	//帧存模块工作时钟
+	output							reset_fb							,	//帧存模块工作时钟域的复位信号，高有效
 	//  -------------------------------------------------------------------------------------
 	//  MIG Status
 	//  -------------------------------------------------------------------------------------
@@ -165,6 +169,14 @@ module frame_buffer # (
 	//	-------------------------------------------------------------------------------------
 	localparam	BURST_SIZE					= 2048;
 	//	-------------------------------------------------------------------------------------
+	//	数据屏蔽信号位宽
+	//	-------------------------------------------------------------------------------------
+	localparam	MASK_WD						= 32;
+	//	-------------------------------------------------------------------------------------
+	//	有效地址位宽，DDR3容量不同，位宽不同。1Gbit-27 2Gbit-28 4Gbit-29
+	//	-------------------------------------------------------------------------------------
+	localparam	BYTE_ADDR_WD				= (MEM_SIZE_MBIT==1024) ? 27 : ((MEM_SIZE_MBIT==2048) ? 28 : (MEM_SIZE_MBIT==4096) ? 29 : 30);
+	//	-------------------------------------------------------------------------------------
 	//	MIG fifo 位宽的byte个数。读写MIG fifo一次，操作的byte个数
 	//	-------------------------------------------------------------------------------------
 	localparam	MIG_BYTE_NUM				= DATA_WD/8;
@@ -192,7 +204,7 @@ module frame_buffer # (
 	localparam	MIG_ADDR_WD   				= BYTE_ADDR_WD-DQ_PINS_BYTE_NUM_WD	;	//MIG地址信号位宽
 	//	-------------------------------------------------------------------------------------
 	//	通过最大的帧存深度，计算出读写指针的位宽
-	//	1.多帧时，位宽为log2(MAX_FRAME_DEPTH)
+	//	1.多帧时，位宽为log2(FRAME_DEPTH_MAX)
 	//	2.最大帧存深度与位宽的对应关系
 	//	--最大深度2帧	  		位宽1
 	//	--最大深度3帧或者4帧  	位宽2
@@ -200,7 +212,7 @@ module frame_buffer # (
 	//	--最大深度最大65536帧 	位宽16
 	//	3.如果错误设置为0，程序中要保护，强制为1
 	//	-------------------------------------------------------------------------------------
-	localparam	PTR_WD						= log2(MAX_FRAME_DEPTH);
+	localparam	PTR_WD						= log2(FRAME_DEPTH_MAX);
 	//	-------------------------------------------------------------------------------------
 	//	写计数器 wr_addr 的最大位宽
 	//	1.单次写操作的数据量都是由MIG用户端数据位宽决定的：
@@ -245,11 +257,6 @@ module frame_buffer # (
 	localparam	BURST_CNT_WD				= log2(BURST_SIZE)				;
 
 	//	ref signals
-	//  -------------------------------------------------------------------------------------
-	//  时钟和复位信号
-	//  -------------------------------------------------------------------------------------
-	wire								clk_fb								;	//帧存模块工作时钟
-	wire								reset_fb							;	//帧存模块工作时钟域的复位信号，高有效
 	//	-------------------------------------------------------------------------------------
 	//	fb write 相关信号
 	//	-------------------------------------------------------------------------------------
@@ -286,7 +293,6 @@ module frame_buffer # (
 	//	fb read plugins 相关信号
 	//	-------------------------------------------------------------------------------------
 	wire								w_fval_plugins						;	//fb_read_plugins输出，clk_fb时钟域，场有效信号，高有效
-	wire								w_pval_plugins						;	//fb_read_plugins输出，clk_fb时钟域，包有效信号，高有效
 	wire								w_aval_plugins						;	//fb_read_plugins输出，clk_fb时钟域，地址有效信号，高有效
 	wire								w_info_flag_plugins					;	//fb_read_plugins输出，clk_fb时钟域，信息段标志，高有效
 	wire								w_image_flag_plugins				;	//fb_read_plugins输出，clk_fb时钟域，图像段标志，高有效
@@ -396,12 +402,12 @@ module frame_buffer # (
 	.IMAGE_SIZE_WD					(IMAGE_SIZE_WD					),
 	.WR_ADDR_WD						(WR_ADDR_WD						),
 	.FRAME_BYTE_ADDR_WD				(FRAME_BYTE_ADDR_WD				),
-	.FBOUT_DE_WD					(FBOUT_DE_WD					),
-	.FBOUT_DATA_WD					(FBOUT_DATA_WD					),
+	.GEV_DE_WD						(GEV_DE_WD						),
+	.GEV_DATA_WD					(GEV_DATA_WD					),
 	.BURST_SIZE						(BURST_SIZE						)
 	)
 	fb_read_inst (
-	.clk_out						(clk_out						),
+	.clk_gev						(clk_gev						),
 	.i_fb_rd						(i_fb_rd						),
 	.o_fb_empty						(o_fb_empty						),
 	.ov_data_is_cmd					(ov_data_is_cmd					),
@@ -409,6 +415,7 @@ module frame_buffer # (
 	.ov_data						(ov_data						),
 	.clk							(clk_fb							),
 	.reset							(reset_fb						),
+	.i_acquisition_start			(i_acquisition_start			),
 	.i_stream_enable				(i_stream_enable				),
 	.i_fb_transfer_start			(i_fb_transfer_start			),
 	.i_fb_can_read					(w_fb_can_read					),
@@ -441,7 +448,6 @@ module frame_buffer # (
 	.iv_resend_packet_id_last		(wv_resend_packet_id_last		),
 	.i_resending					(w_resending					),
 	.i_fval							(w_fval_plugins		    		),
-	.i_pval							(w_pval_plugins		    		),
 	.i_aval							(w_aval_plugins		    		),
 	.i_info_flag					(w_info_flag_plugins			),
 	.i_image_flag					(w_image_flag_plugins			),
@@ -461,6 +467,8 @@ module frame_buffer # (
 	//	帧存读插件模块
 	//	-------------------------------------------------------------------------------------
 	fb_read_plugins # (
+	.BID_WD							(BID_WD							),
+	.PID_WD							(PID_WD							),
 	.PTR_WD							(PTR_WD							),
 	.SHORT_REG_WD					(SHORT_REG_WD					),
 	.LONG_REG_WD					(LONG_REG_WD					),
@@ -481,13 +489,13 @@ module frame_buffer # (
 	.i_stream_enable				(i_stream_enable				),
 	.iv_frame_depth					(wv_frame_depth					),
 	.iv_pkt_length					(iv_pkt_length					),
+	.iv_remain_pkt_length			(iv_remain_pkt_length			),
 	.iv_pic_pkt_cnt					(iv_pic_pkt_cnt					),
 	.i_mroi_global_en				(i_mroi_global_en				),
 	.iv_mroi_num_en					(iv_mroi_num_en					),
 	.ov_mroi_num_resend				(ov_mroi_num_resend				),
 	.i_wr_ptr_changing				(w_wr_ptr_changing				),
 	.iv_wr_ptr						(wv_wr_ptr						),
-	.iv_rd_ptr_normal				(wv_rd_ptr_normal				),
 	.ov_rd_ptr_resend				(wv_rd_ptr_resend				),
 	.o_normal_read_repeat			(w_normal_read_repeat			),
 	.i_resend_rdy					(w_resend_rdy					),
@@ -509,7 +517,6 @@ module frame_buffer # (
 	.iv_rd_length					(wv_rd_length_read				),
 	.o_ardy							(w_ardy_plugins					),
 	.o_fval							(w_fval_plugins					),
-	.o_pval							(w_pval_plugins					),
 	.o_aval							(w_aval_plugins					),
 	.o_info_flag					(w_info_flag_plugins			),
 	.o_image_flag					(w_image_flag_plugins			),

@@ -1,0 +1,608 @@
+//-------------------------------------------------------------------------------------------------
+//  -- 版权所有者   : 中国大恒（集团）有限公司北京图像视觉技术分公司, 2010 -2015.
+//  -- 保密级别     ：绝密.
+//  -- 部门         : 硬件部，FPGA工作组
+//  -- 模块名       : fb_resend_calc
+//  -- 设计者       : 邢海涛
+//-------------------------------------------------------------------------------------------------
+//
+//  -- 版本记录 :
+//
+//  -- 作者         :| 版本号	:| 修改日期				:|  修改说明
+//-------------------------------------------------------------------------------------------------
+//  -- 邢海涛       :| V1.0		:| 2018/7/19 10:09:28	:|  划分模块端口
+//-------------------------------------------------------------------------------------------------
+//
+//  -- 模块描述     :
+//              1)  :
+//
+//              2)  :
+//
+//              3)  :
+//
+//-------------------------------------------------------------------------------------------------
+//`include			"fb_resend_calc_def.v"
+//仿真单位/精度
+`timescale 1ns/1ps
+//-------------------------------------------------------------------------------------------------
+module fb_resend_calc # (
+	parameter	BID_WD										= 16		,	//BID的位宽，gev1.2 位宽是16，gev2.0 位宽是64
+	parameter	PID_WD										= 24		,	//PID的位宽，gev1.2 位宽是24，gev2.0 位宽是32
+	parameter	PTR_WD										= 2			,	//读写指针的位宽
+	parameter	SHORT_REG_WD   								= 16		,	//短寄存器位宽
+	parameter	REG_WD  						 			= 32		,	//寄存器位宽
+	parameter	LONG_REG_WD  						 		= 64		,	//长寄存器位宽
+	parameter	PKT_LENGTH_WD								= 16		,	//包长的位宽，最大支持64K，即16bit
+	parameter	PKT_CNT_WD									= 32			//一帧图像中包含的完整包个数的位宽，gigevision 1.2 pid的位宽3byte，gigevision 2.0 pid的位宽4byte
+	)
+	(
+	//	===============================================================================================
+	//	重传命令写入时钟域
+	//	===============================================================================================
+	//  -------------------------------------------------------------------------------------
+	//  时钟和复位信号
+	//  -------------------------------------------------------------------------------------
+	input							clk_gev								,	//gev工作时钟
+	input							reset_gev							,	//gev工作时钟域的复位信号，高有效
+	//	-------------------------------------------------------------------------------------
+	//	写入的重传信息
+	//	-------------------------------------------------------------------------------------
+	input	[LONG_REG_WD-1:0]		iv_resend_block_id					,	//clk_gev时钟域，block id
+	input	[REG_WD-1:0]			iv_resend_packet_id_first			,	//clk_gev时钟域，packet id first，重传起始
+	input	[REG_WD-1:0]			iv_resend_packet_id_last			,	//clk_gev时钟域，packet id last，重传结束
+	input							i_resend_en							,	//clk_gev时钟域，ov_resend_cmd写使能，发送给重传命令fifo，高有效
+	//	===============================================================================================
+	//	帧存时钟域
+	//	===============================================================================================
+	//  -------------------------------------------------------------------------------------
+	//  时钟和复位信号
+	//  -------------------------------------------------------------------------------------
+	input							clk									,	//帧存模块工作时钟
+	input							reset								,	//帧存模块工作时钟域的复位信号，高有效
+	//  -------------------------------------------------------------------------------------
+	//  控制数据
+	//  -------------------------------------------------------------------------------------
+	input							i_stream_enable						,	//clk时钟域，流停止信号，高有效，有效时允许数据从帧存读出，无效时立即停止读出，并复位读写地址指针，清帧存
+	input	[PTR_WD-1:0]			iv_frame_depth						,	//clk时钟域，帧缓存深度，0-单帧，1-2帧，2-3帧，3-4帧，经过生效时机控制
+	input	[PKT_CNT_WD-1:0]		iv_pic_pkt_cnt						,	//clk时钟域，图像包含的完整数据包个数（不包括残包）
+	input  	[PKT_LENGTH_WD-1:0]		iv_remain_pkt_length				,	//clk时钟域，remain packet length 残包包长(包含帧信息部分)
+	//  -------------------------------------------------------------------------------------
+	//  与 fb_read_plugins 交互
+	//  -------------------------------------------------------------------------------------
+	input	[4:0]					iv_mroi_num_en						,	//clk时钟域，roi使能个数，0表示1个roi或者multi-roi没有使能，最大是31表示32个roi使能
+	output	[REG_WD-1:0]			ov_mroi_num_resend					,	//clk时钟域，重传帧是mroi的第几个，按位有效
+	//  -------------------------------------------------------------------------------------
+	//  与 fb_write 交互
+	//  -------------------------------------------------------------------------------------
+	input							i_wr_ptr_changing					,	//clk时钟域，写帧号正在变化信号，高有效，当该信号有效时，读帧号不能变化
+	input	[PTR_WD-1:0]			iv_wr_ptr							,	//clk时钟域，写帧号，表示当前正在写的帧号
+	//  -------------------------------------------------------------------------------------
+	//  与 fb_read_init 交互
+	//  -------------------------------------------------------------------------------------
+	output	[PTR_WD-1:0]			ov_rd_ptr_resend					,	//clk时钟域，读帧号，表示当前重传读的帧号
+	//  -------------------------------------------------------------------------------------
+	//  与 fb_resend_ctrl 交互
+	//  -------------------------------------------------------------------------------------
+	input							i_resend_rdy						,	//clk时钟域，重传准备好信号，高有效，有效时表示上一个重传命令处理完且可以接收下一个重传命令，无效时表示正在处理重传命令
+	output							o_resend_valid						,	//clk时钟域，重传使能信号，高有效，一个时钟脉冲
+	output							o_resend_unavail					,	//clk时钟域，重传不可见信号，高有效
+	output	[LONG_REG_WD-1:0]		ov_resend_block_id					,	//clk时钟域，block id
+	output	[REG_WD-1:0]			ov_resend_packet_id_first			,	//clk时钟域，packet id first，重传起始包id
+	output	[REG_WD-1:0]			ov_resend_packet_id_last			,	//clk时钟域，packet id last，重传结束包id
+	//  -------------------------------------------------------------------------------------
+	//  与 fb_read_core 交互
+	//  -------------------------------------------------------------------------------------
+	input	[PTR_WD-1:0]			iv_rd_ptr_now						,	//clk时钟域，读帧号，表示当前正在读的这一帧的帧号
+	input	[LONG_REG_WD-1:0]		iv_block_id_now							//clk时钟域，block id，表示当前正在读的这一帧的block id
+	);
+
+
+	//	ref paramters
+
+
+	//FSM Parameter Define
+	parameter	S_IDLE				= 2'd0;
+	parameter	S_RESEND_PTR		= 2'd1;
+	parameter	S_RESEND_AVAIL		= 2'd2;
+	parameter	S_END				= 2'd3;
+
+	reg		[1:0]	current_state	= S_IDLE;
+	reg		[1:0]	next_state		= S_IDLE;
+
+	//FSM for sim
+	// synthesis translate_off
+	reg		[127:0]			state_ascii;
+	always @ ( * ) begin
+		case(current_state)
+			2'd0 	:	state_ascii	= "S_IDLE";
+			2'd1 	:	state_ascii	= "S_RESEND_PTR";
+			2'd2 	:	state_ascii	= "S_RESEND_AVAIL";
+			2'd3 	:	state_ascii	= "S_END";
+			default	:	state_ascii	= "ERROR";
+		endcase
+	end
+	// synthesis translate_on
+
+
+
+	parameter	FIFO_DATA_WD			= (BID_WD==16) ? 64 : 128;			//FIFO数据位宽，如果bid的位宽是16，那么fifo的位宽是64，否则fifo的位宽是128
+	parameter	BID_MAX					= {BID_WD{1'b1}};					//BID的最大值
+
+
+
+
+	//	ref functions
+
+
+	//	ref signals
+	wire								fifo_reset				;			//fifo复位
+	wire								fifo_wr_en				;			//fifo写使能
+	wire	[FIFO_DATA_WD-1:0]			fifo_din				;			//fifo输入
+	wire								fifo_full				;			//fifo满
+	wire								fifo_rd_en				;			//fifo读使能
+	wire	[FIFO_DATA_WD-1:0]			fifo_dout				;			//fifo输出
+	wire								fifo_empty				;			//fifo空
+	reg		[1:0]						step_cnt				= 'b0;		//状态计数器，用于控制状态机的跳转
+	reg		[BID_WD:0]					bid_gap					= 'b0;		//重传bid与正常bid的间隔，最高位作为符号位
+	reg		[PTR_WD:0]					rd_ptr_resend_expect	= 'b0;		//重传期望的rd_ptr，最高位作为符号位
+	reg		[PTR_WD-1:0]				rd_ptr_resend_border	= 'b0;		//重传读指针的边界
+	reg									resend_unavail			= 1'b0;		//重传不可见，高有效
+	reg		[PKT_CNT_WD-1:0]			trailer_packet_id		= 'b0;		//trailer包的pid
+	reg									resend_packet_error		= 1'b0;		//重传包错误
+	wire	[BID_WD-1:0]				fifo_resend_block_id	;			//提取fifo输出的重传bid
+	wire	[PID_WD-1:0]				fifo_resend_packet_id_first	;		//提取fifo输出的重传pid
+	wire	[PID_WD-1:0]				fifo_resend_packet_id_last	;		//提取fifo输出的重传pid
+	reg		[PID_WD-1:0]				filter_resend_packet_id_first= 'b0;	//滤波整形之后的重传pid
+	reg		[PID_WD-1:0]				filter_resend_packet_id_last= 'b0;	//滤波整形之后的重传pid
+	reg									resend_valid			= 'b0;		//重传使能信号，高有效，一个时钟脉冲
+	reg		[PTR_WD-1:0]				rd_ptr_resend			= 'b0;		//重传读指针
+	reg									wr_ptr_changing_dly		= 'b0;		//i_wr_ptr_changing打一拍
+
+
+	//	ref ARCHITECTURE
+
+	//	===============================================================================================
+	//	ref async fifo
+	//	===============================================================================================
+
+	generate
+		//	-------------------------------------------------------------------------------------
+		//	如果BID的位宽是16，则使用小位宽的fifo
+		//	-------------------------------------------------------------------------------------
+		if(BID_WD==16) begin
+			//	-------------------------------------------------------------------------------------
+			//	用于时钟域转换的异步fifo
+			//	位宽为64bit，深度为32。使用64个LUT作为缓存。输出设计为standard。
+			//	-------------------------------------------------------------------------------------
+//			resend_fifo_narrow resend_fifo_inst (
+//			.rst			(fifo_reset		),
+//			.wr_clk			(clk_gev		),
+//			.wr_en			(fifo_wr_en		),
+//			.din			(fifo_din		),
+//			.full			(fifo_full		),
+//			.rd_clk			(clk			),
+//			.rd_en			(fifo_rd_en		),
+//			.dout			(fifo_dout		),
+//			.empty			(fifo_empty		)
+//			);
+
+			resend_fifo_narrow_bram resend_fifo_inst (
+			.rst			(fifo_reset		),
+			.wr_clk			(clk_gev		),
+			.wr_en			(fifo_wr_en		),
+			.din			(fifo_din		),
+			.full			(fifo_full		),
+			.rd_clk			(clk			),
+			.rd_en			(fifo_rd_en		),
+			.dout			(fifo_dout		),
+			.empty			(fifo_empty		)
+			);
+
+
+		end
+		else begin
+			//	-------------------------------------------------------------------------------------
+			//	用于时钟域转换的异步fifo
+			//	位宽为128bit，深度为32。使用128个LUT作为缓存。输出设计为standard。
+			//	-------------------------------------------------------------------------------------
+			resend_fifo_wide resend_fifo_inst (
+			.rst			(fifo_reset		),
+			.wr_clk			(clk_gev		),
+			.wr_en			(fifo_wr_en		),
+			.din			(fifo_din		),
+			.full			(fifo_full		),
+			.rd_clk			(clk			),
+			.rd_en			(fifo_rd_en		),
+			.dout			(fifo_dout		),
+			.empty			(fifo_empty		)
+			);
+		end
+	endgenerate
+
+	//	-------------------------------------------------------------------------------------
+	//	当时钟域复位或者停流时，清空fifo
+	//	-------------------------------------------------------------------------------------
+	assign	fifo_reset	= (reset==1'b1 || i_stream_enable==1'b0) ? 1'b1 : 1'b0;
+
+	//	-------------------------------------------------------------------------------------
+	//	当前端写使能有效且fifo非满时，fifo写有效
+	//	-------------------------------------------------------------------------------------
+	assign	fifo_wr_en	= (i_resend_en==1'b1 && fifo_full==1'b0) ? 1'b1 : 1'b0;
+
+	//	-------------------------------------------------------------------------------------
+	//	重传的 bid pid 组成fifo输入
+	//	-------------------------------------------------------------------------------------
+	assign	fifo_din	= {iv_resend_packet_id_last[PID_WD-1:0],iv_resend_packet_id_first[PID_WD-1:0],iv_resend_block_id[BID_WD-1:0]};
+
+	//	-------------------------------------------------------------------------------------
+	//	在idle状态下，满足跳转到 RESEND_PTR 的条件，读fifo
+	//	-------------------------------------------------------------------------------------
+	assign	fifo_rd_en	= (current_state==S_IDLE && fifo_empty==1'b0 && i_resend_rdy==1'b1) ? 1'b1 : 1'b0;
+
+	//	-------------------------------------------------------------------------------------
+	//	提取bid和pid
+	//	-------------------------------------------------------------------------------------
+	assign	fifo_resend_block_id			= fifo_dout[BID_WD-1:0];
+	assign	fifo_resend_packet_id_first		= fifo_dout[BID_WD+PID_WD-1:BID_WD];
+	assign	fifo_resend_packet_id_last		= fifo_dout[BID_WD+2*PID_WD-1:BID_WD+PID_WD];
+
+	//	===============================================================================================
+	//	ref calc rd_ptr_resend_expect
+	//	===============================================================================================
+	//	-------------------------------------------------------------------------------------
+	//	在 RESEND_PTR 状态，通过4步计算出 rd_ptr_resend_expect
+	//	Step0：bid_gap=Y-N
+	//	Step1：如果bid_gap溢出，则bid_gap=bid_gap+BID_MAX
+	//	Step2：rd_ptr_resend_expct=X-bid_gap
+	//	Step3：如果rd_ptr_resend_expct溢出，则rd_ptr_resend_expct= rd_ptr_resend_expct+frame_depth+1
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		if(current_state==S_RESEND_PTR) begin
+			if(step_cnt==0) begin
+				bid_gap		<= iv_block_id_now - fifo_resend_block_id;
+			end
+			else if(step_cnt==1) begin
+				if(bid_gap[BID_WD]==1'b1) begin
+					bid_gap		<= bid_gap + BID_MAX;
+				end
+			end
+			else if(step_cnt==2) begin
+				rd_ptr_resend_expect	<= iv_rd_ptr_now - bid_gap;
+			end
+			else if(step_cnt==3) begin
+				if(rd_ptr_resend_expect[PTR_WD]==1'b1) begin
+					rd_ptr_resend_expect	<= rd_ptr_resend_expect + iv_frame_depth + 1;
+				end
+			end
+		end
+	end
+
+	//	===============================================================================================
+	//	ref calc rd_ptr_resend_border
+	//	===============================================================================================
+	//	-------------------------------------------------------------------------------------
+	//	1.	当se=0时，Rd_ptr_resend_border清零
+	//	2.	当se=1时，当wr_ptr=rd_ptr_resend_border && iv_wr_ptr!=iv_rd_ptr_now 时，border指针才会改变
+	//		a)	Rd_ptr_resend_border累加达到帧存深度边界时，归零
+	//		b)	当没有达到帧存深度边界时，累加
+	//	从这里也可以看到重要结论，重传的边界只能由写指针改变，读指针是无法改变的
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		if(i_stream_enable==1'b0) begin
+			rd_ptr_resend_border	<= 'b0;
+		end
+		else begin
+			if(iv_wr_ptr==rd_ptr_resend_border && iv_wr_ptr!=iv_rd_ptr_now) begin
+				if(rd_ptr_resend_border==iv_frame_depth) begin
+					rd_ptr_resend_border	<= 0;
+				end
+				else begin
+					rd_ptr_resend_border	<= rd_ptr_resend_border + 1'b1;
+				end
+			end
+		end
+	end
+
+	//	===============================================================================================
+	//	ref calc rd_ptr_resend
+	//	===============================================================================================
+	//	-------------------------------------------------------------------------------------
+	//	i_wr_ptr_changing 打拍
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		wr_ptr_changing_dly	<= i_wr_ptr_changing;
+	end
+
+	//	-------------------------------------------------------------------------------------
+	//	rd_ptr_resend 由2个输入决定， rd_ptr_resend_border 和 rd_ptr_now
+	//	1.rd_ptr_resend_border由wr_ptr决定，且滞后wr_ptr一拍
+	//	2.rd_ptr_now 在 wr_changing=1时不会改变
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		//	-------------------------------------------------------------------------------------
+		//	1.S_RESEND_AVAIL判断重传是否可见，只有在wr_ptr_changing_dly==1'b0时，rd_ptr_resend_border才是稳定值
+		//		因为 在 i_wr_ptr_changing=1时，wr_ptr会改变；下一拍 rd_ptr_resend_border也会改变
+		//	2.wr_ptr_changing_dly==1'b1时,rd_ptr_resend跟随iv_rd_ptr_now
+		//	-------------------------------------------------------------------------------------
+		if(current_state==S_RESEND_AVAIL) begin
+			if(wr_ptr_changing_dly==1'b0) begin
+				//	-------------------------------------------------------------------------------------
+				//	rd_ptr_resend_border<=iv_rd_ptr_now时，重传可见范围:[rd_ptr_resend_border,rd_ptr_nor]
+				//	当重传期望指针在重传范围之内，则重传可见，  rd_ptr_resend=rd_ptr_resend_expect
+				//	当重传期望指针不在重传范围之内，则重传不可见，  rd_ptr_resend=iv_rd_ptr_now
+				//	-------------------------------------------------------------------------------------
+				if(rd_ptr_resend_border<=iv_rd_ptr_now) begin
+					if(rd_ptr_resend_expect[PTR_WD-1:0]>=rd_ptr_resend_border && rd_ptr_resend_expect[PTR_WD-1:0]<=iv_rd_ptr_now) begin
+						rd_ptr_resend	<= rd_ptr_resend_expect[PTR_WD-1:0];
+						resend_unavail	<= 1'b0;
+					end
+					else begin
+						rd_ptr_resend	<= iv_rd_ptr_now;
+						resend_unavail	<= 1'b1;
+					end
+				end
+				//	-------------------------------------------------------------------------------------
+				//	rd_ptr_resend_border>iv_rd_ptr_now时，重传可见范围:[rd_ptr_resend_border,frame_depth] 和 [0,rd_ptr_nor]
+				//	当重传期望指针在重传范围之内，则重传可见，  rd_ptr_resend=rd_ptr_resend_expect
+				//	当重传期望指针不在重传范围之内，则重传不可见，  rd_ptr_resend=iv_rd_ptr_now
+				//	-------------------------------------------------------------------------------------
+				else begin
+					if(rd_ptr_resend_expect[PTR_WD-1:0]>=rd_ptr_resend_border || rd_ptr_resend_expect[PTR_WD-1:0]<=iv_rd_ptr_now) begin
+						rd_ptr_resend	<= rd_ptr_resend_expect[PTR_WD-1:0];
+						resend_unavail	<= 1'b0;
+					end
+					else begin
+						rd_ptr_resend	<= iv_rd_ptr_now;
+						resend_unavail	<= 1'b1;
+					end
+				end
+			end
+			else begin
+				rd_ptr_resend	<= iv_rd_ptr_now;
+				resend_unavail	<= 1'b0;
+			end
+		end
+		//	-------------------------------------------------------------------------------------
+		//	在 END 状态，rd_ptr_resend resend_unavail 保持不变，直到重传结束，返回idle
+		//	-------------------------------------------------------------------------------------
+		else if(current_state==S_END) begin
+			rd_ptr_resend	<= rd_ptr_resend;
+			resend_unavail	<= resend_unavail;
+		end
+		//	-------------------------------------------------------------------------------------
+		//	其他状态下，rd_ptr_resend 跟随 iv_rd_ptr_now
+		//	-------------------------------------------------------------------------------------
+		else begin
+			rd_ptr_resend	<= iv_rd_ptr_now;
+			resend_unavail	<= 1'b0;
+		end
+	end
+	assign	ov_rd_ptr_resend			= rd_ptr_resend;
+	assign	o_resend_unavail			= resend_unavail;
+
+	//	===============================================================================================
+	//	ref filter resend packet id
+	//	===============================================================================================
+	//	-------------------------------------------------------------------------------------
+	//	计算 trailer_packet_id
+	//	1.如果没有残包，那么 trailer_packet_id=iv_pic_pkt_cnt+1
+	//	2.如果有残包，那么 trailer_packet_id=iv_pic_pkt_cnt+2
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		if(iv_remain_pkt_length==0) begin
+			trailer_packet_id	<= iv_pic_pkt_cnt+1;
+		end
+		else begin
+			trailer_packet_id	<= iv_pic_pkt_cnt+2;
+		end
+	end
+
+	//	-------------------------------------------------------------------------------------
+	//	输入的packet_id_first和输出的packet_id_last有可能会有异常的情况，因此需要FPGA做保护，考虑如下情况：
+	//	-------------------------------------------------------------------------------------
+	//	-------------------------------------------------------------------------------------
+	//	判断PID是否可见以及PID滤波整形
+	//	1.只在 S_RESEND_PTR 状态判断PID是否有效，因为在PTR阶段，数据从fifo中读出来。其他状态无需复位
+	//	2.在 S_RESEND_PTR 状态结束时会PID是否有效
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		if(current_state==S_RESEND_PTR) begin
+			//	-------------------------------------------------------------------------------------
+			//	如果重传的BID=0，说明包错误。只有test包的bid才会是0
+			//	a)	resend_packet_error	= 1
+			//	b)	滤波后的packet_id_first不变
+			//	c)	滤波后的packet_id_last不变
+			//	-------------------------------------------------------------------------------------
+			if(fifo_resend_block_id==0) begin
+				resend_packet_error		<= 1'b1;
+			end
+			//	-------------------------------------------------------------------------------------
+			//	1.	输入的packet_id_first > trailer_packet_id，此时主机期望的packet_id不在可见范围之内，这是一个错误包，相机不响应
+			//	a)	resend_packet_error	= 1
+			//	b)	滤波后的packet_id_first不变
+			//	c)	滤波后的packet_id_last不变
+			//	-------------------------------------------------------------------------------------
+			else if(fifo_resend_packet_id_first > trailer_packet_id) begin
+				resend_packet_error		<= 1'b1;
+			end
+			else begin
+				//	-------------------------------------------------------------------------------------
+				//	2.	输入的packet_id_first <= trailer_packet_id，且输入的packet_id_first > 输入的packet_id_last，说明包的顺序是颠倒的，策略是重传的内容是packet_id_first之后的全部内容
+				//	a)	Resend_packet_error	= 0
+				//	b)	滤波后的packet_id_first =输入的packet_id_first
+				//	c)	滤波后的packet_id_last =trailer_packet_id
+				//	-------------------------------------------------------------------------------------
+				if(fifo_resend_packet_id_first > fifo_resend_packet_id_last) begin
+					resend_packet_error				<= 1'b0;
+					filter_resend_packet_id_first	<= fifo_resend_packet_id_first;
+					filter_resend_packet_id_last	<= trailer_packet_id;
+				end
+				//	-------------------------------------------------------------------------------------
+				//	3.	输入的packet_id_first <= trailer_packet_id，且输入的packet_id_first <= 输入的packet_id_last，此时是正常的包顺序，还需要考虑结束包的状态
+				//	-------------------------------------------------------------------------------------
+				else begin
+					//	-------------------------------------------------------------------------------------
+					//	a)	输入的packet_id_last==全1，说明结束包是trailer_packet_id
+					//	i.	Resend_packet_error	= 0
+					//	ii.	滤波后的packet_id_first =输入的packet_id_first
+					//	iii.	滤波后的packet_id_last =trailer_packet_id
+					//	-------------------------------------------------------------------------------------
+					if(fifo_resend_packet_id_last=={PID_WD{1'b1}}) begin
+						resend_packet_error				<= 1'b0;
+						filter_resend_packet_id_first	<= fifo_resend_packet_id_first;
+						filter_resend_packet_id_last	<= trailer_packet_id;
+					end
+					//	-------------------------------------------------------------------------------------
+					//	b)	输入的packet_id_last>trailer_packet_id，说明结束包的位置是不可见的
+					//	i.	Resend_packet_error	= 0
+					//	ii.	滤波后的packet_id_first =输入的packet_id_first
+					//	iii.	滤波后的packet_id_last =trailer_packet_id
+					//	-------------------------------------------------------------------------------------
+					else if(fifo_resend_packet_id_last>trailer_packet_id) begin
+						resend_packet_error				<= 1'b0;
+						filter_resend_packet_id_first	<= fifo_resend_packet_id_first;
+						filter_resend_packet_id_last	<= trailer_packet_id;
+					end
+					//	-------------------------------------------------------------------------------------
+					//	c)	其他情况，即输入的packet_id_last<=trailer_packet_id，说明结束包的位置正常的
+					//	i.	Resend_packet_error	= 0
+					//	ii.	滤波后的packet_id_first =输入的packet_id_first
+					//	iii.	滤波后的packet_id_last =输入的packet_id_last
+					//	-------------------------------------------------------------------------------------
+					else begin
+						resend_packet_error				<= 1'b0;
+						filter_resend_packet_id_first	<= fifo_resend_packet_id_first;
+						filter_resend_packet_id_last	<= fifo_resend_packet_id_last;
+					end
+				end
+			end
+		end
+	end
+
+	assign	ov_resend_block_id			= fifo_resend_block_id;
+	assign	ov_resend_packet_id_first	= filter_resend_packet_id_first;
+	assign	ov_resend_packet_id_last	= filter_resend_packet_id_last;
+
+	//	===============================================================================================
+	//	ref output
+	//	===============================================================================================
+	//	-------------------------------------------------------------------------------------
+	//	只有在S_END的第一拍，才会输出resend_valid高脉冲
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		if(current_state==S_END && step_cnt==0) begin
+			resend_valid	<= 1'b1;
+		end
+		else begin
+			resend_valid	<= 1'b0;
+		end
+	end
+	assign	o_resend_valid		= resend_valid;
+
+	//	-------------------------------------------------------------------------------------
+	//	暂时不支持multi-roi
+	//	-------------------------------------------------------------------------------------
+	assign	ov_mroi_num_resend = 'b0;
+
+	//	===============================================================================================
+	//	ref ***FSM***
+	//	===============================================================================================
+	//	-------------------------------------------------------------------------------------
+	//	1.在 S_RESEND_PTR 和 S_END 状态，step_cnt 计数器工作，如果累加到最大值，则保持
+	//	2.在其他状态下，清零
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		if(current_state==S_RESEND_PTR || current_state==S_END) begin
+			if(step_cnt==3) begin
+				step_cnt	<= step_cnt;
+			end
+			else begin
+				step_cnt	<= step_cnt + 1;
+			end
+		end
+		else begin
+			step_cnt	<= 0;
+		end
+	end
+
+	//	-------------------------------------------------------------------------------------
+	//	FSM Sequential Logic
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		if(reset==1'b1 || i_stream_enable==1'b0) begin
+			current_state	<= S_IDLE;
+		end
+		else begin
+			current_state	<= next_state;
+		end
+	end
+
+	//	-------------------------------------------------------------------------------------
+	//	FSM Conbinatial Logic
+	//	-------------------------------------------------------------------------------------
+	always @ ( * ) begin
+		case(current_state)
+			//	-------------------------------------------------------------------------------------
+			//	IDLE状态表示重传模块没有在工作，当fifo非空且后端允许重传时，才能开始重传流程
+			//	在idle最后一拍，读出重传数据
+			//	1.	Fifo_empty=0
+			//	2.	Resend_rdy=1
+			//	-------------------------------------------------------------------------------------
+			S_IDLE	:
+			if(fifo_empty==1'b0 && i_resend_rdy==1'b1) begin
+				next_state	= S_RESEND_PTR;
+			end
+			else begin
+				next_state	= S_IDLE;
+			end
+			//	-------------------------------------------------------------------------------------
+			//	RESEND_PTR有多拍，在这多拍之内计算出重传期望的PTR
+			//	1.	step_cnt==3计算完毕
+			//		Resend_packet_error=1，pid错误，不响应这个重传请求，返回idle。
+			//		Resend_packet_error=0，pid正确，响应这个重传请求，到下一个状态。
+			//	-------------------------------------------------------------------------------------
+			S_RESEND_PTR	:
+			if(step_cnt==3) begin
+				if(resend_packet_error==1'b1) begin
+					next_state	= S_IDLE;
+				end
+				else begin
+					next_state	= S_RESEND_AVAIL;
+				end
+			end
+			else begin
+				next_state	= S_RESEND_PTR;
+			end
+			//	-------------------------------------------------------------------------------------
+			//	S_RESEND_AVAIL判断重传是否可见，wr_ptr_changing_dly=0时，border稳定且下一拍wr_ptr不会改变，此时可以判断重传是否可见，并更新 rd_ptr_resend
+			//	1.	wr_ptr_changing_dly==1'b0
+			//	-------------------------------------------------------------------------------------
+			S_RESEND_AVAIL	:
+			if(wr_ptr_changing_dly==1'b0) begin
+				next_state	= S_END;
+			end
+			else begin
+				next_state	= S_RESEND_AVAIL;
+			end
+			//	-------------------------------------------------------------------------------------
+			//	END状态有2个作用，1.输出命令给下级模块 2.维持重传的输出，直到当前重传结束
+			//	-------------------------------------------------------------------------------------
+			S_END	:
+			if(step_cnt==3 && i_resend_rdy==1'b1) begin
+				next_state	= S_IDLE;
+			end
+			else begin
+				next_state	= S_END;
+			end
+			default	:
+			next_state	= S_IDLE;
+		endcase
+	end
+
+
+
+
+
+
+
+endmodule

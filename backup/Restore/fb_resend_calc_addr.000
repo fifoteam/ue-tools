@@ -1,0 +1,320 @@
+//-------------------------------------------------------------------------------------------------
+//  -- 版权所有者   : 中国大恒（集团）有限公司北京图像视觉技术分公司, 2010 -2015.
+//  -- 保密级别     ：绝密.
+//  -- 部门         : 硬件部，FPGA工作组
+//  -- 模块名       : fb_resend_ctrl
+//  -- 设计者       : 邢海涛
+//-------------------------------------------------------------------------------------------------
+//
+//  -- 版本记录 :
+//
+//  -- 作者         :| 版本号	:| 修改日期				:|  修改说明
+//-------------------------------------------------------------------------------------------------
+//  -- 邢海涛       :| V1.0		:| 2018/10/23 17:29:04	:|  划分模块端口
+//-------------------------------------------------------------------------------------------------
+//
+//  -- 模块描述     :
+//              1)  :
+//
+//              2)  :
+//
+//              3)  :
+//
+//-------------------------------------------------------------------------------------------------
+//`include			"fb_resend_ctrl_def.v"
+//仿真单位/精度
+`timescale 1ns/1ps
+//-------------------------------------------------------------------------------------------------
+module fb_resend_calc_addr # (
+	parameter	PTR_WD										= 2			,	//读写指针的位宽
+	parameter	SHORT_REG_WD   								= 16		,	//短寄存器位宽
+	parameter	REG_WD  						 			= 32		,	//寄存器位宽
+	parameter	LONG_REG_WD  						 		= 64		,	//长寄存器位宽
+	parameter	IMAGE_SIZE_WD								= 32		,	//图像数据大小位宽，以字节为单位
+	parameter	FRAME_BYTE_ADDR_WD   						= 27		,	//帧内有效地址位宽，以字节为单位
+	parameter	PKT_LENGTH_WD								= 16		,	//包长的位宽，最大支持64K，即16bit
+	parameter	PKT_CNT_WD									= 32			//一帧图像中包含的完整包个数的位宽，gigevision 1.2 pid的位宽3byte，gigevision 2.0 pid的位宽4byte
+	)
+	(
+	//  -------------------------------------------------------------------------------------
+	//  时钟和复位信号
+	//  -------------------------------------------------------------------------------------
+	input							clk									,	//帧存模块工作时钟
+	input							reset								,	//帧存模块工作时钟域的复位信号，高有效
+	//  -------------------------------------------------------------------------------------
+	//  控制数据
+	//  -------------------------------------------------------------------------------------
+//	input							i_stream_enable						,	//clk时钟域，流停止信号，高有效，有效时允许数据从帧存读出，无效时立即停止读出，并复位读写地址指针，清帧存
+	input  	[PKT_LENGTH_WD-1:0]		iv_pkt_length						,	//clk时钟域，packet length 正常包包长
+	input  	[PKT_LENGTH_WD-1:0]		iv_remain_pkt_length				,	//clk时钟域，remain packet length 残包包长(包含帧信息部分)
+	input	[PKT_CNT_WD-1:0]		iv_pic_pkt_cnt						,	//clk时钟域，图像包含的完整数据包个数（不包括残包）
+	input	[IMAGE_SIZE_WD-1:0]		iv_image_size						,	//clk时钟域，帧存写入的一帧图像的大小，以byte为单位
+	input	[IMAGE_SIZE_WD-1:0]		iv_payload_size						,	//clk时钟域，roi图+chunk像大小，以byte为单位
+	//  -------------------------------------------------------------------------------------
+	//  与 fb_read_init 交互
+	//  -------------------------------------------------------------------------------------
+//	output							o_normal_read_repeat				,	//clk时钟域，可以停止前端正常读，高有效，一个时钟脉冲
+//	input							i_fval_init							,	//clk时钟域，场有效信号，高有效
+	//  -------------------------------------------------------------------------------------
+	//  与 fb_packet_divide 交互
+	//  -------------------------------------------------------------------------------------
+//	input							i_fval_pdiv							,	//clk时钟域，场有效信号，高有效
+//	input							i_pval								,	//clk时钟域，一个网络包有效数据标志，是连续信号，期间发出的地址对应一个包长的数据
+//	input							i_aval								,	//clk时钟域，地址有效信号，高有效
+//	input							i_info_flag							,	//clk时钟域，信息段标志，高有效
+//	input							i_image_flag						,	//clk时钟域，图像段标志，高有效
+//	input							i_statis_flag						,	//clk时钟域，统计段标志，高有效
+//	input	[FRAME_BYTE_ADDR_WD-1:0]iv_rd_addr							,	//clk时钟域，读地址
+//	input	[FRAME_BYTE_ADDR_WD-1:0]iv_rd_length						,	//clk时钟域，读长度，以byte为单位
+	//  -------------------------------------------------------------------------------------
+	//  与 fb_resend_calc 交互
+	//  -------------------------------------------------------------------------------------
+//	output							o_resend_rdy						,	//clk时钟域，重传准备好信号，高有效，有效时表示上一个重传命令处理完且可以接收下一个重传命令，无效时表示正在处理重传命令
+	input							i_resend_valid						,	//clk时钟域，重传使能信号，高有效，一个时钟脉冲
+//	input							i_resend_unavail					,	//clk时钟域，重传不可见信号，高有效
+//	input	[LONG_REG_WD-1:0]		iv_resend_block_id					,	//clk时钟域，block id
+	input	[REG_WD-1:0]			iv_resend_packet_id_first			,	//clk时钟域，packet id first，重传起始包id
+	input	[REG_WD-1:0]			iv_resend_packet_id_last			,	//clk时钟域，packet id last，重传结束包id
+	output							o_addr_calc_done					,	//clk时钟域，重传地址计算好信号
+	//  -------------------------------------------------------------------------------------
+	//  与 fb_read_cmd 交互
+	//  -------------------------------------------------------------------------------------
+//	input							i_resend_rdy						,	//clk时钟域，重传准备好信号，高有效，有效时表示上一个重传命令处理完且可以接收下一个重传命令，无效时表示正在处理重传命令
+//	input							i_addr_cmd_wr_done					,	//clk时钟域，一帧地址及数据全部写入addr_buffer完毕标志
+//	output							o_resend_valid						,	//clk时钟域，重传使能信号，高有效，一个时钟脉冲
+//	output							o_resend_unavail					,	//clk时钟域，重传不可见信号，高有效
+//	output							o_interrupt							,	//clk时钟域，正常读停止标志，高有效
+//	output	[LONG_REG_WD-1:0]		ov_resend_block_id					,	//clk时钟域，block id
+//	output	[REG_WD-1:0]			ov_resend_packet_id_first			,	//clk时钟域，packet id first，重传起始包id
+//	output	[REG_WD-1:0]			ov_resend_packet_id_last			,	//clk时钟域，packet id last，重传结束包id
+	//	-------------------------------------------------------------------------------------
+	//	与 fb_resend_cut 交互
+	//	-------------------------------------------------------------------------------------
+//	output							o_resend_need_info					,	//clk时钟域，重传需要info段，高有效
+	output	[FRAME_BYTE_ADDR_WD-1:0]ov_resend_invalid_length			,	//clk时钟域，重传部分不需要的数据长度，以byte为单位，只计算图像部分，在i_resend_valid有效时，该数据有效
+	output	[FRAME_BYTE_ADDR_WD-1:0]ov_resend_require_length			,	//clk时钟域，重传部分请求的数据长度，以byte为单位，只计算图像部分，在i_resend_valid有效时，该数据有效
+	output	[FRAME_BYTE_ADDR_WD-1:0]ov_resend_chunk_invalid_length		,	//clk时钟域，重传部分不需要的数据长度，以byte为单位，只计算图像部分，在i_resend_valid有效时，该数据有效
+	output	[FRAME_BYTE_ADDR_WD-1:0]ov_resend_chunk_require_length			//clk时钟域，重传部分请求的数据长度，以byte为单位，只计算图像部分，在i_resend_valid有效时，该数据有效
+	);
+
+
+	//	ref paramters
+
+
+	//	ref functions
+
+
+	//	ref signals
+
+	reg																resend_rdy					= 'b0;
+	reg																resend_valid_dly0			= 1'b0;
+	reg																resend_valid_dly1			= 1'b0;
+	reg																resend_valid_dly2			= 1'b0;
+	reg																resend_valid_dly3			= 1'b0;
+	reg		[23:0]													mult_a						= 'b0;
+	wire	[15:0]													mlut_b						;
+	wire															mult_ce						;
+	wire	[39:0]													mult_p						;
+
+	reg		[FRAME_BYTE_ADDR_WD-1:0]		start		= 'b0;
+	reg		[FRAME_BYTE_ADDR_WD-1:0]		length		= 'b0;
+	reg		[FRAME_BYTE_ADDR_WD-1:0]		end_pos		= 'b0;
+	wire	[FRAME_BYTE_ADDR_WD-1:0]		image_start;
+	reg		[FRAME_BYTE_ADDR_WD-1:0]		image_length	= 'b0;
+	reg		[FRAME_BYTE_ADDR_WD-1:0]		chunk_start		= 'b0;
+	reg		[FRAME_BYTE_ADDR_WD-1:0]		chunk_length	= 'b0;
+	reg		[PKT_CNT_WD:0]					last_pkt	= 'b0;	//位宽多一个
+	reg		[PKT_CNT_WD:0]					trailer_pkt	= 'b0;	//位宽多一个
+
+
+
+	//	ref ARCHITECTURE
+
+
+
+
+
+	//	===============================================================================================
+	//	ref 计算重传需要的数据量
+	//	===============================================================================================
+	//	-------------------------------------------------------------------------------------
+	//	对i_resend_valid打拍延时
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		resend_valid_dly0	<= i_resend_valid;
+		resend_valid_dly1	<= resend_valid_dly0;
+		resend_valid_dly2	<= resend_valid_dly1;
+		resend_valid_dly3	<= resend_valid_dly2;
+	end
+	assign	o_addr_calc_done	= resend_valid_dly3;
+
+	//	-------------------------------------------------------------------------------------
+	//	乘法器
+	//	A 位宽24bit，pid
+	//	B 位宽16bit，ip_length
+	//	-------------------------------------------------------------------------------------
+	resend_mult resend_mult_inst (
+	.CLK		(clk				),
+	.A			(mult_a				),
+	.B			(mlut_b				),
+	.CE			(mult_ce			),
+	.SCLR		(1'b0				),
+	.P			(mult_p				)
+	);
+
+	//	-------------------------------------------------------------------------------------
+	//	乘法器b端口
+	//	-------------------------------------------------------------------------------------
+	assign	mlut_b		= {{(16-PKT_LENGTH_WD){1'b0}},iv_pkt_length};
+
+	//	-------------------------------------------------------------------------------------
+	//	乘法器使能控制，在resend_valid_dly0 resend_valid_dly1 resend_valid_dly2保持
+	//	-------------------------------------------------------------------------------------
+	assign	mult_ce		= resend_valid_dly0|resend_valid_dly1|resend_valid_dly2;
+
+
+
+
+	always @ (posedge clk) begin
+		if(iv_remain_pkt_length==0) begin
+			last_pkt	<= iv_pic_pkt_cnt;
+			trailer_pkt	<= iv_pic_pkt_cnt+1;
+		end
+		else begin
+			last_pkt	<= iv_pic_pkt_cnt + 1;
+			trailer_pkt	<= iv_pic_pkt_cnt + 2;
+		end
+	end
+
+//	//	pid first     pid last 整形
+//	//	1. 如果 pid first==0  且  pid last==0，说明只传输leader包，不需要计算，直接输出image 和 chunk 的长度为0
+//	//	2. 如果 pid first==trailer_pkt  且  pid last==trailer_pkt，说明只传输trailer包，不需要计算，直接输出image 和 chunk 的长度为0
+//	//	3. 其他情况下，如果 pid=0，则整形为1，pid=trailer_pkt，则整形为last_pkt，目的是计算出payload需要重传的数据量
+//	always @ (posedge clk) begin
+//		if() begin
+//
+//		end
+//		else begin
+//
+//		end
+//	end
+//
+
+
+
+
+
+	//	step 0，计算 start
+	//		有无残包都是如此
+	//		当pid_first=0时，Start=0；当last>=pid_first>0,start= (pid_first-1)*pkt_length
+	//		所以，mult_a需要做以上2个条件的判断
+
+	//	step 1，计算 length
+	//		当无残包时：last=pkt_cnt
+	//			当last>pid_last>=0,length=pid_last*pkt_length-start;pid_last=last,length=pid_last* pkt_length-start
+	//		当有残包时：last=pkt_cnt+1
+	//			当last>pid_last>=0,length=pid_last*pkt_length-start; pid_last = last, length = (pid_last-1) * pkt_length+remain_pkt_length-start
+	always @ (posedge clk) begin
+		if(resend_valid_dly0==1) begin
+			if(iv_resend_packet_id_first==0) begin
+				mult_a	<= 0;
+			end
+			else begin
+				mult_a	<= iv_resend_packet_id_first-1;
+			end
+		end
+		else if(resend_valid_dly1==1) begin
+			if(iv_resend_packet_id_last<last_pkt) begin
+				mult_a	<= iv_resend_packet_id_last;
+			end
+			else begin
+				if(iv_remain_pkt_length==0) begin
+					mult_a	<= iv_resend_packet_id_last;
+				end
+				else begin
+					mult_a	<= iv_resend_packet_id_last-1;
+				end
+			end
+		end
+	end
+
+
+//	-------------------------------------------------------------------------------------
+//	如果 pid first 或者 pid last = trailer_pkt，就会造成
+//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		if(resend_valid_dly1==1) begin
+			if(mult_p>iv_payload_size) begin
+				start	<= iv_payload_size;
+			end
+			else begin
+				start	<= mult_p;
+			end
+		end
+	end
+
+	always @ (posedge clk) begin
+		if(resend_valid_dly2==1) begin
+			if(mult_p+iv_remain_pkt_length>iv_payload_size) begin
+				end_pos	<= iv_payload_size;
+			end
+			else begin
+				end_pos	<= mult_p;
+			end
+		end
+	end
+
+	always @ (posedge clk) begin
+		if(resend_valid_dly3==1) begin
+			length	<= end_pos-start;
+		end
+	end
+
+	always @ (posedge clk) begin
+		if(start<iv_image_size) begin
+//			image_start		<= start;
+			chunk_start		<= 0;
+		end
+//		else if(start<iv_payload_size && start>=iv_image_size) begin
+		else begin
+//			image_start		<= start;
+			chunk_start		<= start-iv_image_size;
+		end
+	end
+	assign	image_start	= start;
+
+
+	always @ (posedge clk) begin
+		if(end_pos<iv_image_size) begin
+			image_length	<= length;
+			chunk_length	<= 0;
+		end
+//		else if(end_pos<=iv_payload_size && end_pos>=iv_image_size) begin
+		else begin
+			if(start>=iv_image_size) begin
+				image_length	<= 0;
+			end
+			else begin
+				image_length	<= iv_image_size-start;
+			end
+			chunk_length	<= end_pos-chunk_start;
+		end
+	end
+
+	assign	ov_resend_invalid_length	= image_start;
+	assign	ov_resend_require_length	= image_length;
+
+//	assign	ov_resend_invalid_length	= 0;
+//	assign	ov_resend_require_length	= 256;
+
+
+	assign	ov_resend_chunk_invalid_length	= chunk_start;
+	assign	ov_resend_chunk_require_length	= chunk_length;
+
+//	assign	ov_resend_chunk_invalid_length	= 0;
+//	assign	ov_resend_chunk_require_length	= 256;
+
+
+
+
+endmodule

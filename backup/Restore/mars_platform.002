@@ -39,10 +39,10 @@ module mars_platform # (
 	parameter		MEM_DQ_WD										= 32						,	//DDR3 数据宽度
 	parameter		MEM_ADDR_WD										= 14						,	//DDR3 地址宽度
 	parameter		MEM_BANKADDR_WD									= 3							,	//DDR3 bank地址宽度
-	parameter		MEM_SIZE_MBIT									= 2048						,	//DDR3 存储容量，以MBIT为单位，支持 512、1024、2048、4096
+	parameter		MEM_SIZE_MBIT									= 4096						,	//DDR3 存储容量，以MBIT为单位，支持 512、1024、2048、4096
 	parameter		MEM_DM_WD										= MEM_DQ_WD/8				,	//DDR3 数据屏蔽信号宽度
 	parameter		MEM_DQS_WD										= MEM_DQ_WD/8				,	//DDR3 数据选通信号宽度
-	parameter		FRAME_DEPTH_MAX									= 4							,	//最大的帧存深度，最小是1帧。可设置为 1 2 3 4 5 6 ......
+	parameter		FRAME_DEPTH_MAX									= 8							,	//最大的帧存深度，最小是1帧。可设置为 1 2 3 4 5 6 ......
 	//	-------------------------------------------------------------------------------------
 	//	interface 相关参数
 	//	-------------------------------------------------------------------------------------
@@ -118,6 +118,7 @@ module mars_platform # (
 	output															mdc							,
 	inout															mdio						,
 	output															o_enet_rstn					,
+
 	//  -------------------------------------------------------------------------------------
 	//  flash 接口
 	//  -------------------------------------------------------------------------------------
@@ -281,6 +282,8 @@ module mars_platform # (
 	//  -------------------------------------------------------------------------------------
 	wire															w_stream_enable				;	//ctrl_channel输出，clk_pix时钟域，流开采信号，没有生效时机
 	wire															w_acquisition_start			;	//ctrl_channel输出，clk_pix时钟域，开采信号，没有生效时机
+	wire	[SHORT_REG_WD-1:0]										wv_frame_depth				;	//clk_fb时钟域，帧缓存深度，0-单帧，1-2帧，2-3帧，3-4帧，在 i_stream_enable 上升沿生效
+	wire															w_fb_transfer_start			;
 	//	wire															w_stream_enable_fb	;	//ctrl_channel输出，clk_fb时钟域，流开采信号，没有生效时机
 	//	wire															w_stream_enable_gev			;	//ctrl_channel输出，clk_gpif时钟域，流开采信号，没有生效时机
 	wire	[8:0]													wv_state					;
@@ -289,9 +292,9 @@ module mars_platform # (
 	//  -------------------------------------------------------------------------------------
 	//	---- ref to io_channel
 	//  -------------------------------------------------------------------------------------
-	//	wire															w_trigger_mode				;	//ctrl_channel输出，clk_pix时钟域，触发模式寄存器，没做生效时机控制
-	//	wire	[3:0]													wv_trigger_source			;	//ctrl_channel输出，clk_pix时钟域，触发源寄存器，没做生效时机控制
-	//	wire															w_trigger_soft				;	//ctrl_channel输出，clk_pix时钟域，软触发寄存器，控制通道自清零，宽度是1个时钟周期
+	wire															w_trigger_mode				;	//ctrl_channel输出，clk_pix时钟域，触发模式寄存器，没做生效时机控制
+	wire	[3:0]													wv_trigger_source			;	//ctrl_channel输出，clk_pix时钟域，触发源寄存器，没做生效时机控制
+	wire															w_trigger_soft				;	//ctrl_channel输出，clk_pix时钟域，软触发寄存器，控制通道自清零，宽度是1个时钟周期
 	//	wire															w_trigger_active			;	//ctrl_channel输出，clk_pix时钟域，触发有效沿寄存器，没做生效时机控制
 	//	wire	[REG_WD-1:0]											wv_trigger_filter_rise		;	//ctrl_channel输出，clk_pix时钟域，上升沿触发滤波寄存器，没做生效时机控制，但保证成组生效
 	//	wire	[REG_WD-1:0]											wv_trigger_filter_fall		;	//ctrl_channel输出，clk_pix时钟域，下降沿触发滤波寄存器，没做生效时机控制，但保证成组生效
@@ -369,7 +372,8 @@ module mars_platform # (
 	//	-------------------------------------------------------------------------------------
 	//	---- ref to gige_vision
 	//	-------------------------------------------------------------------------------------
-	wire	[31:0]													wv_pc_ip					;	//ctrl_channel输出，clk_gev时钟域，ip pc address
+	wire	[31:0]													wv_pc_ip_sc					;	//ctrl_channel输出，clk_gev时钟域，流通道ip pc address
+	wire	[31:0]													wv_pc_ip_cc					;	//ctrl_channel输出，clk_gev时钟域，控制通道ip pc address
 	wire	[31:0]													wv_camera_ip				;	//ctrl_channel输出，clk_gev时钟域，ip camera address
 	wire	[15:0]													wv_pc_port_sc				;	//ctrl_channel输出，clk_gev时钟域，stream channel gvsp包pc端口号
 	wire	[15:0]													wv_camera_port				;	//ctrl_channel输出，clk_gev时钟域，相机udp端口号
@@ -562,6 +566,11 @@ module mars_platform # (
 	wire								mdio_out;
 	wire								mdio_in;
 
+	wire		[11:0]	wv_temperature_sensor_local	;
+	wire        [11:0]	wv_temperature_sensor_remote;
+	wire		[11:0]	wv_temperature_be			;
+	wire        [11:0]	wv_temperature_ps			;
+
 
 	wire			axi_tx_ram_cs		;
 
@@ -644,7 +653,7 @@ module mars_platform # (
 	)
 	io_channel_inst (
 	.clk								(clk_pix							),
-	.i_trigger_mode						(1'b0								),
+	.i_trigger_mode						(w_trigger_mode						),
 	.i_acquisition_start				(1'b1								),
 	.i_stream_enable					(1'b1								),
 	.ov_line_status						(									),
@@ -656,8 +665,8 @@ module mars_platform # (
 	.i_line3_invert						(1'b0								),
 	.iv_filter_rise						({REG_WD{1'b0}}						),
 	.iv_filter_fall						({REG_WD{1'b0}}						),
-	.i_trigger_soft						(1'b0								),
-	.iv_trigger_source					(4'b0								),
+	.i_trigger_soft						(w_trigger_soft						),
+	.iv_trigger_source					(wv_trigger_source					),
 	.i_trigger_active					(1'b0								),
 	.iv_trigger_delay					({REG_WD{1'b0}}						),
 	.iv_line_source1					(3'b0								),
@@ -791,6 +800,12 @@ module mars_platform # (
 	.o_gvcp_ack_txen					(w_gvcp_ack_txen					),
 	.i_gvcp_ack_tx_start				(w_gvcp_ack_tx_start				),
 	.ov_gvcp_ack_length					(wv_gvcp_ack_length					),
+
+	//  温度读出值(此为只读寄存器，固定为12bit)
+	.iv_temperature_sensor_local		(wv_temperature_sensor_local		),
+	.iv_temperature_sensor_remote		(wv_temperature_sensor_remote		),
+	.iv_temperature_be					(wv_temperature_be		    		),
+	.iv_temperature_ps					(wv_temperature_ps		    		),
 	//	-------------------------------------------------------------------------------------
 	//	sensor 时钟域
 	//	-------------------------------------------------------------------------------------
@@ -808,9 +823,9 @@ module mars_platform # (
 	.ov_linein_filter_fall_cnt			(									),
 	.ov_linein_active_cnt				(									),
 	.ov_trigger_n_rise_cnt				(									),
-	.o_trigger_mode					(									),
-	.ov_trigger_source					(									),
-	.o_trigger_soft					(									),
+	.o_trigger_mode						(w_trigger_mode						),
+	.ov_trigger_source					(wv_trigger_source					),
+	.o_trigger_soft						(w_trigger_soft						),
 	.ov_trigger_active					(									),
 	.ov_trigger_filter_rise				(									),
 	.ov_trigger_filter_fall				(									),
@@ -896,10 +911,10 @@ module mars_platform # (
 	//	fb 时钟域
 	//	-------------------------------------------------------------------------------------
 	.ov_single_roi_image_size			(wv_single_roi_image_size			),
-	.ov_frame_buffer_depth				(									),
+	.ov_frame_buffer_depth				(wv_frame_depth						),
 	.o_frame_overwrite_enable			(									),
 	.o_transfer_mode					(									),
-	.o_transfer_start					(									),
+	.o_transfer_start					(w_fb_transfer_start				),
 	.o_cache_flush						(									),
 	.ov_cache_frame_cnt					(									),
 	.ov_cache_frame_depth				(									),
@@ -913,7 +928,8 @@ module mars_platform # (
 	.ov_pc_mac							(wv_pc_mac							),
 	.ov_camera_mac						(wv_camera_mac						),
 	.ov_camera_ip						(wv_camera_ip						),
-	.ov_pc_ip							(wv_pc_ip							),
+	.ov_pc_ip_sc						(wv_pc_ip_sc						),
+	.ov_pc_ip_cc						(wv_pc_ip_cc						),
 	.ov_ip_mask							(wv_ip_mask							),
 	.ov_camera_port						(wv_camera_port						),
 	.ov_pc_port_sc						(wv_pc_port_sc						),
@@ -970,8 +986,8 @@ module mars_platform # (
 			.axi_lite_clk						(clk_axi						),
 			.i_clk_mb_locked					(w_interface_generator_locked	),
 			.i_reset_mb							(reset_microb	     			),
-			.iic_scl_io    						(iic_scl_io    					),
-			.iic_sda_io    						(iic_sda_io    					),
+			.iic_scl_io    						(    					),
+			.iic_sda_io    						(    					),
 			.ov_logic_raddr_0       			(wv_raddr_axi					),
 			.ov_logic_raddr_1       			(wv_raddr_sensor				),
 			.ov_logic_raddr_2       			(wv_raddr_pix					),
@@ -1109,7 +1125,7 @@ module mars_platform # (
 	.iv_python_exposure_delay		(wv_python_exposure_delay[SHORT_REG_WD-1:0]		),
 	.iv_python_trig_interval		(wv_python_trigger_interval		),
 	.iv_python_readout_time			(wv_python_readout_time			),
-	.i_trigger_mode					(1'b0							),
+	.i_trigger_mode					(w_trigger_mode					),
 	.i_trigger						(w_trigger						),
 	.i_acquisition_start			(w_acquisition_start			),
 	.i_python_exposure_monitor		(i_monitor						),
@@ -1250,6 +1266,7 @@ module mars_platform # (
 	.iv_data						(wv_data_frame_info				),
 	.iv_image_size					(wv_single_roi_image_size		),
 	.o_fb_fifo_overflow				(w_fb_fifo_overflow				),
+	.i_acquisition_start			(w_acquisition_start			),
 	.clk_gev						(clk_gev						),
 	.reset_gev						(reset_gev						),
 	.iv_resend_block_id				(wv_resend_block_id				),
@@ -1262,8 +1279,8 @@ module mars_platform # (
 	.ov_dval						(wv_dval_fb						),
 	.ov_data						(wv_data_fb						),
 	.i_stream_enable				(w_stream_enable				),
-	.i_fb_transfer_start			(1'b1							),
-	.iv_frame_depth					(16'd4							),
+	.i_fb_transfer_start			(w_fb_transfer_start			),
+	.iv_frame_depth					(wv_frame_depth					),
 	.i_fb_overwrite					(1'b1							),
 	.iv_pkt_length					(wv_pkt_length					),
 	.iv_remain_pkt_length			(wv_remain_pkt_length			),
@@ -1319,6 +1336,8 @@ module mars_platform # (
 	gige_vision_inst (
 	.clk_gev							(clk_gev							),
 	.reset_gev							(reset_gev							),
+	.clk_quick							(clk_gev							),
+	.reset_quick						(reset_gev							),
 	.clk_gtx							(clk_gtx							),
 	.reset_gtx							(reset_gtx							),
 	.clk_axi							(clk_axi							),
@@ -1335,7 +1354,8 @@ module mars_platform # (
 	.iv_data							(wv_data_fb							),
 	.i_test_pkt_enable_gev				(1'b0								),
 	.o_test_pkt_over_gev				(									),
-	.iv_pc_ip_gev						(wv_pc_ip							),
+	.iv_pc_ip_sc_gev					(wv_pc_ip_sc						),
+	.iv_pc_ip_cc_gev					(wv_pc_ip_cc						),
 	.iv_camera_ip_gev					(wv_camera_ip						),
 	.iv_pc_port_sc_gev					(wv_pc_port_sc						),
 	.iv_camera_port_gev					(wv_camera_port						),
@@ -1388,100 +1408,129 @@ module mars_platform # (
 	);
 
 
-
-	//	-------------------------------------------------------------------------------------
-	//	ten_gig_eth_mac
-	//	-------------------------------------------------------------------------------------
-	ten_gig_eth_mac_0_support ten_gig_eth_mac_inst (
-	.tx_clk0						(clk_gtx					),
-	.reset							(reset_gtx					),
-	.tx_axis_aresetn				(w_tx_axis_aresetn			),
-	.tx_axis_tdata					(wv_tx_axis_tdata			),
-	.tx_axis_tvalid					(w_tx_axis_tvalid			),
-	.tx_axis_tlast					(w_tx_axis_tlast			),
-	.tx_axis_tuser					(w_tx_axis_tuser			),
-	.tx_ifg_delay					(wv_tx_ifg_delay			),
-	.tx_axis_tkeep					(wv_tx_axis_tkeep			),
-	.tx_axis_tready					(w_tx_axis_tready			),
-	.tx_statistics_vector			(							),
-	.tx_statistics_valid			(							),
-
-	.pause_val						(0							),
-	.pause_req						(0							),
-
-	.rx_axis_aresetn				(w_tx_axis_aresetn			),	//此处用w_tx_axis_aresetn是否合适
-	.rx_axis_tdata					(wv_rx_axis_tdata			),
-	.rx_axis_tkeep					(wv_rx_axis_tkeep			),
-	.rx_axis_tvalid					(w_rx_axis_tvalid			),
-	.rx_axis_tuser					(w_rx_axis_tuser			),
-	.rx_axis_tlast					(w_rx_axis_tlast			),
-	.rx_statistics_vector			(							),
-	.rx_statistics_valid			(							),
-
-	.s_axi_aclk             		(clk_axi					),
-	.s_axi_aresetn          		(1'b1						),
-	.s_axi_awaddr           		(m_axi_if_awaddr[10:0]		),
-	.s_axi_awvalid          		(m_axi_if_awvalid    		),
-	.s_axi_awready          		(m_axi_if_awready    		),
-	.s_axi_wdata            		(m_axi_if_wdata[31:0] 		),
-	.s_axi_wvalid           		(m_axi_if_wvalid     		),
-	.s_axi_wready           		(m_axi_if_wready     		),
-	.s_axi_bresp            		(m_axi_if_bresp[1:0]  		),
-	.s_axi_bvalid           		(m_axi_if_bvalid     		),
-	.s_axi_bready           		(m_axi_if_bready     		),
-	.s_axi_araddr           		(m_axi_if_araddr[10:0]		),
-	.s_axi_arvalid          		(m_axi_if_arvalid    		),
-	.s_axi_arready          		(m_axi_if_arready    		),
-	.s_axi_rdata            		(m_axi_if_rdata      		),
-	.s_axi_rresp            		(m_axi_if_rresp[1:0]		),
-	.s_axi_rvalid           		(m_axi_if_rvalid			),
-	.s_axi_rready           		(m_axi_if_rready			),
-	.xgmacint               		(							),
-	.mdc                    		(mdc						),
-	.mdio_in                		(mdio_in					),
-	.mdio_out               		(mdio_out					),
-	.mdio_tri               		(mdio_tri					),
-	.tx_dcm_locked          		(w_rxaui_locked				),
-	.xgmii_txd              		(xgmii_txd					),
-	.xgmii_txc              		(xgmii_txc					),
-	.rx_clk0                		(clk_gtx					),
-	.rx_dcm_locked          		(w_rxaui_locked				),
-	.xgmii_rxd              		(xgmii_rxd					),
-	.xgmii_rxc              		(xgmii_rxc					)
-	);
-
-	//	-------------------------------------------------------------------------------------
-	//	rxaui
-	//	-------------------------------------------------------------------------------------
-	rxaui_0 rxaui_inst (
-	.reset							(1'b0						),
-	.dclk							(clk_microb					),
-	.clk156_out						(clk_gtx					), // Output clock than can be used for external logic
-	.clk156_lock					(w_rxaui_locked				),
-	.pll0outclk_out					(							),
-	.pll0lock_out					(							),
-	.pll0outrefclk_out				(							),
-	.pll1outclk_out					(							),
-	.pll1outrefclk_out				(							),
-	.common_pll_reset_out			(							),
-	.refclk_p						(refclk_p					),
-	.refclk_n						(refclk_n					),
-	.xgmii_txd						(xgmii_txd					),
-	.xgmii_txc						(xgmii_txc					),
-	.xgmii_rxd						(xgmii_rxd					),
-	.xgmii_rxc						(xgmii_rxc					),
-	.rxaui_tx_l0_p					(rxaui_tx_l0_p				),
-	.rxaui_tx_l0_n					(rxaui_tx_l0_n				),
-	.rxaui_tx_l1_p					(rxaui_tx_l1_p				),
-	.rxaui_tx_l1_n					(rxaui_tx_l1_n				),
-	.rxaui_rx_l0_p					(rxaui_rx_l0_p				),
-	.rxaui_rx_l0_n					(rxaui_rx_l0_n				),
-	.rxaui_rx_l1_p					(rxaui_rx_l1_p				),
-	.rxaui_rx_l1_n					(rxaui_rx_l1_n				),
-	.signal_detect					(2'b11						),
-	.debug							(							),
-	.configuration_vector			(7'h00						),
-	.status_vector					(							)
-	);
-
+//
+//	//	-------------------------------------------------------------------------------------
+//	//	ten_gig_eth_mac
+//	//	-------------------------------------------------------------------------------------
+//	ten_gig_eth_mac_0_support ten_gig_eth_mac_inst (
+//	.tx_clk0						(clk_gtx					),
+//	.reset							(reset_gtx					),
+//	.tx_axis_aresetn				(w_tx_axis_aresetn			),
+//	.tx_axis_tdata					(wv_tx_axis_tdata			),
+//	.tx_axis_tvalid					(w_tx_axis_tvalid			),
+//	.tx_axis_tlast					(w_tx_axis_tlast			),
+//	.tx_axis_tuser					(w_tx_axis_tuser			),
+//	.tx_ifg_delay					(wv_tx_ifg_delay			),
+//	.tx_axis_tkeep					(wv_tx_axis_tkeep			),
+//	.tx_axis_tready					(w_tx_axis_tready			),
+//	.tx_statistics_vector			(							),
+//	.tx_statistics_valid			(							),
+//
+//	.pause_val						(0							),
+//	.pause_req						(0							),
+//
+//	.rx_axis_aresetn				(w_tx_axis_aresetn			),	//此处用w_tx_axis_aresetn是否合适
+//	.rx_axis_tdata					(wv_rx_axis_tdata			),
+//	.rx_axis_tkeep					(wv_rx_axis_tkeep			),
+//	.rx_axis_tvalid					(w_rx_axis_tvalid			),
+//	.rx_axis_tuser					(w_rx_axis_tuser			),
+//	.rx_axis_tlast					(w_rx_axis_tlast			),
+//	.rx_statistics_vector			(							),
+//	.rx_statistics_valid			(							),
+//
+//	.s_axi_aclk             		(clk_axi					),
+//	.s_axi_aresetn          		(1'b1						),
+//	.s_axi_awaddr           		(m_axi_if_awaddr[10:0]		),
+//	.s_axi_awvalid          		(m_axi_if_awvalid    		),
+//	.s_axi_awready          		(m_axi_if_awready    		),
+//	.s_axi_wdata            		(m_axi_if_wdata[31:0] 		),
+//	.s_axi_wvalid           		(m_axi_if_wvalid     		),
+//	.s_axi_wready           		(m_axi_if_wready     		),
+//	.s_axi_bresp            		(m_axi_if_bresp[1:0]  		),
+//	.s_axi_bvalid           		(m_axi_if_bvalid     		),
+//	.s_axi_bready           		(m_axi_if_bready     		),
+//	.s_axi_araddr           		(m_axi_if_araddr[10:0]		),
+//	.s_axi_arvalid          		(m_axi_if_arvalid    		),
+//	.s_axi_arready          		(m_axi_if_arready    		),
+//	.s_axi_rdata            		(m_axi_if_rdata      		),
+//	.s_axi_rresp            		(m_axi_if_rresp[1:0]		),
+//	.s_axi_rvalid           		(m_axi_if_rvalid			),
+//	.s_axi_rready           		(m_axi_if_rready			),
+//	.xgmacint               		(							),
+//	.mdc                    		(mdc						),
+//	.mdio_in                		(mdio_in					),
+//	.mdio_out               		(mdio_out					),
+//	.mdio_tri               		(mdio_tri					),
+//	.tx_dcm_locked          		(w_rxaui_locked				),
+//	.xgmii_txd              		(xgmii_txd					),
+//	.xgmii_txc              		(xgmii_txc					),
+//	.rx_clk0                		(clk_gtx					),
+//	.rx_dcm_locked          		(w_rxaui_locked				),
+//	.xgmii_rxd              		(xgmii_rxd					),
+//	.xgmii_rxc              		(xgmii_rxc					)
+//	);
+//
+//	//	-------------------------------------------------------------------------------------
+//	//	rxaui
+//	//	-------------------------------------------------------------------------------------
+//	rxaui_0 rxaui_inst (
+//	.reset							(1'b0						),
+//	.dclk							(clk_microb					),
+//	.clk156_out						(clk_gtx					), // Output clock than can be used for external logic
+//	.clk156_lock					(w_rxaui_locked				),
+//	.pll0outclk_out					(							),
+//	.pll0lock_out					(							),
+//	.pll0outrefclk_out				(							),
+//	.pll1outclk_out					(							),
+//	.pll1outrefclk_out				(							),
+//	.common_pll_reset_out			(							),
+//	.refclk_p						(refclk_p					),
+//	.refclk_n						(refclk_n					),
+//	.xgmii_txd						(xgmii_txd					),
+//	.xgmii_txc						(xgmii_txc					),
+//	.xgmii_rxd						(xgmii_rxd					),
+//	.xgmii_rxc						(xgmii_rxc					),
+//	.rxaui_tx_l0_p					(rxaui_tx_l0_p				),
+//	.rxaui_tx_l0_n					(rxaui_tx_l0_n				),
+//	.rxaui_tx_l1_p					(rxaui_tx_l1_p				),
+//	.rxaui_tx_l1_n					(rxaui_tx_l1_n				),
+//	.rxaui_rx_l0_p					(rxaui_rx_l0_p				),
+//	.rxaui_rx_l0_n					(rxaui_rx_l0_n				),
+//	.rxaui_rx_l1_p					(rxaui_rx_l1_p				),
+//	.rxaui_rx_l1_n					(rxaui_rx_l1_n				),
+//	.signal_detect					(2'b11						),
+//	.debug							(							),
+//	.configuration_vector			(7'h00						),
+//	.status_vector					(							)
+//	);
+//
+//	//  -------------------------------------------------------------------------------------
+//	//	temperature_read 模块
+//	//  -------------------------------------------------------------------------------------
+//
+//	temperature_read temperature_read_inst(
+//	.i_wb_clk						(clk_axi  					),
+//	.i_wb_rst						(1'b0		           		),
+//	.scl							(iic_scl_io                 ),
+//	.sda							(iic_sda_io                 ),
+//	.ov_temperature_sensor_local	(wv_temperature_sensor_local),
+//	.ov_temperature_sensor_remote	(wv_temperature_sensor_remote ),
+//	.ov_temperature_be				(wv_temperature_be		    ),
+//	.ov_temperature_ps				(wv_temperature_ps		    )
+//	);
+//
+//	ila_96 ila_96_inst1 (
+//	.clk		(clk_gtx		),
+//	.probe0		({'b0,
+//				gige_vision_inst.packet_switch_inst.current_state,
+//				gige_vision_inst.w_pb_empty,
+//				gige_vision_inst.w_pcb_empty,
+//				gige_vision_inst.gvcp_rx_inst.gvcp_rx_filter_inst.gvcp_discover_packet,
+//				gige_vision_inst.gvcp_rx_inst.o_protocal_match,
+//				gige_vision_inst.gvcp_rx_inst.wv_mac_data,
+//				gige_vision_inst.gvcp_rx_inst.wv_mac_be,
+//				gige_vision_inst.gvcp_rx_inst.o_mac_valid,
+//				gige_vision_inst.gvcp_rx_inst.w_mac_last,
+//				gige_vision_inst.gvcp_rx_inst.w_mac_user}		)
+//	);
 endmodule
