@@ -1,0 +1,420 @@
+//-------------------------------------------------------------------------------------------------
+//  -- 版权所有者   : 中国大恒（集团）有限公司北京图像视觉技术分公司, 2010 -2015.
+//  -- 保密级别     ：绝密.
+//  -- 部门         : 硬件部，FPGA工作组
+//  -- 模块名       : fb_resend_ctrl
+//  -- 设计者       : 邢海涛
+//-------------------------------------------------------------------------------------------------
+//
+//  -- 版本记录 :
+//
+//  -- 作者         :| 版本号	:| 修改日期				:|  修改说明
+//-------------------------------------------------------------------------------------------------
+//  -- 邢海涛       :| V1.0		:| 2019/2/28 15:27:10	:|  由于乘法器限制，该版本只支持gev1.2，pid长度3byte；包长支持2byte，即64k
+//-------------------------------------------------------------------------------------------------
+//
+//  -- 模块描述     :
+//              1)  :
+//
+//              2)  :
+//
+//              3)  :
+//
+//-------------------------------------------------------------------------------------------------
+//`include			"fb_resend_ctrl_def.v"
+//仿真单位/精度
+`timescale 1ns/1ps
+//-------------------------------------------------------------------------------------------------
+module fb_resend_calc_addr # (
+	parameter	REG_WD  						 			= 32		,	//寄存器位宽
+	parameter	IMAGE_SIZE_WD								= 32		,	//图像数据大小位宽，以字节为单位
+	parameter	FRAME_BYTE_ADDR_WD   						= 27		,	//帧内有效地址位宽，以字节为单位
+	parameter	PKT_LENGTH_WD								= 16		,	//包长的位宽，最大支持64K，即16bit
+	parameter	PKT_CNT_WD									= 32			//一帧图像中包含的完整包个数的位宽，gigevision 1.2 pid的位宽3byte，gigevision 2.0 pid的位宽4byte
+	)
+	(
+	//  -------------------------------------------------------------------------------------
+	//  时钟和复位信号
+	//  -------------------------------------------------------------------------------------
+	input							clk									,	//帧存模块工作时钟
+	input							reset								,	//帧存模块工作时钟域的复位信号，高有效
+	//  -------------------------------------------------------------------------------------
+	//  控制数据
+	//  -------------------------------------------------------------------------------------
+	input  	[PKT_LENGTH_WD-1:0]		iv_pkt_length						,	//clk时钟域，packet length 正常包包长
+	input  	[PKT_LENGTH_WD-1:0]		iv_remain_pkt_length				,	//clk时钟域，remain packet length 残包包长(包含帧信息部分)
+	input	[PKT_CNT_WD-1:0]		iv_pic_pkt_cnt						,	//clk时钟域，图像包含的完整数据包个数（不包括残包）
+	input	[IMAGE_SIZE_WD-1:0]		iv_image_size						,	//clk时钟域，帧存写入的一帧图像的大小，以byte为单位
+	input	[IMAGE_SIZE_WD-1:0]		iv_payload_size						,	//clk时钟域，roi图+chunk像大小，以byte为单位
+	//  -------------------------------------------------------------------------------------
+	//  与 fb_resend_calc_ptr 交互
+	//  -------------------------------------------------------------------------------------
+	input							i_resend_valid						,	//clk时钟域，重传使能信号，高有效，一个时钟脉冲
+	input							i_resend_unavail					,	//clk时钟域，重传不可见信号，高有效
+	input	[REG_WD-1:0]			iv_resend_packet_id_first			,	//clk时钟域，packet id first，重传起始包id
+	input	[REG_WD-1:0]			iv_resend_packet_id_last			,	//clk时钟域，packet id last，重传结束包id
+	//	-------------------------------------------------------------------------------------
+	//	与 fb_resend_ctrl 交互
+	//	-------------------------------------------------------------------------------------
+	output							o_addr_calc_done					,	//clk时钟域，重传地址计算好信号
+	output							o_resend_need_info					,	//clk时钟域，重传需要info段，高有效
+	output	[FRAME_BYTE_ADDR_WD-1:0]ov_resend_invalid_length			,	//clk时钟域，重传部分不需要的数据长度，以byte为单位，只计算图像部分，在i_resend_valid有效时，该数据有效
+	output	[FRAME_BYTE_ADDR_WD-1:0]ov_resend_require_length			,	//clk时钟域，重传部分请求的数据长度，以byte为单位，只计算图像部分，在i_resend_valid有效时，该数据有效
+	output	[FRAME_BYTE_ADDR_WD-1:0]ov_resend_chunk_invalid_length		,	//clk时钟域，重传部分不需要的数据长度，以byte为单位，只计算图像部分，在i_resend_valid有效时，该数据有效
+	output	[FRAME_BYTE_ADDR_WD-1:0]ov_resend_chunk_require_length			//clk时钟域，重传部分请求的数据长度，以byte为单位，只计算图像部分，在i_resend_valid有效时，该数据有效
+	);
+
+
+	//	ref paramters
+
+	localparam		CALC_NUM											= 4;				//计数器的最大值
+	localparam		CALC_CNT_WD											= log2(CALC_NUM+1);	//计数器的位宽
+
+
+	//	ref functions
+	//	-------------------------------------------------------------------------------------
+	//	取对数，上取整
+	//	log2取对数的时候，有两种情况。分别是计算计数器的位宽和计算通道偏移的bit数
+	//	1.计算计数器的位宽，使用 y = log2(x+1)，当x=2^n时，y=n+1，可以表示0-2^(n+1)-1的数值
+	//	2.计算通道偏移的bit数，使用 y = log2(x)，当x=2^n时，y=n，可以表示0-2^n-1的数值
+	//	-------------------------------------------------------------------------------------
+	function integer log2 (input integer xx);
+		integer x;
+		begin
+			x	= xx-1 ;
+			for (log2=0;x>0;log2=log2+1) begin
+				x	= x >> 1;
+			end
+		end
+	endfunction
+
+	//	ref signals
+
+	reg											start_calc				= 1'b0;
+	reg		[CALC_CNT_WD-1:0]					calc_cnt				= 'b0;
+	reg											addr_calc_done			= 1'b0;
+	reg		[23:0]								mult_a					= 'b0;
+	wire	[15:0]								mlut_b					;
+	wire										mult_ce					;
+	wire	[39:0]								mult_p					;
+
+	reg		[FRAME_BYTE_ADDR_WD-1:0]			start_pos				= 'b0;
+	reg		[FRAME_BYTE_ADDR_WD-1:0]			length					= 'b0;
+	reg		[FRAME_BYTE_ADDR_WD-1:0]			end_pos					= 'b0;
+	wire	[FRAME_BYTE_ADDR_WD-1:0]			image_start				;
+	reg		[FRAME_BYTE_ADDR_WD-1:0]			image_length			= 'b0;
+	reg		[FRAME_BYTE_ADDR_WD-1:0]			chunk_start				= 'b0;
+	reg		[FRAME_BYTE_ADDR_WD-1:0]			chunk_length			= 'b0;
+	reg		[PKT_CNT_WD:0]						last_pkt				= 'b0;	//位宽多一个
+	reg											need_info				= 'b0;
+
+
+
+	//	ref ARCHITECTURE
+
+
+
+
+
+	//	===============================================================================================
+	//	ref 流程控制
+	//	===============================================================================================
+	//
+	//	-------------------------------------------------------------------------------------
+	//	重传可见时的波形
+	//	重传使能有效，done立即拉低，start立即拉高，开始计算。当计算好之后，done再拉高，start拉低
+	//                               ___
+	//	i_resend_valid		_________| |____________________________________________________
+	//
+	//	i_resend_unavail	________________________________________________________________
+	//                      ____________                  __________________________________
+	//	o_addr_calc_done    ///////////|__________________|
+	//                                 ____________________
+	//	start_calc          ___________|                  |_________________________________
+	//
+	//	calc_cnt            00000000000||0||1||2||3||.||n||000000000000000000000000000000000
+	//
+	//	-------------------------------------------------------------------------------------
+	//	-------------------------------------------------------------------------------------
+	//	重传不可见时的波形
+	//	重传使能有效，done立即拉高，start立即拉低，无需计算
+	//                               ___
+	//	i_resend_valid		_________| |____________________________________________________
+	//                      ________________________________________________________________
+	//	i_resend_unavail
+	//                      ________________________________________________________________
+	//	o_addr_calc_done    ///////////
+	//
+	//	start_calc          ________________________________________________________________
+	//
+	//	calc_cnt            0000000000000000000000000000000000000000000000000000000000000000
+	//
+	//	-------------------------------------------------------------------------------------
+
+
+	//	-------------------------------------------------------------------------------------
+	//	start_calc
+	//	1.当计算完毕之后，信号拉低
+	//	2.当重传使能有效，且重传可见时，开始计算
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		if(calc_cnt==CALC_NUM) begin
+			start_calc	<= 1'b0;
+		end
+		else if(i_resend_valid==1'b1 && i_resend_unavail==1'b0) begin
+			start_calc	<= 1'b1;
+		end
+	end
+
+	//	-------------------------------------------------------------------------------------
+	//	calc_cnt
+	//	1.当计数到最大值时，计数器归零
+	//	2.当start_calc打开时，开始计数
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		if(calc_cnt==CALC_NUM) begin
+			calc_cnt	<= 'b0;
+		end
+		else if(start_calc==1'b1) begin
+			calc_cnt	<= calc_cnt + 1'b1;
+		end
+	end
+
+	//	-------------------------------------------------------------------------------------
+	//	addr_calc_done
+	//	1.当重传使能有效，且重传可见时，done拉低
+	//	2.当重传使能有效，且重传不可见时，done拉高
+	//	3.当calc_cnt达到最大值时，表示计算完毕，done拉高
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		if(i_resend_valid==1'b1 && i_resend_unavail==1'b0) begin
+			addr_calc_done	<= 1'b0;
+		end
+		else if(i_resend_valid==1'b1 && i_resend_unavail==1'b1) begin
+			addr_calc_done	<= 1'b1;
+		end
+		else if(calc_cnt==CALC_NUM) begin
+			addr_calc_done	<= 1'b1;
+		end
+	end
+	assign	o_addr_calc_done	= addr_calc_done;
+
+	//	===============================================================================================
+	//	ref 重传计算 - 用乘法器计算出起始地址、结束地址、长度
+	//	===============================================================================================
+	//	-------------------------------------------------------------------------------------
+	//	last_pkt		: payload的最后一个包的pid
+	//	trailer_pkt		: trailer包的pid
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		if(iv_remain_pkt_length==0) begin
+			last_pkt	<= iv_pic_pkt_cnt;
+		end
+		else begin
+			last_pkt	<= iv_pic_pkt_cnt + 1;
+		end
+	end
+
+	//	-------------------------------------------------------------------------------------
+	//	乘法器
+	//	A 位宽24bit，pid
+	//	B 位宽16bit，ip_length
+	//	-------------------------------------------------------------------------------------
+	resend_mult resend_mult_inst (
+	.CLK		(clk				),
+	.A			(mult_a				),
+	.B			(mlut_b				),
+	.CE			(mult_ce			),
+	.SCLR		(1'b0				),
+	.P			(mult_p				)
+	);
+
+	//	-------------------------------------------------------------------------------------
+	//	乘法器使能控制，只有模块响应之后，才能做乘法
+	//	-------------------------------------------------------------------------------------
+	assign	mult_ce		= start_calc;
+
+	//	-------------------------------------------------------------------------------------
+	//	乘法器b端口，固定为包长
+	//	-------------------------------------------------------------------------------------
+	assign	mlut_b		= {{(16-PKT_LENGTH_WD){1'b0}},iv_pkt_length};
+
+	//	-------------------------------------------------------------------------------------
+	//	step 1，计算 start_pos
+	//		有无残包都是如此
+	//		（1）当pid_first=0时，start_pos=0；
+	//		（2）当last>=pid_first>0,start_pos= (pid_first-1)*pkt_length；
+	//		（3）当pid_first=trailer_pkt时，start_pos=payload_size，乘法会超过payload_size；
+	//		所以，mult_a需要做以上前2个条件的判断，如果乘法结果超过payload size，则保护为payload size
+	//
+	//	-------------------------------------------------------------------------------------
+	//	step 2，计算 end_pos
+	//		当无残包时：last=pkt_cnt
+	//			（1）当last>pid_last>=0,end_pos=pid_last*pkt_length;
+	//			（2）pid_last=last,end_pos=pid_last* pkt_length;
+	//			（3）pid_last=trailer_pkt,end_pos=pid_last* pkt_length，乘法会超过payload_size；
+	//		当有残包时：last=pkt_cnt+1
+	//			（1）当last>pid_last>=0,end_pos=pid_last*pkt_length;
+	//			（2）pid_last=last,end_pos=pid_last*pkt_length，乘法会超过payload_size；
+	//			（3）pid_last=trailer_pkt,end_pos=pid_last*pkt_length，乘法会超过payload_size；
+	//		所以，mult_a需要，如果乘法结果超过payload size，则保护为payload size
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		//	-------------------------------------------------------------------------------------
+		//	calc_cnt==1
+		//	乘法器计算 start_pos，计算结果在 calc_cnt=2时输出
+		//	-------------------------------------------------------------------------------------
+		if(calc_cnt==1) begin
+			if(iv_resend_packet_id_first==0) begin
+				mult_a	<= 0;
+			end
+			else begin
+				mult_a	<= iv_resend_packet_id_first-1;
+			end
+		end
+		//	-------------------------------------------------------------------------------------
+		//	calc_cnt==2
+		//	乘法器计算 end_pos，计算结果在 calc_cnt=3时输出
+		//	-------------------------------------------------------------------------------------
+		else if(calc_cnt==2) begin
+			mult_a	<= iv_resend_packet_id_last;
+		end
+	end
+
+	//	-------------------------------------------------------------------------------------
+	//	start_pos计算结果在 calc_cnt=2时输出
+	//	乘法结果如果大于 payload size，要保护为payload size
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		if(calc_cnt==2) begin
+			if(mult_p>iv_payload_size) begin
+				start_pos	<= iv_payload_size;
+			end
+			else begin
+				start_pos	<= mult_p;
+			end
+		end
+	end
+
+	//	-------------------------------------------------------------------------------------
+	//	end_pos计算结果在 calc_cnt=3时输出
+	//	乘法结果如果大于 payload size，要保护为payload size
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		if(calc_cnt==3) begin
+			if(mult_p>iv_payload_size) begin
+				end_pos	<= iv_payload_size;
+			end
+			else begin
+				end_pos	<= mult_p;
+			end
+		end
+	end
+
+	//	-------------------------------------------------------------------------------------
+	//	计算出重传需要的长度
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		if(calc_cnt==4) begin
+			length	<= end_pos-start_pos;
+		end
+	end
+
+	//	===============================================================================================
+	//	ref 重传计算 - 计算出图像和chunk的起始地址和长度
+	//	上面的计算中已经做了溢出保护，start_pos 和 end_pos 不会大于 payload_size
+	//	===============================================================================================
+	//	-------------------------------------------------------------------------------------
+	//	image start 等于  start_pos
+	//	当 start_pos 在chunk之中时，image start是不正确的，这样也是无所谓的，因为此时image length=0
+	//	-------------------------------------------------------------------------------------
+	assign	image_start	= start_pos;
+
+	//	-------------------------------------------------------------------------------------
+	//	chunk_start要考虑2点
+	//	如果start_pos在image中，那么chunk_start=0
+	//	如果start_pos>image，那么chunk_start=start_pos-iv_image_size
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		if(start_pos<iv_image_size) begin
+			chunk_start		<= 0;
+		end
+		else begin
+			chunk_start		<= start_pos-iv_image_size;
+		end
+	end
+
+	//	-------------------------------------------------------------------------------------
+	//	image_length图像长度
+	//		如果end_pos在image中，那么image_length=length
+	//		如果end_pos>image中，那么还要看image_start在哪里
+	//			如果start_pos>=image，说明没有image数据，那么image_length=0
+	//			如果start_pos<image，image_length=iv_image_size-start_pos
+	//
+	//	chunk_length chunk长度
+	//		如果end_pos在image中，说明没有chunk，那么chunk_length=0
+	//		如果end_pos>image，说明没有chunk，那么chunk_length=end_pos-chunk_start
+	//
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		if(end_pos<iv_image_size) begin
+			image_length	<= length;
+			chunk_length	<= 0;
+		end
+		else begin
+			if(start_pos>=iv_image_size) begin
+				image_length	<= 0;
+			end
+			else begin
+				image_length	<= iv_image_size-start_pos;
+			end
+			chunk_length	<= end_pos-chunk_start;
+		end
+	end
+
+	//	-------------------------------------------------------------------------------------
+	//	将图像和chunk的地址传递给下一级模块
+	//	-------------------------------------------------------------------------------------
+	assign	ov_resend_invalid_length	= image_start;
+	assign	ov_resend_require_length	= image_length;
+
+	//	assign	ov_resend_invalid_length	= 0;
+	//	assign	ov_resend_require_length	= 256;
+
+
+	assign	ov_resend_chunk_invalid_length	= chunk_start;
+	assign	ov_resend_chunk_require_length	= chunk_length;
+
+	//	assign	ov_resend_chunk_invalid_length	= 0;
+	//	assign	ov_resend_chunk_require_length	= 256;
+
+	//	===============================================================================================
+	//	ref 重传计算 - 重传期间是否需要info
+	//	iv_resend_packet_id_first=0或者iv_resend_packet_id_last==trailer_pkt_cnt，说明有leader包或者trailer包，此时需要发info
+	//	如果重传结束地址>image size，说明重传需要chunk数据，此时需要发info
+	//	===============================================================================================
+	//	-------------------------------------------------------------------------------------
+	//	在响应了重传使能时候，开始判断
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		if(i_resend_valid==1'b1) begin
+			if(iv_resend_packet_id_first==0) begin
+				need_info	<= 1'b1;
+			end
+			else if(iv_resend_packet_id_last>last_pkt) begin
+				need_info	<= 1'b1;
+			end
+			else if(end_pos>iv_image_size) begin
+				need_info	<= 1'b1;
+			end
+			else begin
+				need_info	<= 1'b0;
+			end
+		end
+	end
+	assign	o_resend_need_info		= need_info;
+
+
+
+
+endmodule

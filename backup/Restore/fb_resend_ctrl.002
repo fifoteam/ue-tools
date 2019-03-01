@@ -1,0 +1,587 @@
+//-------------------------------------------------------------------------------------------------
+//  -- 版权所有者   : 中国大恒（集团）有限公司北京图像视觉技术分公司, 2010 -2015.
+//  -- 保密级别     ：绝密.
+//  -- 部门         : 硬件部，FPGA工作组
+//  -- 模块名       : fb_resend_ctrl
+//  -- 设计者       : 邢海涛
+//-------------------------------------------------------------------------------------------------
+//
+//  -- 版本记录 :
+//
+//  -- 作者         :| 版本号	:| 修改日期				:|  修改说明
+//-------------------------------------------------------------------------------------------------
+//  -- 邢海涛       :| V1.0		:| 2018/10/23 17:29:04	:|  划分模块端口
+//-------------------------------------------------------------------------------------------------
+//
+//  -- 模块描述     :
+//              1)  :
+//
+//              2)  :
+//
+//              3)  :
+//
+//-------------------------------------------------------------------------------------------------
+//`include			"fb_resend_ctrl_def.v"
+//仿真单位/精度
+`timescale 1ns/1ps
+//-------------------------------------------------------------------------------------------------
+module fb_resend_ctrl # (
+	parameter	PTR_WD										= 2			,	//读写指针的位宽
+	parameter	SHORT_REG_WD   								= 16		,	//短寄存器位宽
+	parameter	REG_WD  						 			= 32		,	//寄存器位宽
+	parameter	LONG_REG_WD  						 		= 64		,	//长寄存器位宽
+	parameter	IMAGE_SIZE_WD								= 32		,	//图像数据大小位宽，以字节为单位
+	parameter	FRAME_BYTE_ADDR_WD   						= 27		,	//帧内有效地址位宽，以字节为单位
+	parameter	PKT_LENGTH_WD								= 16		,	//包长的位宽，最大支持64K，即16bit
+	parameter	PKT_CNT_WD									= 32			//一帧图像中包含的完整包个数的位宽，gigevision 1.2 pid的位宽3byte，gigevision 2.0 pid的位宽4byte
+	)
+	(
+	//  -------------------------------------------------------------------------------------
+	//  时钟和复位信号
+	//  -------------------------------------------------------------------------------------
+	input							clk									,	//帧存模块工作时钟
+	input							reset								,	//帧存模块工作时钟域的复位信号，高有效
+	//  -------------------------------------------------------------------------------------
+	//  控制数据
+	//  -------------------------------------------------------------------------------------
+	input							i_stream_enable						,	//clk时钟域，流停止信号，高有效，有效时允许数据从帧存读出，无效时立即停止读出，并复位读写地址指针，清帧存
+	input	[PKT_CNT_WD-1:0]		iv_pic_pkt_cnt						,	//clk时钟域，图像包含的完整数据包个数（不包括残包）
+	input	[IMAGE_SIZE_WD-1:0]		iv_image_size						,	//clk时钟域，帧存写入的一帧图像的大小，以byte为单位
+	//  -------------------------------------------------------------------------------------
+	//  与 fb_read_init 交互
+	//  -------------------------------------------------------------------------------------
+	output							o_normal_read_repeat				,	//clk时钟域，可以停止前端正常读，高有效，一个时钟脉冲
+	input							i_fval_init							,	//clk时钟域，场有效信号，高有效
+	//  -------------------------------------------------------------------------------------
+	//  与 fb_packet_divide 交互
+	//  -------------------------------------------------------------------------------------
+	input							i_fval_pdiv							,	//clk时钟域，场有效信号，高有效
+	input							i_pval								,	//clk时钟域，一个网络包有效数据标志，是连续信号，期间发出的地址对应一个包长的数据
+	input							i_aval								,	//clk时钟域，地址有效信号，高有效
+	input							i_image_flag						,	//clk时钟域，图像段标志，高有效
+	input	[FRAME_BYTE_ADDR_WD-1:0]iv_rd_length						,	//clk时钟域，读长度，以byte为单位
+	//  -------------------------------------------------------------------------------------
+	//  与 fb_resend_calc_ptr 交互
+	//  -------------------------------------------------------------------------------------
+	output							o_resend_rdy						,	//clk时钟域，重传准备好信号，高有效，有效时表示上一个重传命令处理完且可以接收下一个重传命令，无效时表示正在处理重传命令
+	input							i_resend_valid						,	//clk时钟域，重传使能信号，高有效，一个时钟脉冲
+	input							i_resend_unavail					,	//clk时钟域，重传不可见信号，高有效
+	input	[LONG_REG_WD-1:0]		iv_resend_block_id					,	//clk时钟域，block id
+	input	[REG_WD-1:0]			iv_resend_packet_id_first			,	//clk时钟域，packet id first，重传起始包id
+	input	[REG_WD-1:0]			iv_resend_packet_id_last			,	//clk时钟域，packet id last，重传结束包id
+	//  -------------------------------------------------------------------------------------
+	//  与 fb_resend_calc_addr 交互
+	//  -------------------------------------------------------------------------------------
+	input							i_addr_calc_done					,	//clk时钟域，重传地址计算好信号
+	input							i_resend_need_info					,	//clk时钟域，重传需要info段，高有效
+	input	[FRAME_BYTE_ADDR_WD-1:0]iv_resend_invalid_length			,	//clk时钟域，重传部分不需要的数据长度，以byte为单位，只计算图像部分，在i_resend_valid有效时，该数据有效
+	input	[FRAME_BYTE_ADDR_WD-1:0]iv_resend_require_length			,	//clk时钟域，重传部分请求的数据长度，以byte为单位，只计算图像部分，在i_resend_valid有效时，该数据有效
+	input	[FRAME_BYTE_ADDR_WD-1:0]iv_resend_chunk_invalid_length		,	//clk时钟域，重传部分不需要的数据长度，以byte为单位，只计算图像部分，在i_resend_valid有效时，该数据有效
+	input	[FRAME_BYTE_ADDR_WD-1:0]iv_resend_chunk_require_length		,	//clk时钟域，重传部分请求的数据长度，以byte为单位，只计算图像部分，在i_resend_valid有效时，该数据有效
+	//  -------------------------------------------------------------------------------------
+	//  与 fb_read_cmd 交互
+	//  -------------------------------------------------------------------------------------
+	input							i_resend_rdy						,	//clk时钟域，重传准备好信号，高有效，有效时表示上一个重传命令处理完且可以接收下一个重传命令，无效时表示正在处理重传命令
+	input							i_addr_cmd_wr_done					,	//clk时钟域，一帧地址及数据全部写入addr_buffer完毕标志
+	output							o_resend_valid						,	//clk时钟域，重传使能信号，高有效，一个时钟脉冲
+	output							o_resend_unavail					,	//clk时钟域，重传不可见信号，高有效
+	output							o_interrupt							,	//clk时钟域，正常读停止标志，高有效
+	output	[LONG_REG_WD-1:0]		ov_resend_block_id					,	//clk时钟域，block id
+	output	[REG_WD-1:0]			ov_resend_packet_id_first			,	//clk时钟域，packet id first，重传起始包id
+	output	[REG_WD-1:0]			ov_resend_packet_id_last			,	//clk时钟域，packet id last，重传结束包id
+	//	-------------------------------------------------------------------------------------
+	//	与 fb_resend_cut 交互
+	//	-------------------------------------------------------------------------------------
+	output							o_resend_need_info					,	//clk时钟域，重传需要info段，高有效
+	output	[FRAME_BYTE_ADDR_WD-1:0]ov_resend_invalid_length			,	//clk时钟域，重传部分不需要的数据长度，以byte为单位，只计算图像部分，在i_resend_valid有效时，该数据有效
+	output	[FRAME_BYTE_ADDR_WD-1:0]ov_resend_require_length			,	//clk时钟域，重传部分请求的数据长度，以byte为单位，只计算图像部分，在i_resend_valid有效时，该数据有效
+	output	[FRAME_BYTE_ADDR_WD-1:0]ov_resend_chunk_invalid_length		,	//clk时钟域，重传部分不需要的数据长度，以byte为单位，只计算图像部分，在i_resend_valid有效时，该数据有效
+	output	[FRAME_BYTE_ADDR_WD-1:0]ov_resend_chunk_require_length			//clk时钟域，重传部分请求的数据长度，以byte为单位，只计算图像部分，在i_resend_valid有效时，该数据有效
+	);
+
+
+	//	ref paramters
+	//FSM Parameter Define
+	parameter	S_IDLE		= 2'd0;
+	parameter	S_RDY		= 2'd1;
+	parameter	S_WAIT		= 2'd2;
+	parameter	S_RESENDING	= 2'd3;
+
+	reg		[1:0]	current_state	= S_IDLE;
+	reg		[1:0]	next_state		= S_IDLE;
+
+	//FSM for sim
+	// synthesis translate_off
+	reg		[127:0]			state_ascii;
+	always @ ( * ) begin
+		case(current_state)
+			2'd0 	:	state_ascii	= "S_IDLE";
+			2'd1 	:	state_ascii	= "S_RDY";
+			2'd2 	:	state_ascii	= "S_WAIT";
+			2'd3 	:	state_ascii	= "S_RESENDING";
+			default	:	state_ascii	= "ERROR";
+		endcase
+	end
+	// synthesis translate_on
+
+
+	parameter	SEND_PKT_THRESHOLD									= 20;	//重传包的阈值，距离完整包的个数小于这个数值时，意味着马上要结束这一帧，不能在打断正常流；
+
+	//	ref functions
+
+
+	//	ref signals
+	reg																pval_dly					= 1'b0;
+	wire															pval_fall					;
+	reg																image_flag_dly				= 1'b0;
+	reg																fval_pdiv_dly				= 1'b0;
+	wire															fval_pdiv_fall				;
+	reg																fval_init_dly				= 1'b0;
+	wire															fval_init_rise				;
+	wire															fval_init_fall				;
+	reg																resend_rdy					= 'b0;
+	reg		[FRAME_BYTE_ADDR_WD-1:0]								resend_invalid_length		= 'b0;
+	reg		[FRAME_BYTE_ADDR_WD-1:0]								resend_require_length		= 'b0;
+	reg																can_stop_normal				;
+	reg																can_stop_normal_fval		;
+	reg		[FRAME_BYTE_ADDR_WD-1:0]								send_image_length			= 'b0;
+	reg		[PKT_CNT_WD-1:0]										send_pkt_cnt				= 'b0;
+	reg																send_pkt_over_thd			= 'b0;
+	reg																normal_read_repeat			= 1'b0;
+	reg																resend_valid				= 1'b0;
+	reg																stop_normal_at_fval			= 1'b0;
+	reg																pause_normal_flag			= 1'b0;
+	reg																interrupt					= 1'b0;
+	reg																resend_need_info			= 1'b0;
+
+
+	//	ref ARCHITECTURE
+	//	===============================================================================================
+	//	ref edge
+	//	===============================================================================================
+	//	-------------------------------------------------------------------------------------
+	//	i_pval 提取下降沿
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		pval_dly	<= i_pval;
+	end
+	assign	pval_fall	= (pval_dly==1'b1 && i_pval==1'b0) ? 1'b1 : 1'b0;
+
+	//	-------------------------------------------------------------------------------------
+	//	i_image_flag延时
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		image_flag_dly	<= i_image_flag;
+	end
+
+	//	-------------------------------------------------------------------------------------
+	//	i_fval_pdiv 下降沿
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		fval_pdiv_dly	<= i_fval_pdiv;
+	end
+	assign	fval_pdiv_fall	= (fval_pdiv_dly==1'b1 && i_fval_pdiv==1'b0) ? 1'b1 : 1'b0;
+
+	//	-------------------------------------------------------------------------------------
+	//	i_fval_init 上升沿
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		fval_init_dly	<= i_fval_init;
+	end
+	assign	fval_init_rise	= (fval_init_dly==1'b0 && i_fval_init==1'b1) ? 1'b1 : 1'b0;
+	assign	fval_init_fall	= (fval_init_dly==1'b1 && i_fval_init==1'b0) ? 1'b1 : 1'b0;
+
+	//	===============================================================================================
+	//	ref resend_calc 交互
+	//	===============================================================================================
+	//	-------------------------------------------------------------------------------------
+	//	o_resend_rdy
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		if(i_resend_valid==1'b1) begin
+			resend_rdy	<= 1'b0;
+		end
+		else if(current_state==S_IDLE && i_resend_rdy==1'b1) begin
+			resend_rdy	<= 1'b1;
+		end
+	end
+	assign	o_resend_rdy	= resend_rdy;
+
+	//	===============================================================================================
+	//	ref	正常流数据统计
+	//	===============================================================================================
+	//	-------------------------------------------------------------------------------------
+	//	统计正常流发送的数据量
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		//	-------------------------------------------------------------------------------------
+		//	当停流的时候，要复位计数器
+		//	-------------------------------------------------------------------------------------
+		if(i_stream_enable==1'b0) begin
+			send_image_length	<= 'b0;
+		end
+		//	-------------------------------------------------------------------------------------
+		//	当current_state!=S_RESENDING时，表示在正常流状态。
+		//	正常流状态下fval下降沿表示一帧正常结束，此时计数器清零
+		//	此处必须要用 fval_pdiv 的下降沿，因为 iv_rd_length 是从pdiv引入的
+		//	-------------------------------------------------------------------------------------
+		else if(current_state!=S_RESENDING && fval_pdiv_fall==1'b1) begin
+			send_image_length	<= 'b0;
+		end
+		//	-------------------------------------------------------------------------------------
+		//	正常流状态下，统计数据量
+		//	-------------------------------------------------------------------------------------
+		else if(current_state!=S_RESENDING && i_fval_pdiv==1'b1 && i_image_flag==1'b1 && i_aval==1'b1) begin
+			send_image_length	<= send_image_length + iv_rd_length;
+		end
+	end
+
+	//	-------------------------------------------------------------------------------------
+	//	统计发送的包个数
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		//	-------------------------------------------------------------------------------------
+		//	当停流的时候，要复位计数器
+		//	-------------------------------------------------------------------------------------
+		if(i_stream_enable==1'b0) begin
+			send_pkt_cnt	<= 'b0;
+		end
+		//	-------------------------------------------------------------------------------------
+		//	当current_state!=S_RESENDING时，表示在正常流状态。
+		//	正常流状态下fval下降沿表示一帧正常结束，此时计数器清零
+		//	-------------------------------------------------------------------------------------
+		else if(current_state!=S_RESENDING && fval_pdiv_fall==1'b1) begin
+			send_pkt_cnt	<= 'b0;
+		end
+		//	-------------------------------------------------------------------------------------
+		//	正常流状态下，统计数据量
+		//	-------------------------------------------------------------------------------------
+		else if(current_state!=S_RESENDING && i_fval_pdiv==1'b1 && i_image_flag==1'b1 && pval_fall==1'b1) begin
+			send_pkt_cnt	<= send_pkt_cnt + 1'b1;
+		end
+	end
+
+	//	===============================================================================================
+	//	ref 打断正常流
+	//	===============================================================================================
+	//	-------------------------------------------------------------------------------------
+	//	当完整包个数-已经发包个数 > 阈值时，说明此时一帧可以被打断
+	//	否则，一帧即将结束，不能被打断
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		if((iv_pic_pkt_cnt-send_pkt_cnt)>SEND_PKT_THRESHOLD) begin
+			send_pkt_over_thd	<= 1'b1;
+		end
+		else begin
+			send_pkt_over_thd	<= 1'b0;
+		end
+	end
+
+	//	-------------------------------------------------------------------------------------
+	//	合适的位置打断正常流
+	//	分为2种情况考虑，正常流传输时，正常流消隐时
+	//	1.正常流正在传输时，fval_init=1 || fval_pdiv =1，且中断条件满足
+	//	当i_resend_rdy=1且i_pval下降沿，中断正常流。init和cmd会处于同一读指针，当cmd操作完当前帧之后，init才会切换到下一帧。
+	//	中断条件满足指的是：
+	//	（1）	在info阶段不能打断
+	//	（2）	在statis阶段不能打断
+	//	（3）	当完整包个数-已经发包个数 > 阈值时，说明此时一帧可以被打断否则，一帧即将结束，不能被打断。阈值暂定为20。
+	//	2.正常流不在传输时，i_fval_init=0且i_fval_pdiv且init输出的fval_changing=0，此时前后两端的都已经停下来
+	//	-------------------------------------------------------------------------------------
+	always @ (*) begin
+		if(i_addr_calc_done==1 && (i_fval_init==1'b1 || i_fval_pdiv==1'b1) && i_resend_rdy==1'b1 && pval_fall==1'b1 && image_flag_dly==1'b1 && send_pkt_over_thd==1'b1) begin
+			can_stop_normal			= 1'b1;
+			can_stop_normal_fval	= 1'b1;
+		end
+		//	-------------------------------------------------------------------------------------
+		//	                  ______________________
+		//	fval_init		__|                    |__________________
+		//	                        ______________________
+		//	fval_pdiv		________|                    |____________
+		//	                          ______________________
+		//	fval_pdiv_dly	__________|                    |__________
+		//                                                 ___________
+		//	o_interrupt		_______________________________|
+		//
+		//	-------------------------------------------------------------------------------------
+		else if(i_addr_calc_done==1 && i_fval_init==1'b0 && i_fval_pdiv==1'b0 && fval_pdiv_dly==1'b0 && i_resend_rdy==1'b1) begin
+			can_stop_normal			= 1'b1;
+			can_stop_normal_fval	= 1'b0;
+		end
+		else begin
+			can_stop_normal			= 1'b0;
+			can_stop_normal_fval	= 1'b0;
+		end
+	end
+
+	//	-------------------------------------------------------------------------------------
+	//	当重传不可见时，不打断fb_read_init，只有在重传可见时，才会输出 normal_read_repeat
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		if(i_resend_unavail==1'b1) begin
+			normal_read_repeat	<= 1'b0;
+		end
+		else begin
+			if(current_state==S_WAIT && can_stop_normal==1'b1) begin
+				normal_read_repeat	<= 1'b1;
+			end
+			else begin
+				normal_read_repeat	<= 1'b0;
+			end
+		end
+
+	end
+	assign	o_normal_read_repeat	= normal_read_repeat;
+
+	//	===============================================================================================
+	//	ref 重传信息输出
+	//	===============================================================================================
+	//	-------------------------------------------------------------------------------------
+	//	在可以停采的时刻，发出resend_valid信号，高电平脉冲
+	//	1.重传开始时，发出resend_valid
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		if(current_state==S_WAIT && can_stop_normal==1'b1) begin
+			resend_valid	<= 1'b1;
+		end
+		else begin
+			resend_valid	<= 1'b0;
+		end
+	end
+	assign	o_resend_valid	= resend_valid;
+
+	//	-------------------------------------------------------------------------------------
+	//	interrupt，打断 fb_read_init 模块
+	//	重传开始时，发出interrrupt
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		if(i_stream_enable==1'b0 || i_addr_cmd_wr_done==1'b1) begin
+			interrupt	<= 1'b0;
+		end
+		else if(current_state==S_WAIT && can_stop_normal==1'b1) begin
+			interrupt	<= 1'b1;
+		end
+	end
+
+	//	-------------------------------------------------------------------------------------
+	//	o_interrupt 提前 o_resend_valid 一拍输出，目的是为了让 packet_divide模块先停下来
+	//	-------------------------------------------------------------------------------------
+	assign	o_interrupt		= interrupt | (current_state==S_WAIT && can_stop_normal==1'b1);
+
+	//	-------------------------------------------------------------------------------------
+	//	重传是否可见在 calc 中做判断，在 ctrl 中直接传递
+	//	-------------------------------------------------------------------------------------
+	assign	o_resend_unavail	= i_resend_unavail;
+
+	//	===============================================================================================
+	//	当重传不可见时，o_resend_need_info保持不变
+	//	需要多个寄存器联合完成这个功能
+	//	===============================================================================================
+	//	-------------------------------------------------------------------------------------
+	//	stop_normal_at_fval 记录重传发生的位置
+	//	stop_normal_at_fval==1，表明重传发生在场有效之中；stop_normal_at_fval==0，表明重传发生在场消隐之中
+	//	1.停流时复位
+	//	2.开流时动作如下
+	//	(1)在wait状态判断，如果上一个在中断还没有处理完，且上一个中断是在场有效时发生的，那么中断位置不变
+	//	(2)在wait状态判断，如果上一个在中断处理完，或者上一个中断是在场消隐时发生的，那么中断的位置要更新
+	//	(3)当打断正常流的标志==0时，说明正常流已经恢复，此时寄存器复位
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		if(i_stream_enable==1'b0) begin
+			stop_normal_at_fval		<= 1'b0;
+		end
+		else if(current_state==S_WAIT && stop_normal_at_fval==1'b1) begin
+			stop_normal_at_fval	<= 1'b1;
+		end
+		else if(current_state==S_WAIT && stop_normal_at_fval==1'b0) begin
+			stop_normal_at_fval	<= can_stop_normal_fval;
+		end
+		else if(pause_normal_flag==1'b0) begin
+			stop_normal_at_fval		<= 1'b0;
+		end
+	end
+
+	//	-------------------------------------------------------------------------------------
+	//	pause_normal_flag 打断正常流的标志
+	//	pause_normal_flag==1时，表明上一帧的正常流还没有结束；pause_normal_flag==0时，表明上一帧的正常流已经结束。
+	//	1.停流时，重传标志清零
+	//	2.开流时，动作如下
+	//	(1)stop_normal_at_fval==1，表明重传发生在场有效中，需要下一个恢复的正常流完成之后，才表明正常流结束
+	//	(2)stop_normal_at_fval==0，表明重传发生在场消隐中，或者没有重传，当一帧结束时，寄存器清零
+	//	(3)当进入重传状态时，寄存器置位
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		if(i_stream_enable==1'b0) begin
+			pause_normal_flag		<= 1'b0;
+		end
+		else if(stop_normal_at_fval==1'b1 && current_state!=S_RESENDING && fval_init_fall==1'b1) begin
+			pause_normal_flag		<= 1'b0;
+		end
+		else if(stop_normal_at_fval==1'b0 && fval_init_fall==1'b1) begin
+			pause_normal_flag		<= 1'b0;
+		end
+		else if(current_state==S_WAIT && can_stop_normal_fval==1'b1) begin
+			pause_normal_flag		<= 1'b1;
+		end
+		else if(current_state==S_WAIT && can_stop_normal_fval==1'b0) begin
+			pause_normal_flag		<= pause_normal_flag;
+		end
+	end
+
+	//	-------------------------------------------------------------------------------------
+	//	当重传不可见时，o_resend_need_info保持不变
+	//	-------------------------------------------------------------------------------------
+	//	o_resend_need_info   是否需要info
+	//	1.完整的正常流是否需要info
+	//	凡是正常开始的正常流，都需要info。
+	//	2.重传流是否需要info
+	//		由 fb_resend_calc_addr 模块提供
+	//	3.重传恢复的正常流是否需要info
+	//		(1)当重传发生在一帧的场有效位置，重传结束时，下一个正常流不需要info
+	//		(2)当重传发生在一帧的场消隐位置，重传结束时，下一个正常流需要info  --  这种情况，与情况1是一样的
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		if(i_resend_unavail==1'b1) begin
+			resend_need_info	<= resend_need_info;
+		end
+		else begin
+			//	-------------------------------------------------------------------------------------
+			//	情况1，需要info
+			//	-------------------------------------------------------------------------------------
+			if(current_state!=S_RESENDING && fval_init_rise==1'b1 && pause_normal_flag==1'b0) begin
+				resend_need_info	<= 1'b1;
+			end
+			//	-------------------------------------------------------------------------------------
+			//	情况2，需要判断包的id
+			//	-------------------------------------------------------------------------------------
+			else if(current_state==S_WAIT && can_stop_normal==1'b1) begin
+				resend_need_info	<= i_resend_need_info;
+			end
+			//	-------------------------------------------------------------------------------------
+			//	情况3，不需要info
+			//	-------------------------------------------------------------------------------------
+			else if(current_state!=S_RESENDING && fval_init_rise==1'b1 && pause_normal_flag==1'b1) begin
+				resend_need_info	<= 1'b0;
+			end
+		end
+	end
+	assign	o_resend_need_info		= resend_need_info;
+
+	//	-------------------------------------------------------------------------------------
+	//	当重传不可见时，resend_invalid_length resend_require_length 保持不变
+	//	-------------------------------------------------------------------------------------
+	//	ov_resend_invalid_length ov_resend_require_length 表示后级 cut 模块要截取的数据量，在重传和正常流下都要使用
+	//	1.完整的正常流传输时，
+	//		ov_resend_invalid_length=0
+	//		ov_resend_require_length=image_size
+	//	2.重传流传输时，
+	//		ov_resend_invalid_length=要扔掉的数据量
+	//		ov_resend_require_length=要发送的数据量
+	//	3.重传恢复的正常流传输时，
+	//		ov_resend_invalid_length=被重传打断时，已经发送的数据量，即这一次要扔掉的数据量
+	//		ov_resend_require_length=image_size-已发送数据量
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		if(i_resend_unavail==1'b1) begin
+			resend_invalid_length	<= resend_invalid_length;
+			resend_require_length	<= resend_require_length;
+		end
+		else begin
+			//	-------------------------------------------------------------------------------------
+			//	重传开始，情况2
+			//	-------------------------------------------------------------------------------------
+			if(current_state==S_WAIT && can_stop_normal==1'b1) begin
+				resend_invalid_length	<= iv_resend_invalid_length;
+				resend_require_length	<= iv_resend_require_length;
+			end
+			//	-------------------------------------------------------------------------------------
+			//	重传恢复的正常流传输时，情况3，情况1
+			//	当 fval_init 的上升沿时，后端所有模块的地址都已经处理完，此时 fval_pdiv 有可能还是高电平，没有关系
+			//	-------------------------------------------------------------------------------------
+			else if(current_state!=S_RESENDING && fval_init_rise==1'b1) begin
+				resend_invalid_length	<= send_image_length;
+				resend_require_length	<= iv_image_size - send_image_length;
+			end
+		end
+	end
+	assign	ov_resend_invalid_length	= resend_invalid_length;
+	assign	ov_resend_require_length	= resend_require_length;
+
+	//	-------------------------------------------------------------------------------------
+	//	重传所需的bid pid chunk地址，不做处理，直连
+	//	-------------------------------------------------------------------------------------
+	assign	ov_resend_block_id				= iv_resend_block_id;
+	assign	ov_resend_packet_id_first		= iv_resend_packet_id_first;
+	assign	ov_resend_packet_id_last		= iv_resend_packet_id_last;
+	assign	ov_resend_chunk_invalid_length	= iv_resend_chunk_invalid_length;
+	assign	ov_resend_chunk_require_length	= iv_resend_chunk_require_length;
+
+	//	===============================================================================================
+	//	ref ***FSM***
+	//	===============================================================================================
+	//	-------------------------------------------------------------------------------------
+	//	FSM Sequential Logic
+	//	-------------------------------------------------------------------------------------
+	always @ (posedge clk) begin
+		if(reset==1'b1 || i_stream_enable==1'b0) begin
+			current_state	<= S_IDLE;
+		end
+		else begin
+			current_state	<= next_state;
+		end
+	end
+
+	//	-------------------------------------------------------------------------------------
+	//	FSM Conbinatial Logic
+	//	-------------------------------------------------------------------------------------
+	always @ ( * ) begin
+		case(current_state)
+			//	-------------------------------------------------------------------------------------
+			//	IDLE 空闲状态，等待resend_cmd模块返回rdy信号
+			//	-------------------------------------------------------------------------------------
+			S_IDLE	:
+			if(i_resend_rdy==1'b1) begin
+				next_state	= S_RDY;
+			end
+			else begin
+				next_state	= S_IDLE;
+			end
+			//	-------------------------------------------------------------------------------------
+			//	RDY 准备好阶段，等待接收重传指令
+			//	-------------------------------------------------------------------------------------
+			S_RDY	:
+			if(i_resend_valid) begin
+				next_state	= S_WAIT;
+			end
+			else begin
+				next_state	= S_RDY;
+			end
+			//	-------------------------------------------------------------------------------------
+			//	WAIT 等待一个可以中断的位置，如果找到，则发出o_normal_read_repeat的脉冲
+			//	-------------------------------------------------------------------------------------
+			S_WAIT	:
+			if(can_stop_normal==1'b1) begin
+				next_state	= S_RESENDING;
+			end
+			else begin
+				next_state	= S_WAIT;
+			end
+			//	-------------------------------------------------------------------------------------
+			//	RESENDING 重传处理
+			//	-------------------------------------------------------------------------------------
+			S_RESENDING	:
+			if(i_addr_cmd_wr_done==1'b1) begin
+				next_state	= S_IDLE;
+			end
+			else begin
+				next_state	= S_RESENDING;
+			end
+
+			default	:
+			next_state	= S_IDLE;
+		endcase
+	end
+
+
+
+endmodule
