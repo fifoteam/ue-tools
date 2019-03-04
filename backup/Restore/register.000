@@ -1,0 +1,147 @@
+//-------------------------------------------------------------------------------------------------
+//  -- 版权所有者   : 中国大恒（集团）有限公司北京图像视觉技术分公司, 2010 -2015.
+//  -- 保密级别     ：绝密.
+//  -- 部门         : 硬件部，FPGA工作组
+//  -- 模块名       : register
+//  -- 设计者       : 邢海涛
+//-------------------------------------------------------------------------------------------------
+//
+//  -- 版本记录 :
+//
+//  -- 作者         :| 修改日期				:|  修改说明
+//-------------------------------------------------------------------------------------------------
+//  -- 邢海涛       :| 2016/12/14 13:37:15	:|  初始版本
+//-------------------------------------------------------------------------------------------------
+//
+//  -- 模块描述     :
+//              1)  :
+//
+//              2)  :
+//
+//              3)  :
+//
+//-------------------------------------------------------------------------------------------------
+//`include			"register_def.v"
+//仿真单位/精度
+`timescale 1ns/1ps
+//-------------------------------------------------------------------------------------------------
+
+module register ();
+
+	//	ref parameters
+
+	parameter	BAYER_PATTERN			= driver.param.BAYER_PATTERN			;
+	parameter	SENSOR_DAT_WIDTH		= driver.param.SENSOR_DAT_WIDTH		;
+	parameter	CHANNEL_NUM				= driver.param.CHANNEL_NUM			;
+	parameter	REG_WD					= driver.param.REG_WD					;
+
+
+	//	ref signals
+
+
+
+	reg		[REG_WD-1:0]								iv_pixel_format			= 32'h01080001;
+	reg		[2:0]										pixel_byte				= 1;
+	reg													i_stream_enable			= 1'b0;
+
+
+
+
+	//	ref ARCHITECTURE
+
+	//	-------------------------------------------------------------------------------------
+	//	几个规则
+	//	1.如果是单bit信号，则不需要输入参数，通过尾缀 _on _off 来区别
+	//	2.如果是多bit信号，则需要输入参数，前缀是 set_
+	//	3.一般情况下，信号名保持不变不缩写，特殊的信号名可以缩写
+	//	4.如果是一组寄存器设置，前缀是 cfg_，输入参数可有可无
+	//	-------------------------------------------------------------------------------------
+
+
+
+	task set_pixel_format_mono8;
+		begin
+			iv_pixel_format	= 32'h01080001;
+			pixel_byte		= 1;
+		end
+	endtask
+
+	task set_pixel_format_mono10;
+		begin
+			iv_pixel_format	= 32'h01100003;
+			pixel_byte		= 2;
+		end
+	endtask
+
+	task set_pixel_format_gr8;
+		begin
+			iv_pixel_format	= 32'h01080008;
+			pixel_byte		= 1;
+		end
+	endtask
+
+	task set_pixel_format_gr10;
+		begin
+			iv_pixel_format	= 32'h0110000C;
+			pixel_byte		= 2;
+		end
+	endtask
+
+	task set_pixel_format_rg8;
+		begin
+			iv_pixel_format	= 32'h01080009;
+			pixel_byte		= 1;
+		end
+	endtask
+
+	task set_pixel_format_rg10;
+		begin
+			iv_pixel_format	= 32'h0110000D;
+			pixel_byte		= 2;
+		end
+	endtask
+
+	task set_pixel_format_gb8;
+		begin
+			iv_pixel_format	= 32'h0108000A;
+			pixel_byte		= 1;
+		end
+	endtask
+
+	task set_pixel_format_gb10;
+		begin
+			iv_pixel_format	= 32'h0110000E;
+			pixel_byte		= 2;
+		end
+	endtask
+
+	task set_pixel_format_bg8;
+		begin
+			iv_pixel_format	= 32'h0108000B;
+			pixel_byte		= 1;
+		end
+	endtask
+
+	task set_pixel_format_bg10;
+		begin
+			iv_pixel_format	= 32'h0110000F;
+			pixel_byte		= 2;
+		end
+	endtask
+
+
+	task set_se_off;
+		begin
+			i_stream_enable	= 1'b0;
+		end
+	endtask
+
+	task set_se_on;
+		begin
+			i_stream_enable	= 1'b1;
+		end
+	endtask
+
+
+
+endmodule
