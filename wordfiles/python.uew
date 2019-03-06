@@ -1,4 +1,7 @@
 /L16"Python" PYTHON_LANG Line Comment = # Escape Char = \ String Literal Prefix = r File Extensions = PY PYW
+
+/Strip Comments = No
+
 /TGBegin "Classes"
 /TGFindStr = "^[ \t]*class[ \t]+([^:\r\n]*)\("
 /TGFindStr = "^[ \t]*class[ \t]+([^:\r\n]*):"
@@ -16,6 +19,11 @@
 /TGFindBEnd = "\)"
 /TGEnd
 /TGEnd
+/TGBegin "Reference"
+/TGFindStr = "^[ \t]*##([ \t]+ref[ \t]+[^:\r\n]*)"
+/TGEnd
+
+
 /LanguageMarker = "python"
 /Regexp Type = Perl
 /Delimiters = ! "	%&'()*+,-./:;<=>@[\]^`{|}
