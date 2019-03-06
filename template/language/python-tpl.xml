@@ -1,11 +1,13 @@
 <?xml version="1.0"?>
-<Templates encode="utf8escenc"><Template Name="if" Comments="0" Strings="0" Description="">if ([+expression+]):&#xD;&#xD;
-	^</Template><Template Name="elif" Comments="0" Strings="0">elif ([+expression+]):&#xD;
+<Templates encode="utf8escenc"><Template Name="if" Comments="0" Strings="0" Description="">if([+expression+]):&#xD;
+	^&#xD;
+else:&#xD;
+</Template><Template Name="elif" Comments="0" Strings="0">elif ([+expression+]):&#xD;
 	^</Template><Template Name="else" Comments="0" Strings="0">else: &#xD;
 	^</Template><Template Name="while" Comments="0" Strings="0">while ([+evaluation+]): {&#xD;
-	^</Template><Template Name="for" Comments="0" Strings="0">for [+var+] in [+sequence+]:&#xD;
-	^ # code to be executed</Template><Template Name="list" Comments="0" Strings="0">[+listname+] = ['[+item1+]', '[+item2+]', '[+item3+]'];</Template><Template Name="dict" Comments="0" Strings="0">dict = {'[+key1+]':'[+val1+]', [+key2+]':'[+val2+]'} </Template><Template Name="def" Comments="0" Strings="0">def [+functionName+]( [+parameters+] ):&#xD;
-	^&#xD;
+	^</Template><Template Name="for" Comments="0" Strings="0" Description="">for [+var+] in [+sequence+]:&#xD;
+	^# code to be executed</Template><Template Name="list" Comments="0" Strings="0">[+listname+] = ['[+item1+]', '[+item2+]', '[+item3+]'];</Template><Template Name="dict" Comments="0" Strings="0">dict = {'[+key1+]':'[+val1+]', [+key2+]':'[+val2+]'} </Template><Template Name="def" Comments="0" Strings="0" Description="">def function(var):&#xD;
+	^#function code&#xD;
 	return</Template><Template Name="com" Description="" Comments="0" Strings="0">##	-------------------------------------------------------------------------------------&#xD;&#xD;
 ##	^&#xD;&#xD;
 ##	-------------------------------------------------------------------------------------</Template><Template Name="comd" Description="" Comments="0" Strings="0">##	===============================================================================================&#xD;&#xD;
@@ -13,4 +15,30 @@
 ##	===============================================================================================&#xD;&#xD;
 ##	-------------------------------------------------------------------------------------&#xD;&#xD;
 ##&#xD;&#xD;
-##	-------------------------------------------------------------------------------------</Template></Templates>
+##	-------------------------------------------------------------------------------------</Template><Template Name="try" Description="" Comments="0" Strings="0">try:&#xD;
+    index_value = line_value.index(":")&#xD;
+except ValueError:&#xD;
+    index_value = -1</Template><Template Name="line" Description="" Comments="0" Strings="0">##	-------------------------------------------------------------------------------------&#xD;
+##	&#x53BB;&#x6389;&#x6CE8;&#x91CA; &#x56DE;&#x8F66; &#x5B57;&#x7B26;&#x4E32;&#x4E24;&#x8FB9;&#x7684;&#x7A7A;&#x683C; tab&#x8F6C;&#x6362;&#x4E3A;&#x7A7A;&#x683C;&#xD;
+##	-------------------------------------------------------------------------------------&#xD;
+line_content	= file_content[i];&#xD;
+line_content	= trim_eol(line_content);&#xD;
+line_content	= trim_comment(line_content);&#xD;
+line_content	= line_content.strip();&#xD;
+line_content	= line_content.replace("\t"," ");&#xD;
+line_space_split	= line_content.split(' ');</Template><Template Name="def" Description="" Comments="0" Strings="0">def function(var):&#xD;
+	^#function code&#xD;
+	return</Template><Template Name="print" Description="" Comments="0" Strings="0">print("src_path is really exist");&#xD;
+print(code_path);&#xD;
+print("src_path is",src_path);&#xD;
+print("is_declare is "+str(is_declare)+"");</Template><Template Name="substring" Description="" Comments="0" Strings="0">&gt;&gt;&gt; x = "Hello World!"&#xD;
+&gt;&gt;&gt; x[2:]&#xD;
+'llo World!'&#xD;
+&gt;&gt;&gt; x[:2]&#xD;
+'He'&#xD;
+&gt;&gt;&gt; x[:-2]&#xD;
+'Hello Worl'&#xD;
+&gt;&gt;&gt; x[-2:]&#xD;
+'d!'&#xD;
+&gt;&gt;&gt; x[2:-2]&#xD;
+'llo Worl'</Template></Templates>
