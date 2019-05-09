@@ -1,525 +1,633 @@
-[2019/05/09, 13:06]: Detoured Scrollbars: 0.0000
-[2019/05/09, 13:06]: Template Initialization: 0.0000
-[2019/05/09, 13:06]: Initialize Common Controls: 0.0000
-[2019/05/09, 13:06]: GdiPlus Startup: 0.0160
-[2019/05/09, 13:06]: CBCGPEditListBox Initialization: 0.0000
-[2019/05/09, 13:06]: Load Language Resources: 0.0000
-[2019/05/09, 13:06]: Load INI File: 0.0000
-[2019/05/09, 13:06]: Shell Integration Initialization: 0.0000
-[2019/05/09, 13:06]: CEditFrame Initialization: 0.0000
-[2019/05/09, 13:06]: ueView Initialization: 0.0000
-[2019/05/09, 13:06]: Create CEditMain: 0.0160
-[2019/05/09, 13:06]: Load Key Table: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::OnGetMinMaxInfo: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CBCGPMDIFrameWnd::OnCreate: 0.0160
-[2019/05/09, 13:06]: Executing CXeScrollbar::ClassInit: 0.0000
-[2019/05/09, 13:06]: Executing CFTPInstancd::ClassInit: 0.0000
-[2019/05/09, 13:06]: Create and setup application menubar: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::OnGetMinMaxInfo: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::OnGetMinMaxInfo: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::OnApplicationLook: 0.0150
-[2019/05/09, 13:06]: Moving Templates: 0.0000
-[2019/05/09, 13:06]: Block 1: 0.0000
-[2019/05/09, 13:06]: Loading Wordfiles: 0.0630
-[2019/05/09, 13:06]: Block 2: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::InitFTP: 0.0000
-[2019/05/09, 13:06]: Block 3: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::UpdateColTable: 0.0000
-[2019/05/09, 13:06]: Creating statusbar: 0.0000
-[2019/05/09, 13:06]: Creating Main Window Tool Tip: 0.0000
-[2019/05/09, 13:06]: Creating Main Window Tool Tip: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::UpdateRibbonToolNamesAndIcons: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::UserToolInit: 0.0150
-[2019/05/09, 13:06]: Block 4: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::SetToolbarIcons: 0.0630
-[2019/05/09, 13:06]: Creating ImageLists: 0.0930
-[2019/05/09, 13:06]: Executing CEditMain::EnableDocking: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::UpdateToolsIcons: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::UpdateHTMLIcons: 0.0000
-[2019/05/09, 13:06]: Block A: 0.0000
-[2019/05/09, 13:06]: Block B: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Block C: 0.0000
-[2019/05/09, 13:06]: Block D: 0.0000
-[2019/05/09, 13:06]: Block E: 0.0000
-[2019/05/09, 13:06]: Block F: 0.0000
-[2019/05/09, 13:06]: Block I: 0.0630
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0150
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Block J: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::SetToolbarIcons: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Block K: 0.0470
-[2019/05/09, 13:06]: Block M: 0.0000
-[2019/05/09, 13:06]: Block N: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::LoadRibbonBars: 0.1250
-[2019/05/09, 13:06]: Executing CEditMain::UpdateRibbonToolNamesAndIcons: 0.0000
-[2019/05/09, 13:06]: Block 5: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::FinalInitialization: 0.0000
-[2019/05/09, 13:06]: Block 6: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Creating Project Frame: 0.0310
-[2019/05/09, 13:06]: Creating MDI File Tabs: 0.0000
-[2019/05/09, 13:06]: Executing Function 1: 0.0000
-[2019/05/09, 13:06]: Executing Function 1: 0.0000
-[2019/05/09, 13:06]: Executing Function 1: 0.0000
-[2019/05/09, 13:06]: Creating Output Window: 0.0160
-[2019/05/09, 13:06]: Creating Function List: 0.0150
-[2019/05/09, 13:06]: Creating Bookmark List: 0.0000
-[2019/05/09, 13:06]: Creating Tag List: 0.0000
-[2019/05/09, 13:06]: Creating Macro List: 0.0160
-[2019/05/09, 13:06]: Creating Template List: 0.0000
-[2019/05/09, 13:06]: Clipboard List: 0.0000
-[2019/05/09, 13:06]: Creating ASCII Table: 0.0160
-[2019/05/09, 13:06]: Creating Script List: 0.0150
-[2019/05/09, 13:06]: Creating Telnet/SSH Window: 0.0000
-[2019/05/09, 13:06]: Creating XML Manager: 0.0000
-[2019/05/09, 13:06]: Creating List Lines Window: 0.0150
-[2019/05/09, 13:06]: Executing CEditMain::InitializeFindOptions: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::InitializeDockableFindWnd: 0.0000
-[2019/05/09, 13:06]: Creating Panes: 0.1400
-[2019/05/09, 13:06]: Block 7: 0.0320
-[2019/05/09, 13:06]: Enabling Docking and Showing Panes: 0.0150
-[2019/05/09, 13:06]: Block 8: 0.0000
-[2019/05/09, 13:06]: Block 9: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::DelayedInitialization: 0.0160
-[2019/05/09, 13:06]: Block 9: 0.0150
-[2019/05/09, 13:06]: Executing CEditMain::OnCreateSecondary: 0.5770
-[2019/05/09, 13:06]: Docking menubar: 0.0000
-[2019/05/09, 13:06]: Executing ues1set message: 0.0000
-[2019/05/09, 13:06]: Executing CMFCVisualManagerIDMCustom::GetThemeList: 0.0000
-[2019/05/09, 13:06]: Executing CMFCVisualManagerIDMCustom::LoadTheme: 0.0000
-[2019/05/09, 13:06]: Executing CMFCVisualManagerIDMCustom::LoadTheme: 0.0160
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::OnApplicationLook: 0.4050
-[2019/05/09, 13:06]: Executing CEditMain::ApplyTheme: 0.4210
-[2019/05/09, 13:06]: Initializing themes: 0.4370
-[2019/05/09, 13:06]: Executing CEditMain::OnCreate: 1.0450
-[2019/05/09, 13:06]: Initializing Main Frame Window (CEditMain): 1.0450
-[2019/05/09, 13:06]: SoftwareKey Initialization: 0.0160
-[2019/05/09, 13:06]: Block A: 0.0000
-[2019/05/09, 13:06]: Block B: 0.0000
-[2019/05/09, 13:06]: Block C: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::OnGetMinMaxInfo: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::OnGetMinMaxInfo: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::OnGetMinMaxInfo: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0160
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::SetWindowPlacement: 0.3430
-[2019/05/09, 13:06]: Block D: 0.0000
-[2019/05/09, 13:06]: Executing LDS phase 1: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0160
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMan::LoadToolBarState: 0.0620
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::LoadMenuBarState: 0.0000
-[2019/05/09, 13:06]: Executing CBCGPDockManager::LoadState: 0.0160
-[2019/05/09, 13:06]: Executing LDS phase 2: 0.0780
-[2019/05/09, 13:06]: Block A: 0.0000
-[2019/05/09, 13:06]: Block B: 0.0000
-[2019/05/09, 13:06]: Block C: 0.0000
-[2019/05/09, 13:06]: Block D: 0.0000
-[2019/05/09, 13:06]: Block E: 0.0160
-[2019/05/09, 13:06]: Block F: 0.0000
-[2019/05/09, 13:06]: Block G: 0.0000
-[2019/05/09, 13:06]: Block H: 0.0310
-[2019/05/09, 13:06]: Block I: 0.0150
-[2019/05/09, 13:06]: Block J: 0.0780
-[2019/05/09, 13:06]: Block K: 0.0000
-[2019/05/09, 13:06]: Block L: 0.0000
-[2019/05/09, 13:06]: Block M: 0.0000
-[2019/05/09, 13:06]: Block N: 0.0000
-[2019/05/09, 13:06]: Block O: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Block P: 0.0160
-[2019/05/09, 13:06]: Executing CBCGPDockManager::SetDockState: 0.1560
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing LDS phase 3: 0.1560
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0160
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing LDS phase 4: 0.0160
-[2019/05/09, 13:06]: Executing LDS phase 5: 0.2500
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing LDS phase 6: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::LoadDockState: 0.2650
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::OnGetMinMaxInfo: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::OnGetMinMaxInfo: 0.0000
-[2019/05/09, 13:06]: Block E: 0.3120
-[2019/05/09, 13:06]: Executing CEditMain::InitialShowWindow: 0.6550
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Forcing Window Update: 0.0160
-[2019/05/09, 13:06]: Recently Closed Files List: 0.0000
-[2019/05/09, 13:06]: Unknown startup item: 0.0160
-[2019/05/09, 13:06]: Restoring Toolbar Layout: 0.0000
-[2019/05/09, 13:06]: Executing CUESMultiDocTemplate::CreateNewDocument: 0.0000
-[2019/05/09, 13:06]: Block 1: 0.0000
-[2019/05/09, 13:06]: Excecuting CMDILazyFrame::GetIconWndClass: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Block 1: 0.0000
-[2019/05/09, 13:06]: Executing CMDILazyView::CMDILazyView: 0.0000
-[2019/05/09, 13:06]: Executing ueView::PreCreateWindow: 0.0000
-[2019/05/09, 13:06]: Executing CEditFrame::OnUpdateFrameTitle: 0.0000
-[2019/05/09, 13:06]: Executing CDocument::UpdateFrameCounts: 0.0000
-[2019/05/09, 13:06]: Executing ueView::OnCreate: 0.0000
-[2019/05/09, 13:06]: Block 8: 0.0000
-[2019/05/09, 13:06]: Executing Function 2: 0.0000
-[2019/05/09, 13:06]: Excecuting CUESplitter::CreateView: 0.0000
-[2019/05/09, 13:06]: Excecuting CUESplitter::Create: 0.0000
-[2019/05/09, 13:06]: Excecuting CEditFrame::OnCreateClient: 0.0000
-[2019/05/09, 13:06]: Block 6: 0.0000
-[2019/05/09, 13:06]: Block 7: 0.0000
-[2019/05/09, 13:06]: Excecuting CMDILazyFrame::OnCreate: 0.0000
-[2019/05/09, 13:06]: Block 2: 0.0000
-[2019/05/09, 13:06]: Excecuting CMDILazyFrame::Create: 0.0150
-[2019/05/09, 13:06]: Excecuting CMDILazyFrame::LoadFrame: 0.0150
-[2019/05/09, 13:06]: Executing CUESMultiDocTemplate::CreateNewFrame: 0.0150
-[2019/05/09, 13:06]: Executing CEditFrame::OnUpdateFrameTitle: 0.0160
-[2019/05/09, 13:06]: Executing CDocument::UpdateFrameCounts: 0.0160
-[2019/05/09, 13:06]: Executing Function 4: 0.0000
-[2019/05/09, 13:06]: Executing CEditFrame::OnUpdateFrameTitle: 0.0000
-[2019/05/09, 13:06]: Executing CDocument::UpdateFrameCounts: 0.0000
-[2019/05/09, 13:06]: Executing CDocument::OnOpenDocument: 0.0160
-[2019/05/09, 13:06]: Executing CEditFrame::OnUpdateFrameTitle: 0.0000
-[2019/05/09, 13:06]: Executing CDocument::UpdateFrameCounts: 0.0000
-[2019/05/09, 13:06]: Executing Function 1: 0.0000
-[2019/05/09, 13:06]: Executing Function 1: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::UpdateOpenWindowText: 0.0000
-[2019/05/09, 13:06]: Executing CEditFrame::OnUpdateFrameTitle: 0.0000
-[2019/05/09, 13:06]: Executing Function 2: 0.0000
-[2019/05/09, 13:06]: Excecuting CMDILazyFrame::OnMDIActivate: 0.0150
-[2019/05/09, 13:06]: Executing CEditFrame::OnUpdateFrameTitle: 0.0000
-[2019/05/09, 13:06]: Executing CDocument::UpdateFrameCounts: 0.0000
-[2019/05/09, 13:06]: Executing CEditFrame::OnUpdateFrameTitle: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CUESMultiDocTemplate::OpenDocumentFile: 0.1090
-[2019/05/09, 13:06]: Block 5: 0.1090
-[2019/05/09, 13:06]: Executing Function 1: 0.0000
-[2019/05/09, 13:06]: OpenFile 6: 0.1090
-[2019/05/09, 13:06]: OpenFile 5: 0.0000
-[2019/05/09, 13:06]: OpenFile 3: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::QodBlock: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::OnOpenDocQod: 0.0000
-[2019/05/09, 13:06]: OpenFile 2: 0.0000
-[2019/05/09, 13:06]: OpenFile 1: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::UpdateOpenWindowText: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::QodBlock: 0.0320
-[2019/05/09, 13:06]: Executing CEditMain::OnOpenDocQod: 0.0630
-[2019/05/09, 13:06]: Executing Function 1: 0.0000
-[2019/05/09, 13:06]: Executing Function 3: 0.0000
-[2019/05/09, 13:06]: OpenFile 5: 0.0000
-[2019/05/09, 13:06]: Executing Function 2: 0.0000
-[2019/05/09, 13:06]: OpenFile 7: 0.0000
-[2019/05/09, 13:06]: OpenFile 8: 0.0000
-[2019/05/09, 13:06]: OpenFile 4: 0.0630
-[2019/05/09, 13:06]: Executing CEditApp::LoadFiles: 0.0630
-[2019/05/09, 13:06]: Executing Function 1: 0.0000
-[2019/05/09, 13:06]: OpenFile 6: 0.0310
-[2019/05/09, 13:06]: Closing INI: 0.0310
-[2019/05/09, 13:06]: Show Document Map: 0.0000
-[2019/05/09, 13:06]: Application Initialization: 2.0910
-[2019/05/09, 13:06]: Executing CEditMain::UpdateOpenWindowText: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::UpdateOpenWindowText: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditFrame::OnUpdateFrameTitle: 0.0150
-[2019/05/09, 13:06]: Executing CDocument::UpdateFrameCounts: 0.0150
-[2019/05/09, 13:06]: Executing CEditMain::UpdateOpenWindowText: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::UpdateOpenWindowText: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0160
-[2019/05/09, 13:06]: Executing CEditFrame::OnUpdateFrameTitle: 0.0160
-[2019/05/09, 13:06]: Executing CDocument::UpdateFrameCounts: 0.0160
-[2019/05/09, 13:06]: Executing CEditMain::UpdateOpenWindowText: 0.0000
-[2019/05/09, 13:06]: Executing CEditFrame::OnUpdateFrameTitle: 0.0000
-[2019/05/09, 13:06]: Executing CDocument::UpdateFrameCounts: 0.0000
-[2019/05/09, 13:06]: Executing CEditFrame::OnUpdateFrameTitle: 0.0000
-[2019/05/09, 13:06]: Executing CDocument::UpdateFrameCounts: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::UpdateOpenWindowText: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::UpdateOpenWindowText: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditFrame::OnUpdateFrameTitle: 0.0160
-[2019/05/09, 13:06]: Executing CDocument::UpdateFrameCounts: 0.0160
-[2019/05/09, 13:06]: Executing CEditMain::UpdateOpenWindowText: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::UpdateOpenWindowText: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditFrame::OnUpdateFrameTitle: 0.0160
-[2019/05/09, 13:06]: Executing CDocument::UpdateFrameCounts: 0.0160
-[2019/05/09, 13:06]: Executing CEditMain::UpdateOpenWindowText: 0.0000
-[2019/05/09, 13:06]: Executing CEditFrame::OnUpdateFrameTitle: 0.0000
-[2019/05/09, 13:06]: Executing CDocument::UpdateFrameCounts: 0.0000
-[2019/05/09, 13:06]: Executing CEditFrame::OnUpdateFrameTitle: 0.0000
-[2019/05/09, 13:06]: Executing CDocument::UpdateFrameCounts: 0.0000
-[2019/05/09, 13:06]: Child Windows = 1
-[2019/05/09, 13:06]: f:\kuaipan\kuaipan\FifoTeam\bat-tools\boot\run_shut.bat
-[2019/05/09, 13:06]: Open File0 = f:\kuaipan\kuaipan\FifoTeam\bat-tools\boot\run_shut.bat
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0160
-[2019/05/09, 13:06]: Executing CEditFrame::OnUpdateFrameTitle: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Executing CEditMain::RecalcLayout: 0.0000
-[2019/05/09, 13:06]: Excecuting CMDILazyFrame::OnMDIActivate: 0.0000
-[2019/05/09, 13:06]: Executing CDocument::UpdateFrameCounts: 0.0000
+[2019/05/09, 17:50]: Detoured Scrollbars: 0.0000
+[2019/05/09, 17:50]: Template Initialization: 0.0000
+[2019/05/09, 17:50]: Initialize Common Controls: 0.0000
+[2019/05/09, 17:50]: GdiPlus Startup: 0.0000
+[2019/05/09, 17:50]: CBCGPEditListBox Initialization: 0.0000
+[2019/05/09, 17:50]: Load Language Resources: 0.0000
+[2019/05/09, 17:50]: Load INI File: 0.0160
+[2019/05/09, 17:50]: Shell Integration Initialization: 0.0000
+[2019/05/09, 17:50]: CEditFrame Initialization: 0.0000
+[2019/05/09, 17:50]: ueView Initialization: 0.0000
+[2019/05/09, 17:50]: Create CEditMain: 0.0160
+[2019/05/09, 17:50]: Load Key Table: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::OnGetMinMaxInfo: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CBCGPMDIFrameWnd::OnCreate: 0.0470
+[2019/05/09, 17:50]: Executing CXeScrollbar::ClassInit: 0.0000
+[2019/05/09, 17:50]: Executing CFTPInstancd::ClassInit: 0.0000
+[2019/05/09, 17:50]: Create and setup application menubar: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::OnGetMinMaxInfo: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::OnGetMinMaxInfo: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::OnApplicationLook: 0.0310
+[2019/05/09, 17:50]: Moving Templates: 0.0000
+[2019/05/09, 17:50]: Block 1: 0.0000
+[2019/05/09, 17:50]: Loading Wordfiles: 0.0630
+[2019/05/09, 17:50]: Block 2: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::InitFTP: 0.0000
+[2019/05/09, 17:50]: Block 3: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::UpdateColTable: 0.0000
+[2019/05/09, 17:50]: Creating statusbar: 0.0000
+[2019/05/09, 17:50]: Creating Main Window Tool Tip: 0.0000
+[2019/05/09, 17:50]: Creating Main Window Tool Tip: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::UpdateRibbonToolNamesAndIcons: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::UserToolInit: 0.0150
+[2019/05/09, 17:50]: Block 4: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::SetToolbarIcons: 0.0630
+[2019/05/09, 17:50]: Creating ImageLists: 0.0930
+[2019/05/09, 17:50]: Executing CEditMain::EnableDocking: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::UpdateToolsIcons: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::UpdateHTMLIcons: 0.0000
+[2019/05/09, 17:50]: Block A: 0.0000
+[2019/05/09, 17:50]: Block B: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Block C: 0.0320
+[2019/05/09, 17:50]: Block D: 0.0000
+[2019/05/09, 17:50]: Block E: 0.0000
+[2019/05/09, 17:50]: Block F: 0.0000
+[2019/05/09, 17:50]: Block I: 0.0780
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0160
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0160
+[2019/05/09, 17:50]: Block J: 0.0160
+[2019/05/09, 17:50]: Executing CEditMain::SetToolbarIcons: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Block K: 0.1240
+[2019/05/09, 17:50]: Block M: 0.0000
+[2019/05/09, 17:50]: Block N: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::LoadRibbonBars: 0.3120
+[2019/05/09, 17:50]: Executing CEditMain::UpdateRibbonToolNamesAndIcons: 0.0000
+[2019/05/09, 17:50]: Block 5: 0.0160
+[2019/05/09, 17:50]: Executing CEditMain::FinalInitialization: 0.0000
+[2019/05/09, 17:50]: Block 6: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Creating Project Frame: 0.0780
+[2019/05/09, 17:50]: Creating MDI File Tabs: 0.0310
+[2019/05/09, 17:50]: Executing Function 1: 0.0000
+[2019/05/09, 17:50]: Executing Function 1: 0.0000
+[2019/05/09, 17:50]: Executing Function 1: 0.0000
+[2019/05/09, 17:50]: Creating Output Window: 0.0470
+[2019/05/09, 17:50]: Creating Function List: 0.0160
+[2019/05/09, 17:50]: Creating Bookmark List: 0.0150
+[2019/05/09, 17:50]: Creating Tag List: 0.0160
+[2019/05/09, 17:50]: Creating Macro List: 0.0000
+[2019/05/09, 17:50]: Creating Template List: 0.0150
+[2019/05/09, 17:50]: Clipboard List: 0.0000
+[2019/05/09, 17:50]: Creating ASCII Table: 0.0320
+[2019/05/09, 17:50]: Creating Script List: 0.0150
+[2019/05/09, 17:50]: Creating Telnet/SSH Window: 0.0000
+[2019/05/09, 17:50]: Creating XML Manager: 0.0310
+[2019/05/09, 17:50]: Creating List Lines Window: 0.0150
+[2019/05/09, 17:50]: Executing CEditMain::InitializeFindOptions: 0.0160
+[2019/05/09, 17:50]: Executing CEditMain::InitializeDockableFindWnd: 0.0000
+[2019/05/09, 17:50]: Creating Panes: 0.3590
+[2019/05/09, 17:50]: Block 7: 0.1250
+[2019/05/09, 17:50]: Enabling Docking and Showing Panes: 0.0310
+[2019/05/09, 17:50]: Block 8: 0.0000
+[2019/05/09, 17:50]: Block 9: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::DelayedInitialization: 0.0310
+[2019/05/09, 17:50]: Block 9: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::OnCreateSecondary: 1.1080
+[2019/05/09, 17:50]: Docking menubar: 0.0000
+[2019/05/09, 17:50]: Executing ues1set message: 0.0000
+[2019/05/09, 17:50]: Executing CMFCVisualManagerIDMCustom::GetThemeList: 0.0000
+[2019/05/09, 17:50]: Executing CMFCVisualManagerIDMCustom::LoadTheme: 0.0160
+[2019/05/09, 17:50]: Executing CMFCVisualManagerIDMCustom::LoadTheme: 0.0160
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::OnApplicationLook: 0.4680
+[2019/05/09, 17:50]: Executing CEditMain::ApplyTheme: 0.5140
+[2019/05/09, 17:50]: Initializing themes: 0.5300
+[2019/05/09, 17:50]: Executing CEditMain::OnCreate: 1.7160
+[2019/05/09, 17:50]: Initializing Main Frame Window (CEditMain): 1.7160
+[2019/05/09, 17:50]: SoftwareKey Initialization: 0.0320
+[2019/05/09, 17:50]: Block A: 0.0000
+[2019/05/09, 17:50]: Block B: 0.0000
+[2019/05/09, 17:50]: Block C: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::OnGetMinMaxInfo: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::OnGetMinMaxInfo: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::OnGetMinMaxInfo: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0150
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0160
+[2019/05/09, 17:50]: Executing CEditMain::SetWindowPlacement: 0.3430
+[2019/05/09, 17:50]: Block D: 0.0000
+[2019/05/09, 17:50]: Executing LDS phase 1: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMan::LoadToolBarState: 0.1560
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::LoadMenuBarState: 0.0000
+[2019/05/09, 17:50]: Executing CBCGPDockManager::LoadState: 0.0620
+[2019/05/09, 17:50]: Executing LDS phase 2: 0.2180
+[2019/05/09, 17:50]: Block A: 0.0000
+[2019/05/09, 17:50]: Block B: 0.0000
+[2019/05/09, 17:50]: Block C: 0.0000
+[2019/05/09, 17:50]: Block D: 0.0000
+[2019/05/09, 17:50]: Block E: 0.0310
+[2019/05/09, 17:50]: Block F: 0.0000
+[2019/05/09, 17:50]: Block G: 0.0000
+[2019/05/09, 17:50]: Block H: 0.1410
+[2019/05/09, 17:50]: Block I: 0.0150
+[2019/05/09, 17:50]: Block J: 0.1100
+[2019/05/09, 17:50]: Block K: 0.0150
+[2019/05/09, 17:50]: Block L: 0.0000
+[2019/05/09, 17:50]: Block M: 0.0000
+[2019/05/09, 17:50]: Block N: 0.0000
+[2019/05/09, 17:50]: Block O: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Block P: 0.0000
+[2019/05/09, 17:50]: Executing CBCGPDockManager::SetDockState: 0.3120
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing LDS phase 3: 0.3120
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing LDS phase 4: 0.0160
+[2019/05/09, 17:50]: Executing LDS phase 5: 0.5460
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing LDS phase 6: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::LoadDockState: 0.5770
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::OnGetMinMaxInfo: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0150
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::OnGetMinMaxInfo: 0.0000
+[2019/05/09, 17:50]: Block E: 0.6390
+[2019/05/09, 17:50]: Executing CEditMain::InitialShowWindow: 0.9820
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Forcing Window Update: 0.0000
+[2019/05/09, 17:50]: Recently Closed Files List: 0.0000
+[2019/05/09, 17:50]: Unknown startup item: 0.0160
+[2019/05/09, 17:50]: Restoring Toolbar Layout: 0.0000
+[2019/05/09, 17:50]: Executing CUESMultiDocTemplate::CreateNewDocument: 0.0000
+[2019/05/09, 17:50]: Block 1: 0.0000
+[2019/05/09, 17:50]: Excecuting CMDILazyFrame::GetIconWndClass: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Block 1: 0.0000
+[2019/05/09, 17:50]: Executing CMDILazyView::CMDILazyView: 0.0000
+[2019/05/09, 17:50]: Executing ueView::PreCreateWindow: 0.0000
+[2019/05/09, 17:50]: Executing CEditFrame::OnUpdateFrameTitle: 0.0000
+[2019/05/09, 17:50]: Executing CDocument::UpdateFrameCounts: 0.0000
+[2019/05/09, 17:50]: Executing ueView::OnCreate: 0.0000
+[2019/05/09, 17:50]: Block 8: 0.0000
+[2019/05/09, 17:50]: Executing Function 2: 0.0000
+[2019/05/09, 17:50]: Excecuting CUESplitter::CreateView: 0.0000
+[2019/05/09, 17:50]: Excecuting CUESplitter::Create: 0.0000
+[2019/05/09, 17:50]: Excecuting CEditFrame::OnCreateClient: 0.0000
+[2019/05/09, 17:50]: Block 6: 0.0000
+[2019/05/09, 17:50]: Block 7: 0.0150
+[2019/05/09, 17:50]: Excecuting CMDILazyFrame::OnCreate: 0.0150
+[2019/05/09, 17:50]: Block 2: 0.0150
+[2019/05/09, 17:50]: Excecuting CMDILazyFrame::Create: 0.0310
+[2019/05/09, 17:50]: Excecuting CMDILazyFrame::LoadFrame: 0.0310
+[2019/05/09, 17:50]: Executing CUESMultiDocTemplate::CreateNewFrame: 0.0310
+[2019/05/09, 17:50]: Executing CEditFrame::OnUpdateFrameTitle: 0.0000
+[2019/05/09, 17:50]: Executing CDocument::UpdateFrameCounts: 0.0000
+[2019/05/09, 17:50]: Executing Function 4: 0.0160
+[2019/05/09, 17:50]: Executing CEditFrame::OnUpdateFrameTitle: 0.0000
+[2019/05/09, 17:50]: Executing CDocument::UpdateFrameCounts: 0.0000
+[2019/05/09, 17:50]: Executing CDocument::OnOpenDocument: 0.0160
+[2019/05/09, 17:50]: Executing CEditFrame::OnUpdateFrameTitle: 0.0000
+[2019/05/09, 17:50]: Executing CDocument::UpdateFrameCounts: 0.0000
+[2019/05/09, 17:50]: Executing Function 1: 0.0000
+[2019/05/09, 17:50]: Executing Function 1: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::UpdateOpenWindowText: 0.0000
+[2019/05/09, 17:50]: Executing CEditFrame::OnUpdateFrameTitle: 0.0000
+[2019/05/09, 17:50]: Executing Function 2: 0.0000
+[2019/05/09, 17:50]: Excecuting CMDILazyFrame::OnMDIActivate: 0.0150
+[2019/05/09, 17:50]: Executing CEditFrame::OnUpdateFrameTitle: 0.0000
+[2019/05/09, 17:50]: Executing CDocument::UpdateFrameCounts: 0.0000
+[2019/05/09, 17:50]: Executing CEditFrame::OnUpdateFrameTitle: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CUESMultiDocTemplate::OpenDocumentFile: 0.1870
+[2019/05/09, 17:50]: Block 5: 0.2020
+[2019/05/09, 17:50]: Executing Function 1: 0.0000
+[2019/05/09, 17:50]: OpenFile 6: 0.2180
+[2019/05/09, 17:50]: OpenFile 5: 0.0000
+[2019/05/09, 17:50]: OpenFile 3: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::QodBlock: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::OnOpenDocQod: 0.0000
+[2019/05/09, 17:50]: OpenFile 2: 0.0000
+[2019/05/09, 17:50]: OpenFile 1: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::UpdateOpenWindowText: 0.0000
+[2019/05/09, 17:50]: Executing CEditMain::QodBlock: 0.0460
+[2019/05/09, 17:50]: Executing CEditMain::OnOpenDocQod: 0.0930
+[2019/05/09, 17:50]: Executing Function 1: 0.0000
+[2019/05/09, 17:50]: Executing Function 3: 0.0000
+[2019/05/09, 17:50]: OpenFile 5: 0.0000
+[2019/05/09, 17:50]: Executing Function 2: 0.0000
+[2019/05/09, 17:50]: OpenFile 7: 0.0000
+[2019/05/09, 17:50]: OpenFile 8: 0.0000
+[2019/05/09, 17:50]: OpenFile 4: 0.0930
+[2019/05/09, 17:50]: Executing CEditApp::LoadFiles: 0.0930
+[2019/05/09, 17:50]: Executing Function 1: 0.0000
+[2019/05/09, 17:50]: OpenFile 6: 0.0630
+[2019/05/09, 17:50]: Closing INI: 0.0320
+[2019/05/09, 17:50]: Show Document Map: 0.0000
+[2019/05/09, 17:50]: Application Initialization: 3.3390
+[2019/05/09, 17:51]: Executing CUESMultiDocTemplate::CreateNewDocument: 0.0000
+[2019/05/09, 17:51]: Block 1: 0.0000
+[2019/05/09, 17:51]: Excecuting CMDILazyFrame::GetIconWndClass: 0.0000
+[2019/05/09, 17:51]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:51]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:51]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:51]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:51]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:51]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:51]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:51]: Block 1: 0.0000
+[2019/05/09, 17:51]: Executing CMDILazyView::CMDILazyView: 0.0000
+[2019/05/09, 17:51]: Executing ueView::PreCreateWindow: 0.0000
+[2019/05/09, 17:51]: Executing CEditFrame::OnUpdateFrameTitle: 0.0000
+[2019/05/09, 17:51]: Executing CDocument::UpdateFrameCounts: 0.0000
+[2019/05/09, 17:51]: Executing ueView::OnCreate: 0.0000
+[2019/05/09, 17:51]: Block 8: 0.0000
+[2019/05/09, 17:51]: Executing Function 2: 0.0000
+[2019/05/09, 17:51]: Excecuting CUESplitter::CreateView: 0.0000
+[2019/05/09, 17:51]: Excecuting CUESplitter::Create: 0.0000
+[2019/05/09, 17:51]: Excecuting CEditFrame::OnCreateClient: 0.0000
+[2019/05/09, 17:51]: Block 6: 0.0000
+[2019/05/09, 17:51]: Block 7: 0.0000
+[2019/05/09, 17:51]: Excecuting CMDILazyFrame::OnCreate: 0.0000
+[2019/05/09, 17:51]: Block 2: 0.0000
+[2019/05/09, 17:51]: Excecuting CMDILazyFrame::Create: 0.0160
+[2019/05/09, 17:51]: Excecuting CMDILazyFrame::LoadFrame: 0.0160
+[2019/05/09, 17:51]: Executing CUESMultiDocTemplate::CreateNewFrame: 0.0160
+[2019/05/09, 17:51]: Executing CEditFrame::OnUpdateFrameTitle: 0.0000
+[2019/05/09, 17:51]: Executing CDocument::UpdateFrameCounts: 0.0000
+[2019/05/09, 17:51]: Executing CEditFrame::OnUpdateFrameTitle: 0.0000
+[2019/05/09, 17:51]: Executing CDocument::UpdateFrameCounts: 0.0000
+[2019/05/09, 17:51]: Executing CEditFrame::OnUpdateFrameTitle: 0.0000
+[2019/05/09, 17:51]: Executing CDocument::UpdateFrameCounts: 0.0000
+[2019/05/09, 17:51]: Executing Function 1: 0.0000
+[2019/05/09, 17:51]: Executing Function 1: 0.0000
+[2019/05/09, 17:51]: Executing CEditFrame::OnUpdateFrameTitle: 0.0000
+[2019/05/09, 17:51]: Executing CDocument::UpdateFrameCounts: 0.0000
+[2019/05/09, 17:51]: Executing Function 1: 0.0000
+[2019/05/09, 17:51]: Executing CDocument::OnNewDocument: 0.0620
+[2019/05/09, 17:51]: Executing CEditFrame::OnUpdateFrameTitle: 0.0000
+[2019/05/09, 17:51]: Excecuting CMDILazyFrame::OnMDIActivate: 0.0000
+[2019/05/09, 17:51]: Executing CEditMain::UpdateOpenWindowText: 0.0000
+[2019/05/09, 17:51]: Executing CEditFrame::OnUpdateFrameTitle: 0.0000
+[2019/05/09, 17:51]: Executing Function 2: 0.0000
+[2019/05/09, 17:51]: Excecuting CMDILazyFrame::OnMDIActivate: 0.0000
+[2019/05/09, 17:51]: Executing CEditFrame::OnUpdateFrameTitle: 0.0000
+[2019/05/09, 17:51]: Executing CDocument::UpdateFrameCounts: 0.0000
+[2019/05/09, 17:51]: Executing CEditFrame::OnUpdateFrameTitle: 0.0000
+[2019/05/09, 17:51]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:51]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:51]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:51]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:51]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:51]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:51]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:51]: Executing CUESMultiDocTemplate::OpenDocumentFile: 0.1560
+[2019/05/09, 17:51]: Executing CEditApp::OnFileNew: 0.1560
+[2019/05/09, 17:51]: Executing CEditMain::UpdateOpenWindowText: 0.0000
+[2019/05/09, 17:51]: Executing CEditMain::UpdateOpenWindowText: 0.0000
+[2019/05/09, 17:51]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:51]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:51]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:51]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:51]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:51]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:51]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:51]: Executing CEditFrame::OnUpdateFrameTitle: 0.0160
+[2019/05/09, 17:51]: Executing CDocument::UpdateFrameCounts: 0.0160
+[2019/05/09, 17:51]: Executing Function 1: 0.0000
+[2019/05/09, 17:51]: Executing Function 1: 0.0000
+[2019/05/09, 17:51]: Executing CEditMain::UpdateOpenWindowText: 0.0000
+[2019/05/09, 17:51]: Executing CEditMain::UpdateOpenWindowText: 0.0000
+[2019/05/09, 17:51]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:51]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:51]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:51]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:51]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:51]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:51]: Executing CEditMain::RecalcLayout: 0.0160
+[2019/05/09, 17:51]: Executing CEditFrame::OnUpdateFrameTitle: 0.0160
+[2019/05/09, 17:51]: Executing CDocument::UpdateFrameCounts: 0.0160
+[2019/05/09, 17:51]: Executing CEditFrame::OnUpdateFrameTitle: 0.0000
+[2019/05/09, 17:51]: Excecuting CMDILazyFrame::OnMDIActivate: 0.0000
+[2019/05/09, 17:51]: Executing CEditFrame::OnUpdateFrameTitle: 0.0000
+[2019/05/09, 17:51]: Executing Function 2: 0.0000
+[2019/05/09, 17:51]: Excecuting CMDILazyFrame::OnMDIActivate: 0.0150
+[2019/05/09, 17:51]: Executing CDocument::UpdateFrameCounts: 0.0000
+[2019/05/09, 17:51]: Executing CUESMultiDocTemplate::CreateNewDocument: 0.0000
+[2019/05/09, 17:51]: Block 1: 0.0000
+[2019/05/09, 17:51]: Excecuting CMDILazyFrame::GetIconWndClass: 0.0000
+[2019/05/09, 17:51]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:51]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:51]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:51]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:51]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:51]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:51]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:51]: Block 1: 0.0000
+[2019/05/09, 17:51]: Executing CMDILazyView::CMDILazyView: 0.0000
+[2019/05/09, 17:51]: Executing ueView::PreCreateWindow: 0.0000
+[2019/05/09, 17:51]: Executing CEditFrame::OnUpdateFrameTitle: 0.0000
+[2019/05/09, 17:51]: Executing CDocument::UpdateFrameCounts: 0.0000
+[2019/05/09, 17:51]: Executing ueView::OnCreate: 0.0000
+[2019/05/09, 17:51]: Block 8: 0.0000
+[2019/05/09, 17:51]: Executing Function 2: 0.0000
+[2019/05/09, 17:51]: Excecuting CUESplitter::CreateView: 0.0000
+[2019/05/09, 17:51]: Excecuting CUESplitter::Create: 0.0000
+[2019/05/09, 17:51]: Excecuting CEditFrame::OnCreateClient: 0.0000
+[2019/05/09, 17:51]: Block 6: 0.0000
+[2019/05/09, 17:51]: Block 7: 0.0000
+[2019/05/09, 17:51]: Excecuting CMDILazyFrame::OnCreate: 0.0000
+[2019/05/09, 17:51]: Block 2: 0.0000
+[2019/05/09, 17:51]: Excecuting CMDILazyFrame::Create: 0.0150
+[2019/05/09, 17:51]: Excecuting CMDILazyFrame::LoadFrame: 0.0150
+[2019/05/09, 17:51]: Executing CUESMultiDocTemplate::CreateNewFrame: 0.0150
+[2019/05/09, 17:51]: Executing CEditFrame::OnUpdateFrameTitle: 0.0000
+[2019/05/09, 17:51]: Executing CDocument::UpdateFrameCounts: 0.0000
+[2019/05/09, 17:51]: Executing Function 4: 0.0160
+[2019/05/09, 17:51]: Executing CEditFrame::OnUpdateFrameTitle: 0.0000
+[2019/05/09, 17:51]: Executing CDocument::UpdateFrameCounts: 0.0000
+[2019/05/09, 17:51]: Executing CDocument::OnOpenDocument: 0.0320
+[2019/05/09, 17:51]: Executing CEditFrame::OnUpdateFrameTitle: 0.0000
+[2019/05/09, 17:51]: Executing CDocument::UpdateFrameCounts: 0.0000
+[2019/05/09, 17:51]: Executing Function 1: 0.0000
+[2019/05/09, 17:51]: Executing Function 1: 0.0000
+[2019/05/09, 17:51]: Executing CEditFrame::OnUpdateFrameTitle: 0.0000
+[2019/05/09, 17:51]: Excecuting CMDILazyFrame::OnMDIActivate: 0.0150
+[2019/05/09, 17:51]: Executing CEditMain::UpdateOpenWindowText: 0.0000
+[2019/05/09, 17:51]: Executing CEditFrame::OnUpdateFrameTitle: 0.0000
+[2019/05/09, 17:51]: Executing Function 2: 0.0000
+[2019/05/09, 17:51]: Excecuting CMDILazyFrame::OnMDIActivate: 0.0000
+[2019/05/09, 17:51]: Executing CEditFrame::OnUpdateFrameTitle: 0.0000
+[2019/05/09, 17:51]: Executing CDocument::UpdateFrameCounts: 0.0000
+[2019/05/09, 17:51]: Executing CEditFrame::OnUpdateFrameTitle: 0.0000
+[2019/05/09, 17:51]: Executing CUESMultiDocTemplate::OpenDocumentFile: 0.1250
+[2019/05/09, 17:51]: Block 5: 0.1250
+[2019/05/09, 17:51]: Executing Function 1: 0.0000
+[2019/05/09, 17:51]: OpenFile 6: 0.1880
+[2019/05/09, 17:52]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:52]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:52]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:52]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:52]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:52]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 17:52]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 18:00]: Child Windows = 2
+[2019/05/09, 18:00]: F:\DAHENG\hw_mars\mars_platform\TD\Development_Phase\003_develop_phase\fpga_platform\ver20\src\gige_vision\gige_vision.v
+[2019/05/09, 18:00]: Open File0 = F:\DAHENG\hw_mars\mars_platform\TD\Development_Phase\003_develop_phase\fpga_platform\ver20\src\gige_vision\gige_vision.v
+[2019/05/09, 18:00]: F:\DAHENG\hw_mars\mars_platform\TD\Development_Phase\003_develop_phase\fpga_platform\ver20\src\gige_vision\packet_switch.v
+[2019/05/09, 18:00]: Open File1 = F:\DAHENG\hw_mars\mars_platform\TD\Development_Phase\003_develop_phase\fpga_platform\ver20\src\gige_vision\packet_switch.v
+[2019/05/09, 18:32]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 18:32]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 18:32]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 18:32]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 18:32]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 18:32]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 18:32]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 19:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 19:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 19:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 19:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 19:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 19:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 19:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 19:50]: Executing CEditFrame::OnUpdateFrameTitle: 0.0000
+[2019/05/09, 19:50]: Excecuting CMDILazyFrame::OnMDIActivate: 0.0160
+[2019/05/09, 19:50]: Executing CEditFrame::OnUpdateFrameTitle: 0.0000
+[2019/05/09, 19:50]: Executing Function 2: 0.0000
+[2019/05/09, 19:50]: Excecuting CMDILazyFrame::OnMDIActivate: 0.0160
+[2019/05/09, 19:50]: Executing CDocument::UpdateFrameCounts: 0.0000
+[2019/05/09, 19:50]: Executing CEditFrame::OnUpdateFrameTitle: 0.0000
+[2019/05/09, 19:50]: Excecuting CMDILazyFrame::OnMDIActivate: 0.0000
+[2019/05/09, 19:50]: Executing CDocument::UpdateFrameCounts: 0.0000
+[2019/05/09, 19:50]: Child Windows = 0
+[2019/05/09, 19:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 19:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 19:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 19:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 19:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 19:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 19:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 19:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 19:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 19:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 19:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 19:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 19:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 19:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 19:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 19:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 19:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 19:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 19:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 19:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 19:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 19:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 19:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 19:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 19:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 19:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 19:50]: Executing CEditMain::RecalcLayout: 0.0000
+[2019/05/09, 19:50]: Executing CEditMain::RecalcLayout: 0.0000
