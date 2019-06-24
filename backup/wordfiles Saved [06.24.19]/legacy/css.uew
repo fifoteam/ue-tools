@@ -1,16 +1,12 @@
 /L11"CSS" CSS_LANG Nocase Block Comment On = /* Block Comment Off = */ String Chars = "' Escape Char = \ DisableMLS File Extensions = CSS
-/TGBegin "Imports"
-/TGFindStr = "@import(?:\s+url)?[\s\("']+([a-z/\.\-]*?)[\)"']+"
-/TGEnd
 /TGBegin "Selectors"
-/TGFindStr = "((?:[\.#]-?[_a-z]+[_a-z0-9\- :]*[\s,]*)+)\{"
+/TGFindStr = "%[ ^t]++^([ "#*+,^-./0-9:=>@^[^]_a-z|~]+^)[ ^t]++{"
 /TGBegin "Properties"
-/TGFindStr = "[ \t]*(.*);"
-/TGFindBStart = "\{"
-/TGFindBEnd = "\}"
+/TGFindStr = "[ ^t]++^(*:*^)"
+/TGFindBStart = "{"
+/TGFindBEnd = "}"
 /TGEnd
 /TGEnd
-/Regexp Type = Perl
 /Delimiters = ( )	*+,.:;=>[\]{|}~
 /Indent Strings = "{"
 /Unindent Strings = "}"

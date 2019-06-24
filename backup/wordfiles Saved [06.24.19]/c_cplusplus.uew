@@ -10,7 +10,7 @@
 /TGFindStr = "^(?:\w+[ \t]+)+[ *]*(\w+)[ \t]*\([^)]*\);"
 /TGEnd
 /TGBegin "Functions"
-/TGFindStr = "^(?!if\b|else\b|while\b|[\s*])(?:[\w*~_&]+?\s+){1,6}([\w:*~_&]+\s*)\([^);]*\)[^{;]*?(?:^[^\r\n{]*;?[\s]+){0,10}\{"
+/TGFindStr = "^(?!if\b|else\b|while\b|[\s*])(?:[\w*~_&]+?\s+){1,6}([\w:*~_&]+\s*)\([^();]*\)[^{;]*?(?:^[^\r\n{]*;?[\s]+){0,10}\{"
 /TGBegin "Parameters"
 /TGFindStr = "\s*([^,]+)"
 /TGFindBStart = "\("

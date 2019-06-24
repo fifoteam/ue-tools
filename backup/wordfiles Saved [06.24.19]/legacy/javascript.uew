@@ -1,17 +1,7 @@
-/L9"JavaScript" JSCRIPT_LANG Line Comment = // Block Comment On = /* Block Comment Off = */ Escape Char = \ String Chars = '" File Extensions = JS TS
-/TGBegin "Anonymous Functions"
-/TGFindStr = "^[ \t]*(?:([\w \t\.\[\]]+)[ \t]*[=:][ \t]*){1,5}function[ \t]*\([^\)]*\)"
-/TGEnd
-/TGBegin "Functions"
-/TGFindStr = "^[ \t]*function[ \t]*(\w+[ \t]*)\(.*\)"
-/TGFindStr = "^[ \t]*function[ \t]*(\w+[ \t]*)\([^\)]*?\)"
-/TGBegin "Parameters"
-/TGFindStr = "[ \t\n]*([^,\s]+)"
-/TGFindBStart = "\("
-/TGFindBEnd = "\)"
-/TGEnd
-/TGEnd
-/Regexp Type = Perl
+/L9"JavaScript" JSCRIPT_LANG Line Comment = // Block Comment On = /* Block Comment Off = */ Escape Char = \ String Chars = '" File Extensions = JS
+/Function String = "%[ ^t]++function[ ^t]++^([a-zA-Z_][a-zA-Z_0-9]++[^t ]++(*)^)"
+/Function String 1 = "%[ ^t]++^(*^)=[ ^t]++function[ ^t]++(*)"
+/Function String 2 = "%[ ^t]++^(*^):[ ^t]++function[ ^t]++(*)"
 /Delimiters = ! "	%&'()*+,-./:;<=>?@[\]^{|}~
 /Indent Strings = "{" "else"
 /Unindent Strings = "}"
@@ -170,7 +160,6 @@ gotoEndOfPrevWordSelect gotoLine gotoLineSelect gotoPage gotoPageSelect gotoPos 
 hexDelete hexInsert hexOff hexOn hideOrShowLines
 insertLine insertMode insertPageBreak insertTemplate invertCase isChar isCharGt isColNum isColNumGt
 isEof isExt isFTP isFound isHexModeOn isName isNotFound isReadOnly isSel isWordWrap
-jsonCompressDocument jsonFormatDocument
 key
 matchBrace messageBox moveLineDown moveLineUp
 newFile

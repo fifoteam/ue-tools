@@ -1,27 +1,30 @@
 /L8"PHP" PHP_LANG Nocase EnableMLS Line Comment = // Line Comment Alt = # Block Comment On = /* Block Comment Off = */ Escape Char = \ String Chars = "' File Extensions = PHP3 PHP4 PHP5
 /LanguageMarker = "php"
 /TGBegin "Requires"
-/TGFindStr = "^[\t ]*require(?:_once)*[\t "']+([0-9a-z$&*\-./:=?\\^_]+)["']*;"
+/TGFindStr = "%require^([ ^t]+[^$a-z_/^"0-9.*]+^);"
 /TGEnd
 /TGBegin "Includes"
-/TGFindStr = "^[\t ]*include(?:_once)*[\t "']+([0-9a-z$&*\-./:=?\\^_]+)["']*;"
+/TGFindStr = "%include^([ ^t]+[^$a-z_/^"0-9.*]+^);"
+/TGEnd
+/TGBegin "Global Variables"
+/TGFindStr = "%[ ^t]++^(global[ ^t]++^$[a-z_0-9]+*;^)"
 /TGEnd
 /TGBegin "Functions"
-/TGFindStr = "^[\t ]*(?:(?:abstract|final|private|protected|public|static)[\t ]+)*function[\t ]+([a-z_\x7f-\xff][0-9a-z_\x7f-\xff]*)"
+/TGFindStr = "%[^t ]++function[^t ]+^([a-ÿ0-9_&]+^)"
+/TGFindStr = "%[^t ]++static[^t ]+function[^t ]+^([a-ÿ0-9_&]+^)"
+/TGFindStr = "%[^t ]++[publicrotecdvas ]++[^t ]++function[^t ]+^([a-ÿ0-9_&]+^)"
 /TGBegin "Parameters"
-/TGFindStr = "[\t ]*(\$[a-z_\x7f-\xff][0-9a-z_\x7f-\xff]*[\t ]*=[\t ]*(?:array[\t ]*\((?:[^()]*|(?:[\t ]*array[\t ]*\(.*?\))+[\t ]*)\)|".*?"(?<!\\")|'.*?'(?<!\\'))|[^,]+)"
-/TGFindBStart = "\("
-/TGFindBEnd = "\)\s*(?:\{|#|//|/\*)"
+/TGFindStr = "[ ^t^p]++^([~,]+^)"
+/TGFindBStart = "("
+/TGFindBEnd = ")"
 /TGEnd
 /TGBegin "Variables"
-/TGFindStr = "^[\t ]*\$([a-z_\x7f-\xff][0-9a-z_\x7f-\xff]*)[\t ]*="
-/TGFindBStart = "\{"
-/TGFindBEnd = "\}"
+/TGFindStr = "%[ ^t]++^(^$[a-z_0-9]+^)[ ^t]++=*;"
+/TGFindBStart = "{"
+/TGFindBEnd = "}"
 /TGEnd
 /TGEnd
-/Regexp Type = Perl
 /Delimiters = ! "	%&'()*+,-./:;=>[\]^`{|}~
-/Variable String = "^[ \t]*\$$S[ \t]*=[ \t]*new[ \t]+([a-z_0-9]+)\(\);"
 /Indent Strings = "{"
 /Unindent Strings = "}"
 /Open Brace Strings =  "{" "(" "["
