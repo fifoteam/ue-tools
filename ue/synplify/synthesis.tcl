@@ -1,5 +1,5 @@
 project -new D:/tools/Synopsys/fpga_J-2015.03/bin/mbin/proj_1.prj
-add_file -verilog F:/kuaipan/kuaipan/FifoTeam/rtl-tools/module/006_serial_protocol/mdio/testbench/driver/mdio_master/mdio_master.v
+add_file -verilog F:/DAHENG/hw_mars/branches/liuyifu/fpga_module/mdio_master/src/mdio_master.v
 set_option -part XC7A100T
 set_option -grade -2
 set_option -package FGG484
