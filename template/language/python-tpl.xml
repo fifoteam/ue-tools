@@ -4,10 +4,12 @@
 else:&#xD;
 </Template><Template Name="elif" Comments="0" Strings="0" Description="">elif ([+expression+]):&#xD;
 	^</Template><Template Name="else" Comments="0" Strings="0" Description="">else: &#xD;
-	^</Template><Template Name="while" Comments="0" Strings="0" Description="">while ([+evaluation+]): {&#xD;
-	^</Template><Template Name="for" Comments="0" Strings="0" Description="">##for i in range(0,line_num):&#xD;
+	^</Template><Template Name="while" Comments="0" Strings="0" Description="">while x &lt;= 100:&#xD;
+	print(x)</Template><Template Name="for" Comments="0" Strings="0" Description="">##for i in range(0,line_num):&#xD;
 ##	line_content	= file_content[i];&#xD;
-&#xD;
+##numbers = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]&#xD;
+##for number in numbers:&#xD;
+##	print(number) &#xD;
 for [+var+] in ([+start+],[+end+]):&#xD;
 	^# code to be executed&#xD;
 &#xD;
