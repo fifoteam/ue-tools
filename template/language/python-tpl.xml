@@ -14,6 +14,7 @@ for [+var+] in ([+start+],[+end+]):&#xD;
 	^# code to be executed&#xD;
 &#xD;
 </Template><Template Name="def" Comments="0" Strings="0" Description="">def function(var):&#xD;
+	'function doc'&#xD;
 	^#function code&#xD;
 	return</Template><Template Name="com" Description="" Comments="0" Strings="0">##	------------------------------------------------------------------------------------- ##	^ ##	-------------------------------------------------------------------------------------</Template><Template Name="comd" Description="" Comments="0" Strings="0">##	=============================================================================================== ##	^ ##	=============================================================================================== ##	------------------------------------------------------------------------------------- ## ##	-------------------------------------------------------------------------------------</Template><Template Name="try" Description="" Comments="0" Strings="0">try:&#xD;
     index_value = line_value.index(":")&#xD;
